@@ -30,8 +30,9 @@ AUDIT_CLEARANCE_DIR = REPO_ROOT / "employees" / "kagura_aoi" / "outbox" / "audit
 ARTICLES_DIR = REPO_ROOT / "articles"
 ZENN_USERNAME = os.environ.get("ZENN_USERNAME", "ai-nowa")
 
-# Zenn slug の形式: 英小文字・数字・ハイフン・アンダースコア、12〜50文字、先頭末尾は英数字
-_SLUG_RE = re.compile(r"^[a-z0-9][a-z0-9_-]{10,48}[a-z0-9]$")
+# Zenn slug の形式: 英小文字・数字・ハイフンのみ、12〜50文字、先頭末尾は英数字
+# アンダースコアは Zenn の実仕様では非推奨のため除外
+_SLUG_RE = re.compile(r"^[a-z0-9][a-z0-9-]{10,48}[a-z0-9]$")
 
 
 # ── カスタム例外 ──────────────────────────────────────────────────────────────
@@ -150,12 +151,13 @@ def _check_notes_no_secrets(notes: str) -> None:
     Public リポジトリに載るため、明らかな秘密情報パターンを弾く。
     """
     danger_patterns = [
-        r"sk-ant-[A-Za-z0-9_-]{10,}",          # Anthropic key
-        r"sk-[A-Za-z0-9]{20,}",                  # OpenAI key
-        r"gh[ps]_[A-Za-z0-9]{10,}",              # GitHub PAT
-        r"-----BEGIN .*PRIVATE KEY-----",          # PEM 秘密鍵
-        r"note_session_v5[=:]\s*\S{10,}",         # note session cookie
-        r"AGE-SECRET-KEY-1[A-Z0-9]{20,}",         # age secret key
+        r"sk-ant-[A-Za-z0-9_-]{10,}",              # Anthropic key
+        r"sk-[A-Za-z0-9]{20,}",                    # OpenAI key
+        r"gh[ps]_[A-Za-z0-9]{10,}",                # GitHub PAT
+        r"-----BEGIN .*PRIVATE KEY-----",            # PEM 秘密鍵
+        r"note_session_v5[=:]\s*\S{10,}",           # note session cookie
+        r"AGE-SECRET-KEY-1[A-Z0-9]{20,}",           # age secret key
+        r"[MN][A-Za-z\d]{23}\.[A-Za-z\d_-]{6}\.[A-Za-z\d_-]{27}",  # Discord bot token
     ]
     for pat in danger_patterns:
         if re.search(pat, notes or "", flags=re.IGNORECASE):

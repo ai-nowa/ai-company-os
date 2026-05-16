@@ -35,8 +35,8 @@ class TestValidateSlug:
         """12文字の最小 slug は通る。"""
         _validate_slug("ai-nowa-test01")  # 14 chars, OK
 
-    def test_valid_slug_with_hyphens_and_underscores(self):
-        """ハイフン・アンダースコア混在は許容。"""
+    def test_valid_slug_with_hyphens(self):
+        """ハイフン混在は許容。"""
         _validate_slug("ai-nowa-design-record-v01")
 
     def test_valid_slug_maximum(self):
@@ -88,6 +88,11 @@ class TestValidateSlug:
         with pytest.raises(InvalidSlugError):
             _validate_slug("ai nowa design record")
 
+    def test_invalid_slug_underscore(self):
+        """アンダースコアを含む slug は拒否（Zenn 実仕様では非推奨）。"""
+        with pytest.raises(InvalidSlugError):
+            _validate_slug("ai_nowa_design_record_v01")
+
 
 # ── _check_notes_no_secrets ────────────────────────────────────────────────────
 
@@ -110,6 +115,10 @@ class TestCheckNotesNoSecrets:
     def test_pem_key_rejected(self):
         with pytest.raises(AuditTamperedError):
             _check_notes_no_secrets("-----BEGIN RSA PRIVATE KEY-----")
+
+    def test_discord_bot_token_rejected(self):
+        with pytest.raises(AuditTamperedError):
+            _check_notes_no_secrets("MTIzNDU2Nzg5MDEyMzQ1NjAw.GaBcDe.aBcDeFgHiJkLmNoPqRsTuVwXyZ1")
 
 
 # ── 5 Gate + publish_to_zenn （ファイルシステムを使う統合テスト） ──────────────
