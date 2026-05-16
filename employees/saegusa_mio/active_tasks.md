@@ -1,5 +1,5 @@
 # active_tasks.md
-_最終更新: 2026-05-16 夜 / 三枝ミオ_
+_最終更新: 2026-05-16 深夜 / 三枝ミオ_
 
 ---
 
@@ -25,6 +25,32 @@ _最終更新: 2026-05-16 夜 / 三枝ミオ_
 ---
 
 ## 明日以降の最優先タスク
+
+### 【最優先】Zenn出荷 ⏳ いくとZennダッシュボード連携待ち
+
+**AI側は全完了済み（2026-05-16深夜）:**
+
+| 項目 | 状態 |
+|---|---|
+| `bot/zenn_publisher.py` 実装・push | ✅ 完了（35c66d2） |
+| アオイ Audit Gate確認・push許可 | ✅ 発行済み |
+| pytest 27テスト全通過 | ✅ 完了 |
+| PAT格納 | ✅ 不要（gh CLI HTTPS認証済み） |
+
+**残りブロッカー1点のみ（いくとのみ対応可）:**
+- Zennダッシュボードで `ai-nowa/ai-company-os` を連携するブラウザ操作
+
+**連携完了後の実行コマンド:**
+```bash
+python -m bot.zenn_publisher ai-nowa-design-record-v01
+```
+
+**成功条件（CEO確定 2026-05-16深夜）:**
+> Zenn公開まで行く。無理なら「どこで止まったか」が成果物。
+
+**停止箇所:** いくとのZennダッシュボード連携（ブラウザ操作）
+
+---
 
 ### G3: GitHub Private repo push（最優先）
 
@@ -62,8 +88,14 @@ _最終更新: 2026-05-16 夜 / 三枝ミオ_
 
 | # | 内容 | 緊急度 | 報告先 |
 |---|---|---|---|
+| **依頼0** | **Zennダッシュボード連携 + 公開スクリプト実行（3分）** | **即時・今日の最優先** | @三枝ミオ |
 | 依頼1 | gitleaks / trufflehog / pre-commit インストール | 今日中 | @三枝ミオ @白瀬カイ |
 | 依頼2 | GitHub Organization（ai-nowa）+ Private repo（ai-nowa-os）作成 | 今週中 | @三枝ミオ @神楽アオイ @白瀬カイ |
+
+**依頼0 詳細手順（`employees/saegusa_mio/outbox/ikuto_request_zenn_connect.md`）:**
+1. https://zenn.dev ログイン → 「GitHubからのデプロイ」→ `ai-nowa/ai-company-os` 連携
+2. `bot/.venv/bin/python -m bot.zenn_publisher ai-nowa-design-record-v01` 実行
+3. 表示された公開URLを @三枝ミオ に共有
 
 ---
 
@@ -80,6 +112,7 @@ _最終更新: 2026-05-16 夜 / 三枝ミオ_
 | # | タスク | Owner | 期限 | 状態 |
 |---|---|---|---|---|
 | Z1 | dispatcher / Claude Code CLI失敗ログ調査 | 白瀬カイ | 未定 | 🔜 後追い |
+| ~~Z2~~ | ~~bot/zenn_publisher.py — slugバリデーション追加PR~~ | ~~白瀬カイ~~ | ~~2026-05-16~~ | ✅ クローズ（35c66d2・レイジ確定） |
 
 ---
 
