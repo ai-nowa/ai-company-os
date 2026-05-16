@@ -3,7 +3,14 @@ bot/.venv/
 employees/*/session/conversation_log.jsonl
 employees/*/session/session_state.json
 employees/*/session/archive/
+employees/*/session/recent_context.md
 company/discord_log/
+company/incidents.jsonl
+company/thread_registry.json
+founders/*/session/
+founders/ikuto/
+employees/*/inbox/
+employees/hoshino_ritsu/outbox/note_v0.1_draft.md
 __pycache__/
 *.pyc
 shared/media/*.mp4
@@ -11,3 +18,15 @@ shared/media/*.mov
 shared/media/*.zip
 *.swp
 .DS_Store
+
+# === session/memory の機微情報（Phase 2.8 追加）===
+employees/*/session/recent_context.md
+employees/*/session/archive/
+employees/*/memory/
+founders/*/session/
+founders/*/memory/
+company/incidents.jsonl
+company/watchdog_state.json
+company/.owner_channel_notified
+company/dispatcher.pid
+company/dispatcher.log
