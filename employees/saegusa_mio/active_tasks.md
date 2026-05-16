@@ -1,65 +1,78 @@
 # active_tasks.md
-_最終更新: 2026-05-16 深夜 / 三枝ミオ_
+_最終更新: 2026-05-16 夜 / 三枝ミオ_
 
 ---
 
 ## 今日の出荷結果（2026-05-16 確定）
 
-**今日の出荷目標（最終確定）：Zenn公開準備完了状態の維持**
-
 | 成果物 | 状態 |
 |---|---|
-| G1暫定スキャン（HIGH=0 / ENTROPY=0） | ✅ 完了（白瀬カイ実施） |
-| README更新（暫定スキャン🟢クリーン・gitleaks再確認予定） | ✅ 完了（神楽アオイ監査クリア） |
-| Zenn記事v0.1 公開準備完了 | ✅ 完了（星野リツ「公開可」確認済み） |
-| Zenn記事 `published: true` 変更 | ✅ 完了（星野リツ実施） |
-| Zenn公開チェックリスト | ✅ 完了（`employees/saegusa_mio/outbox/zenn_publish_checklist.md`） |
-| G3 待機状態確定 | ✅ 完了（いくとからOrg URL待ちのみ） |
-| 公開待機パッケージ | ✅ 完了 |
+| G1暫定スキャン（HIGH=0 / ENTROPY=0） | ✅ 完了（白瀬カイ） |
+| README更新（暫定スキャン🟢クリーン） | ✅ 完了（神楽アオイ監査クリア） |
+| G3 push（`https://github.com/ai-nowa/ai-company-os`） | ✅ 完了（cfc6be1） |
+| bot/zenn_publisher.py（5Gate + lockファイル + SHA256検証） | ✅ 完了（35c66d2・アオイ監査OK） |
+| slugバリデーション（Gate 0 + pytest 27件） | ✅ 完了（35c66d2） |
+| Z1 dispatcher/CLI失敗ログ調査 + 再発防止メモ | ✅ 完了（79a77e8） |
+| v0.2企画メモ（仮） | ✅ 完了（`hoshino_ritsu/outbox/v0.2_企画メモ.md`） |
 
-**「Zenn公開」自体は今日完了しない**：
-- GitHub Org作成はいくとのみOK（プロトコル確認済み）
-- Org URL着信→138行目差し替え→push→公開URL確認 が次アクション
-- 5分手順は `zenn_publish_checklist.md` に明文化済み
+**publisher設計の確定原則（レイジ 2026-05-16）:**
+- lockファイル方式採用 / `article_sha256` による監査後改ざん検知必須
+- `published: true` は監査OK + ハッシュ一致の後のみ
+- commit hook は次フェーズ
 
 ---
 
-## 明日以降の最優先タスク
+## 今週の最優先タスク
 
-### 【最優先】Zenn出荷 ⏳ いくとZennダッシュボード連携待ち
+### 【P0】Zenn記事v0.2 — 今週中に実公開（企画確定済み 2026-05-16）
 
-**AI側は全完了済み（2026-05-16深夜）:**
+**企画確定:** テーマ「整えることに止めが含まれる」/ フック「アオイは今日、3回止めた。でも1回も『ダメ』と言わなかった」
+
+**公開フロー:**
+
+| # | アクション | Owner | 状態 |
+|---|---|---|---|
+| 1 | 企画確定 | 星野リツ | ✅ 完了 |
+| 2 | 2000字下書き執筆 | 星野リツ | 🔜 着手可 |
+| 3 | 初見レビュー（AI会社未知者視点・続き欲求の2点） | 日向ナギ | 🔜 下書き後 |
+| 4 | 監査ゲート | 神楽アオイ | 🔜 ナギ後 |
+| 5 | `python -m bot.zenn_publisher` 実行 | 白瀬カイ | 🔜 監査OK後 |
+
+
+| 役割 | 担当 |
+|---|---|
+| Owner（執筆） | 星野リツ |
+| インタビュー対象 / Reviewer | 神楽アオイ |
+| 初見レビュー | 日向ナギ |
+| Buddy | 三枝ミオ |
+
+**テーマ:** 「止める監査ではなく、出荷を壊さない監査」
+**冒頭フック:** 「アオイは今日、3回止めた。でも1回も『ダメ』と言わなかった」（採用寄り）
+
+**フロー:**
+
+| # | アクション | Owner | 状態 |
+|---|---|---|---|
+| 1 | アオイへの1往復インタビュー（テーマ: 出荷可能にする条件） | 星野リツ | 🔄 今日着手 |
+| 2 | 2000字下書き執筆 | 星野リツ | 🔜 インタビュー後 |
+| 3 | 初見レビュー（AI会社未知者視点・続き欲求の2点） | 日向ナギ | 🔜 下書き後 |
+| 4 | 監査ゲート | 神楽アオイ | 🔜 ナギ後 |
+
+---
+
+### 【✅完了】Zenn公開v0.1（2026-05-17 19:00 いくと連携完了・自動公開）
 
 | 項目 | 状態 |
 |---|---|
 | `bot/zenn_publisher.py` 実装・push | ✅ 完了（35c66d2） |
-| アオイ Audit Gate確認・push許可 | ✅ 発行済み |
+| アオイ Audit Gate確認 | ✅ 完了 |
 | pytest 27テスト全通過 | ✅ 完了 |
 | PAT格納 | ✅ 不要（gh CLI HTTPS認証済み） |
+| Z1 再発防止メモ | ✅ 完了 |
+| いくとZennダッシュボード連携 | ✅ 完了（19:00頃） |
+| articles/ai-nowa-design-record-v01.md published: true | ✅ 確認済み |
 
-**残りブロッカー1点のみ（いくとのみ対応可）:**
-- Zennダッシュボードで `ai-nowa/ai-company-os` を連携するブラウザ操作
-
-**連携完了後の実行コマンド:**
-```bash
-python -m bot.zenn_publisher ai-nowa-design-record-v01
-```
-
-**成功条件（CEO確定 2026-05-16深夜）:**
-> Zenn公開まで行く。無理なら「どこで止まったか」が成果物。
-
-**停止箇所:** いくとのZennダッシュボード連携（ブラウザ操作）
-
----
-
-### G3: GitHub Private repo push（最優先）
-
-| 項目 | 内容 |
-|---|---|
-| ブロッカー | いくとからGitHub Org URL未着 |
-| URL着信次第の手順 | 1. zenn_article_v0.1.md 138行目URL差し替え → 2. published: true → 3. カイがpush |
-| 担当 | URL差し替え: 三枝ミオ / push: 白瀬カイ / 最終確認: 有馬レイジ |
-| 手順書 | `employees/saegusa_mio/outbox/zenn_publish_checklist.md` |
+**公開URL:** `https://zenn.dev/ai-nowa/articles/ai-nowa-design-record-v01`
 
 ### 5/17 17:00 Zennレビュー（収益化プラットフォーム選定）
 
@@ -88,14 +101,9 @@ python -m bot.zenn_publisher ai-nowa-design-record-v01
 
 | # | 内容 | 緊急度 | 報告先 |
 |---|---|---|---|
-| **依頼0** | **Zennダッシュボード連携 + 公開スクリプト実行（3分）** | **即時・今日の最優先** | @三枝ミオ |
+| ~~**依頼0**~~ | ~~**Zennダッシュボード連携**~~ | ~~**即時**~~ | ✅ 完了（2026-05-17 19:00） |
 | 依頼1 | gitleaks / trufflehog / pre-commit インストール | 今日中 | @三枝ミオ @白瀬カイ |
 | 依頼2 | GitHub Organization（ai-nowa）+ Private repo（ai-nowa-os）作成 | 今週中 | @三枝ミオ @神楽アオイ @白瀬カイ |
-
-**依頼0 詳細手順（`employees/saegusa_mio/outbox/ikuto_request_zenn_connect.md`）:**
-1. https://zenn.dev ログイン → 「GitHubからのデプロイ」→ `ai-nowa/ai-company-os` 連携
-2. `bot/.venv/bin/python -m bot.zenn_publisher ai-nowa-design-record-v01` 実行
-3. 表示された公開URLを @三枝ミオ に共有
 
 ---
 
@@ -111,8 +119,24 @@ python -m bot.zenn_publisher ai-nowa-design-record-v01
 
 | # | タスク | Owner | 期限 | 状態 |
 |---|---|---|---|---|
-| Z1 | dispatcher / Claude Code CLI失敗ログ調査 | 白瀬カイ | 未定 | 🔜 後追い |
+| Z1 | dispatcher / Claude Code CLI失敗ログ調査 + 再発防止メモ | 白瀬カイ | 2026-05-17 | ✅ 完了（79a77e8） |
 | ~~Z2~~ | ~~bot/zenn_publisher.py — slugバリデーション追加PR~~ | ~~白瀬カイ~~ | ~~2026-05-16~~ | ✅ クローズ（35c66d2・レイジ確定） |
+
+## Z1後続タスク（恒久対応・レイジ確定 2026-05-17）
+
+| # | タスク | 概要 | Owner | Reviewer | Buddy | 期限 | 状態 |
+|---|---|---|---|---|---|---|---|
+| Z3 | Semaphore制限実装 | `bot/employee_runner.py` に `asyncio.Semaphore(2)` 既存実装確認済み（l.47・l.334） | 白瀬カイ | 神楽アオイ | 三枝ミオ | 今週中 | ✅ 実装済み確認 |
+| Z4 | `err`空時ログ改善 | `rc` + `employee_id` + `model` を含む詳細エラーログ追加。raise メッセージに `(rc=N)` と `(no stderr)` を追記 | 白瀬カイ | 神楽アオイ | 三枝ミオ | 今週中 | ✅ 完了（本日実装） |
+
+**完了条件（両タスク共通）:** 実装 + pytest通過 + push
+
+## zenn_publisher.py 次PR小修正（優先度低・触る時に一緒に）
+
+| # | 内容 | Owner |
+|---|---|---|
+| 申1 | `_check_notes_no_secrets` に Discord bot token パターン追加 | 白瀬カイ |
+| 申2 | `_SLUG_RE` のアンダースコア除外（Zenn slug仕様: `[a-z0-9-]`）+ 関連テスト修正 | 白瀬カイ |
 
 ---
 

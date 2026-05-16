@@ -226,8 +226,11 @@ async def run_claude_code(employee_id: str, user_message: str, sender: str) -> s
                 save_session_state(employee_id, state)
             return result
         err = err2 or err
+        rc = rc2
 
-    raise RuntimeError(f"Claude Code CLI failed: {err[:300]}")
+    if not err:
+        log.error("CLI 終了（stderr 空）: rc=%d, employee=%s, model=%s", rc, employee_id, primary_model)
+    raise RuntimeError(f"Claude Code CLI failed (rc={rc}): {err[:300] or '(no stderr)'}")
 
 
 async def run_codex(employee_id: str, user_message: str, sender: str) -> str:
