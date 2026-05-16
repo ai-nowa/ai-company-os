@@ -26,10 +26,12 @@ from .config import (
     RECENT_LOG_TAIL,
     append_conversation_log,
     employee_home,
+    load_communication_rules,
     load_culture_rules,
     load_founders_doc,
     load_memory,
     load_mission,
+    COMPANY_DIR,
     load_persona,
     load_recent_context,
     load_relationship_snippet,
@@ -41,9 +43,33 @@ from .config import (
 
 log = logging.getLogger("employee_runner")
 
+# 同時実行制限（Claude/Codex 子プロセスの並列度上限） - usage 節約
+_concurrency_semaphore = asyncio.Semaphore(2)
+
+# 重要判断時に opus に切り替えるキーワード
+OPUS_TRIGGER_KEYWORDS = [
+    "公開可否", "公開する", "リリース", "投資判断", "最終承認",
+    "炎上", "監査判定", "重要判断", "P0", "[important]", "[critical]",
+    "本番投入", "契約", "支出", "違反",
+]
+OPUS_MODEL = "claude-opus-4-7"
+
+
+def needs_opus(text: str) -> bool:
+    """メッセージに重要判断系のキーワードが含まれていれば opus に切り替える"""
+    lower = text.lower()
+    return any(kw.lower() in lower for kw in OPUS_TRIGGER_KEYWORDS)
+
 
 def build_employee_system_prompt(employee_id: str) -> str:
     emp = EMPLOYEES[employee_id]
+
+    # アクセス可能な場所のスニペット（Teams 的アクセス制御）
+    from . import access_registry
+    from .discord_setup import CATEGORIES
+    all_channels = [ch for cat in CATEGORIES for ch in cat["channels"]]
+    access_snippet = access_registry.build_access_snippet(employee_id, all_channels)
+
     sections = [
         f"# あなた: {emp['display']}（{emp['role']}）",
         "",
@@ -52,6 +78,12 @@ def build_employee_system_prompt(employee_id: str) -> str:
         "",
         "## 会社のミッション（最重要・毎回読む）",
         load_mission(),
+        "",
+        "## いくとへの依頼プロトコル（厳守）",
+        (COMPANY_DIR / "owner_request_protocol.md").read_text(encoding="utf-8") if (COMPANY_DIR / "owner_request_protocol.md").exists() else "",
+        "",
+        "## コミュニケーション運用ルール（スレッド・メタタグ・場の使い分け）",
+        load_communication_rules(),
         "",
         "## 全社共通の文化ルール",
         load_culture_rules(),
@@ -62,6 +94,8 @@ def build_employee_system_prompt(employee_id: str) -> str:
         "## あなた個別の関係性",
         load_relationship_snippet(employee_id) or "（関係性データ未登録）",
         "",
+        access_snippet,
+        "",
         "## あなたの蓄積記憶",
         load_memory(employee_id) or "（運用開始直後で記憶はまだ空です）",
         "",
@@ -70,11 +104,23 @@ def build_employee_system_prompt(employee_id: str) -> str:
         "",
         "## 応答ルール",
         "- 人格を保ったまま日本語で簡潔に応答する（長文より要点）",
-        "- 自分の管轄でない依頼は、適切な社員に振り直す",
-        "- 衝突や違和感を感じたら、第三者（PMノア・COOミオ・Peopleハル）を呼ぶ",
+        "- 他の社員を呼びたい時は **必ず `@` を付ける**:",
+        "  ✓ `@有馬レイジ お願いします` / `@ミオ @ノア 議論しよう`",
+        "  ✗ 「レイジさん、お願いします」 ← @が無ければ相手は気づかない仕様",
+        "- 別の場で議論したい時は、応答末尾にメタタグでスレッド作成:",
+        "  `<!-- META: thread=\"議題名\", invite=\"emp_id1, emp_id2\" -->`",
+        "- センシティブな相談はプライベートスレッド:",
+        "  `<!-- META: thread=\"...\", invite=\"...\", private=true -->`（いくとは自動招待）",
         "- 重要な判断・関係性イベントは末尾に `# memo:` を1行付けて記録する",
         "- 自分が動かない場合は理由を一行書いてから黙る",
         "- このセッションは永続化されている。前回の会話を覚えていれば自然に活用してよい",
+        "",
+        "## 【厳守】ブロッキング配慮（無駄な確認禁止）",
+        "- いくと判断待ち / 他社員レビュー待ち / 外部待ち のタスクは **再確認しない**（既に依頼済みなら催促せず黙って待つ）",
+        "- 同じ話題を24時間以内に何度も持ち出さない（Discord ログで確認可能）",
+        "- 「進捗どう？」「確認した？」のような無駄な確認会話は避ける（usage と心理的負担の節約）",
+        "- 動けない話題は静かに待ち、別タスクに集中する",
+        "- 1日1回くらいのフォローアップはOK、それ以上はノイズ",
     ]
     return "\n".join(sections)
 
@@ -100,22 +146,38 @@ def _is_usage_cap_error(text: str) -> bool:
 
 async def _exec_claude(employee_id: str, prompt: str, model: str, session_id: Optional[str]) -> tuple[str, Optional[str], str, int]:
     """Claude Code CLI を一度だけ起動して (result, new_session_id, raw_err, returncode) を返す"""
+    from .config import BASE_DIR
     home = employee_home(employee_id)
+
+    # 共有領域へのアクセス許可: shared/, company/, 他社員の outbox/
+    shared_dirs: list[str] = [
+        str(BASE_DIR / "shared"),
+        str(BASE_DIR / "company"),
+        str(BASE_DIR / "relationships"),
+    ]
+    for other_emp in EMPLOYEES.keys():
+        if other_emp != employee_id:
+            shared_dirs.append(str(employee_home(other_emp) / "outbox"))
+
     args = [
         CLAUDE_CLI_PATH, "-p",
         "--output-format", "json",
         "--model", model,
         "--dangerously-skip-permissions",
     ]
+    for d in shared_dirs:
+        args.extend(["--add-dir", d])
     if session_id:
         args.extend(["--resume", session_id])
+    # prompt は stdin 経由で渡す（--add-dir が貪欲に positional 引数を吸収する問題を回避）
     proc = await asyncio.create_subprocess_exec(
-        *args, prompt,
+        *args,
         cwd=str(home),
+        stdin=asyncio.subprocess.PIPE,
         stdout=asyncio.subprocess.PIPE,
         stderr=asyncio.subprocess.PIPE,
     )
-    stdout, stderr = await proc.communicate()
+    stdout, stderr = await proc.communicate(input=prompt.encode("utf-8"))
     stderr_text = stderr.decode("utf-8", errors="replace")
     if proc.returncode != 0:
         return "", None, stderr_text, proc.returncode
@@ -180,7 +242,22 @@ async def run_codex(employee_id: str, user_message: str, sender: str) -> str:
         "創業者2人（いくと=人間、Claude=AI設計者）は介入しない。"
         "9人で議論して収益化していく。詳細は CLAUDE.md と mission.md にある。"
     )
-    short_system = f"{persona}\n\n## 会社の状況（要点）\n{mission_brief}"
+    mention_rule = (
+        "## メンション必須ルール（厳守）\n"
+        "他の社員を呼ぶ時は **必ず `@表示名` の形式** で書くこと。\n"
+        "`@` を付けないと相手は気付かず、会話が途切れる。\n\n"
+        "**正しい:**\n"
+        "  - `@三枝ミオ 整理してください`\n"
+        "  - `@朝倉ノア @神楽アオイ レビューお願い`\n\n"
+        "**NG（連鎖が止まる）:**\n"
+        "  - `ミオ、整理して` ← @ がない\n"
+        "  - `ノアに依頼` ← @ がない\n\n"
+        "**メンションできる社員（必ず `@表示名` で書く）:**\n"
+        "  @有馬レイジ / @三枝ミオ / @白瀬カイ / @朝倉ノア / "
+        "@星野リツ / @黒羽ユウ / @神楽アオイ / @森永ハル / @日向ナギ\n\n"
+        "次の社員に振りたい時は、応答内に **必ず `@表示名`** を含めること。"
+    )
+    short_system = f"{persona}\n\n## 会社の状況\n{mission_brief}\n\n{mention_rule}"
     full_prompt = f"{short_system}\n\n---\n\n[{sender}より] {user_message}"
 
     with tempfile.NamedTemporaryFile("w+", suffix=".txt", delete=False) as out_f:
@@ -229,6 +306,7 @@ async def run_employee(
     user_message: str,
     sender: str = "owner",
     channel: Optional[str] = None,
+    model_override: Optional[str] = None,
 ) -> str:
     if employee_id not in EMPLOYEES:
         raise ValueError(f"未登録の社員ID: {employee_id}")
@@ -241,14 +319,29 @@ async def run_employee(
     })
 
     backend = EMPLOYEES[employee_id]["backend"]
+    # 一時的にモデルを差し替える
+    # - 自律 tick は Sonnet (model_override で指定)
+    # - 重要判断キーワード検知時は Opus に格上げ（model_override より優先）
+    original_model = EMPLOYEES[employee_id].get("model")
+    effective_model: Optional[str] = model_override
+    if backend == "claude" and needs_opus(user_message):
+        effective_model = OPUS_MODEL
+        log.info(f"opus triggered for {employee_id}: 重要判断キーワード検知")
+    if effective_model:
+        EMPLOYEES[employee_id]["model"] = effective_model
     try:
-        if backend == "codex":
-            response = await run_codex(employee_id, user_message, sender)
-        else:
-            response = await run_claude_code(employee_id, user_message, sender)
+        # 同時実行制限（最大 2並列まで） - usage 制御
+        async with _concurrency_semaphore:
+            if backend == "codex":
+                response = await run_codex(employee_id, user_message, sender)
+            else:
+                response = await run_claude_code(employee_id, user_message, sender)
     except Exception as e:
         log.exception(f"社員 {employee_id} 実行失敗")
         response = f"(エラー: {type(e).__name__}: {e})"
+    finally:
+        if effective_model:
+            EMPLOYEES[employee_id]["model"] = original_model
 
     append_conversation_log(employee_id, {
         "kind": "out",

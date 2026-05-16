@@ -1,0 +1,236 @@
+"""各社員の自律ループ（人間以上の自由度版）。
+
+設計の核:
+- 社員は自分の人格として動く（「Claude Code として」とは言わない）
+- 応答 = 思考・作業ログ（conversation_log に保存）。デフォルトでは Discord 投稿しない
+- Discord 投稿は応答内の `[POST: チャンネル]...[/POST]` ブロックで明示する時のみ
+- 業務リズム（間隔）は社員の性格・役割に基づく
+- 23-7時はサイレント、!pause で停止
+"""
+from __future__ import annotations
+
+import asyncio
+import logging
+import random
+import re
+from datetime import datetime
+from typing import Optional
+
+import discord
+
+from .config import EMPLOYEES, JST
+from . import multi_client
+from .employee_runner import run_employee
+
+log = logging.getLogger("employee_autonomy")
+
+# 各社員の業務リズム（最小秒, 最大秒）- usage 節約のため間隔は長め
+INTERVALS: dict[str, tuple[int, int]] = {
+    "arima_reiji":   (3600, 7200),   # CEO 1-2時間
+    "saegusa_mio":   (1800, 3600),   # COO 30-60分
+    "shirase_kai":   (3600, 10800),  # CTO 1-3時間（集中作業）
+    "asakura_noa":   (2400, 4800),   # PM 40-80分
+    "hoshino_ritsu": (3600, 7200),   # 編集長 1-2時間
+    "kuroba_yuu":    (3600, 7200),   # マーケ 1-2時間
+    "kagura_aoi":    (3600, 7200),   # 監査 1-2時間
+    "morinaga_haru": (1200, 2400),   # People 20-40分（こまめ）
+    "hinata_nagi":   (3600, 7200),   # 視聴者代表 1-2時間
+}
+
+# 自律 tick 時のモデル（usage 節約のためデフォルト Sonnet。Opus は重要判断時のみ）
+AUTONOMY_MODEL_OVERRIDE = "claude-sonnet-4-6"
+
+SILENT_HOUR_START = 23
+SILENT_HOUR_END = 7
+
+STARTUP_DELAY_MIN = 30
+STARTUP_DELAY_MAX = 600
+
+# POST ブロックの抽出（[POST: channel] ... [/POST]）
+POST_BLOCK_RE = re.compile(
+    r"\[POST(?:\s*:\s*([^\]]+))?\]\s*\n?(.*?)\[/POST\]",
+    re.DOTALL | re.IGNORECASE,
+)
+
+_running_tasks: dict[str, asyncio.Task] = {}
+_pause_flag = False
+
+
+def pause_all() -> None:
+    global _pause_flag
+    _pause_flag = True
+    log.info("autonomy paused")
+
+
+def resume_all() -> None:
+    global _pause_flag
+    _pause_flag = False
+    log.info("autonomy resumed")
+
+
+def is_silent_hour() -> bool:
+    h = datetime.now(JST).hour
+    return h >= SILENT_HOUR_START or h < SILENT_HOUR_END
+
+
+def build_self_prompt(emp_id: str) -> str:
+    """その社員自身として動くためのプロンプト"""
+    info = EMPLOYEES[emp_id]
+    return f"""\
+あなた自身の時間です。誰かに呼ばれたわけではありません。あなたは {info['display']}（{info['role']}）として、今の状況を見て、自分の判断で動いてください。
+
+## あなたの自由度
+
+応答は **conversation_log にあなたの内省ログとして保存** されます（Discord には投稿されません）。
+つまり応答の中で自由にやっていい:
+- 思考・独り言・整理・計画
+- ファイル作成・編集（Read / Edit / Write / Bash すべて使える）
+- 調査・分析・メモ書き
+- 「今やってること」を自分の言葉で記録
+
+人間の社員と同じく、1日中喋ってる必要はない。考えたり手を動かしたりしている時間が大半でいい。
+
+## まず状況を把握する（必ず最初にやる）
+
+人間の社員は、メンションされなくてもチャットを見ているし、誰が何をしているかは把握しています:
+
+1. **直近のチャット** — `company/discord_log/` から、あなたがアクセスできるチャンネルのログ末尾を読む
+2. **誰が何をやってるか** — `company/active_tasks.md` で進行中タスクと Owner を把握
+3. **最近の成果物** — `shared/docs/`, `shared/data/`, 他社員の `employees/*/outbox/` の新規ファイル
+
+## 自分の判断で動く
+
+- 関心ある会話があれば自発的に参加する判断もしてOK
+- タスクを進める（必要なファイルを作る・編集する）
+- 自分のタスク状態を `active_tasks.md` に反映
+- 同僚に話す or 静かに作業する、両方OK
+- 「今は何もすべきことがない」と判断したら、本当に何もしない（応答も空でOK）
+
+## 【重要】ブロッキング配慮（usage と心理的負担の節約）
+
+人間の会社で最も嫌われるのは「無駄な進捗確認会議」。あなたも同じ。
+
+- **いくと判断待ち / 他社員レビュー待ち / 外部サービス待ち** のタスクは、**再確認しない**
+- 同じ話題・同じ依頼を **24時間以内に何度も持ち出さない**（Discord ログで確認可能）
+- 自分が動けない話題は**静かに待つ**。代わりに進められる別タスクを探す
+- 「進捗どう？」「確認した？」「もう一回確認しよう」は無駄消費。**避ける**
+- ブロッキング解除（いくとからの返答、他社員の完了報告）があってから動く
+- 1日に1回くらい「あの件どうなった？」と聞くのは OK。それ以上はノイズ
+
+`active_tasks.md` で自分のタスクが何かに blocked されていたら、`blocked_by: いくと` のように明記する責任があります。
+
+## Discord に投稿したい時だけ POST ブロックで明示
+
+応答内に Discord に投稿したい内容がある時のみ、次のブロックを書きます:
+
+```
+[POST: チャンネル名]
+（投稿したい内容。あなたの人格・口調そのまま。他社員を呼ぶ時は @表示名 必須）
+[/POST]
+```
+
+- POST ブロックなしなら、Discord には**一切投稿されません**（応答全文は内省ログとして残る）
+- POST ブロックは複数書けます（複数チャンネルへ同時投稿）
+- チャンネル名は部分一致でOK（例: `お知らせ` `経営会議` `給湯室`）
+- POST ブロックの中身が空 or 30文字未満なら投稿スキップ
+
+今の状況で何をするかは、{info['display']} 自身の判断です。
+"""
+
+
+def extract_post_blocks(text: str) -> list[tuple[str, str]]:
+    """応答から POST ブロックを抽出。 [(channel_hint, content), ...]"""
+    result: list[tuple[str, str]] = []
+    for m in POST_BLOCK_RE.finditer(text):
+        channel = (m.group(1) or "").strip()
+        content = m.group(2).strip()
+        if len(content) >= 30:
+            result.append((channel, content))
+    return result
+
+
+async def employee_self_loop(emp_id: str, main_client: discord.Client) -> None:
+    """1社員の自律ループ"""
+    await asyncio.sleep(random.randint(STARTUP_DELAY_MIN, STARTUP_DELAY_MAX))
+    info = EMPLOYEES[emp_id]
+    min_interval, max_interval = INTERVALS.get(emp_id, (1800, 3600))
+    log.info(f"autonomy started: {emp_id} ({info.get('display','')}) interval={min_interval}-{max_interval}s")
+
+    while True:
+        try:
+            wait = random.randint(min_interval, max_interval)
+            await asyncio.sleep(wait)
+
+            if _pause_flag or is_silent_hour():
+                continue
+
+            log.info(f"autonomy tick: {emp_id}")
+            prompt = build_self_prompt(emp_id)
+            try:
+                # 自律 tick 時は Sonnet で usage 節約
+                msg = await run_employee(emp_id, prompt, sender="self_loop",
+                                         model_override=AUTONOMY_MODEL_OVERRIDE)
+            except Exception:
+                log.exception(f"autonomy run_employee failed: {emp_id}")
+                continue
+
+            await _post_blocks_and_chain(emp_id, msg, main_client)
+
+        except asyncio.CancelledError:
+            log.info(f"autonomy loop cancelled: {emp_id}")
+            return
+        except Exception:
+            log.exception(f"autonomy loop error: {emp_id}")
+            await asyncio.sleep(60)
+
+
+async def _post_blocks_and_chain(emp_id: str, msg: str, main_client: discord.Client) -> None:
+    """POST ブロックを抽出して該当チャンネルに投稿。連鎖も発火。"""
+    from .dispatcher import convert_text_mentions_to_discord, process_mention_chain
+
+    blocks = extract_post_blocks(msg)
+    if not blocks:
+        log.info(f"autonomy: {emp_id} は内省のみ（POSTブロックなし → 投稿スキップ）")
+        return
+
+    for channel_hint, content in blocks:
+        # チャンネル決定（指定があればそれ、なければ default_channels の最初）
+        ch = None
+        if channel_hint:
+            ch = await multi_client.find_channel_for_employee(emp_id, channel_hint)
+        if ch is None:
+            info = EMPLOYEES[emp_id]
+            chans = info.get("default_channels", ["給湯室"])
+            target = chans[0] if chans and chans[0] != "all" else "給湯室"
+            ch = await multi_client.find_channel_for_employee(emp_id, target)
+        if ch is None:
+            log.warning(f"autonomy: {emp_id} channel not found (hint={channel_hint})")
+            continue
+
+        discord_text = convert_text_mentions_to_discord(content)
+        chunks = [discord_text[i:i + 1900] for i in range(0, len(discord_text), 1900)] or ["(空)"]
+        for chunk in chunks:
+            await ch.send(chunk)
+        log.info(f"autonomy: {emp_id} posted to {ch.name} ({len(content)} chars)")
+
+        # 連鎖発火
+        try:
+            await process_mention_chain(content, emp_id, ch, depth=0, visited={emp_id})
+        except Exception:
+            log.exception(f"autonomy chain failed: {emp_id}")
+
+
+def start_all_autonomy_loops(main_client: discord.Client) -> None:
+    for emp_id in EMPLOYEES.keys():
+        if emp_id in _running_tasks:
+            continue
+        task = asyncio.create_task(employee_self_loop(emp_id, main_client))
+        _running_tasks[emp_id] = task
+    log.info(f"autonomy loops started: {len(_running_tasks)} employees")
+
+
+async def stop_all_autonomy_loops() -> None:
+    for emp_id, task in _running_tasks.items():
+        task.cancel()
+    _running_tasks.clear()
+    log.info("autonomy loops stopped")

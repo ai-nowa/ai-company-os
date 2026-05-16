@@ -1,0 +1,101 @@
+# AI NOWA 独自 gitleaks 設定
+# アオイ朝レビュー対象。追加キーワード候補は kagura_aoi が直接編集してOK。
+
+title = "AI NOWA gitleaks custom rules"
+
+# デフォルトルール（Discord/OpenAI/AWS等）に加えて、AI NOWA固有の検出ルールを追加
+
+[allowlist]
+description = "誤検出を避けるための除外 + 固定🔴（公開対象外・スキャン除外）"
+paths = [
+    '''\.venv/''',
+    '''__pycache__/''',
+    '''\.git/''',
+    '''node_modules/''',
+    # 固定🔴: 公開対象外（GitHub Public化時もスキャン判定対象外）
+    '''founders/ikuto/''',
+    '''employees/.*/inbox/''',
+    '''employees/hoshino_ritsu/outbox/note_v0\.1_draft\.md''',
+    # 誤検出除外: 報告書・説明ドキュメント内のサンプルパターン文字列
+    '''shared/docs/g1_scan_report\.md''',
+]
+
+# ---- 1. Discord bot token（多重防御） ----
+[[rules]]
+id = "discord-bot-token"
+description = "Discord bot token (Mxx.xxx.xxx)"
+regex = '''[MN][A-Za-z\d]{23}\.[\w-]{6}\.[\w-]{27}'''
+tags = ["discord", "token", "critical"]
+
+# ---- 2. Cookie/session/token系（note特有も含む） ----
+[[rules]]
+id = "session-cookie"
+description = "セッションCookie値（noteのnote_session_v5など）"
+regex = '''(?i)(note_session_v5|connect\.sid|JSESSIONID|sessionid|csrftoken|_ga|auth_token)\s*[:=]\s*["']?[A-Za-z0-9_\-+/=]{20,}'''
+tags = ["cookie", "session"]
+
+[[rules]]
+id = "generic-bearer"
+description = "Bearer トークン形式"
+regex = '''(?i)(bearer|authorization)\s*[:=]\s*["']?[A-Za-z0-9_\-]{20,}'''
+tags = ["bearer", "token"]
+
+# ---- 3. 外部サービス識別子 ----
+[[rules]]
+id = "anthropic-key"
+description = "Anthropic API key"
+regex = '''sk-ant-[A-Za-z0-9_-]{20,}'''
+tags = ["anthropic", "key", "critical"]
+
+[[rules]]
+id = "openai-key"
+description = "OpenAI API key"
+regex = '''sk-[A-Za-z0-9]{32,}'''
+tags = ["openai", "key", "critical"]
+
+[[rules]]
+id = "github-pat"
+description = "GitHub PAT (Classic/Fine-grained)"
+regex = '''gh[ps]_[A-Za-z0-9]{36,}'''
+tags = ["github", "token", "critical"]
+
+[[rules]]
+id = "cloudflare-token"
+description = "Cloudflare API token"
+regex = '''[A-Za-z0-9_-]{40}'''
+# 注: 短すぎて誤検出多発。entropy重視に切り替えるべき。アオイレビュー対象
+tags = ["cloudflare", "token"]
+
+# ---- 4. 人名・アカウント名（個人特定情報） ----
+# ※ AI社員9人の人格名は公開対象なので除外する
+[[rules]]
+id = "ikuto-private-info"
+description = "いくと個人情報（メールアドレス、フルネーム実名、住所等）"
+regex = '''(?i)(ikuto[._-]?(yamada|sato|suzuki|tanaka)|@gmail\.com|@yahoo\.co\.jp)'''
+# 注: アオイが「いくとの公開可能な情報」を確定後にホワイトリスト調整
+tags = ["pii", "founder"]
+
+# ---- 5. パスワード/シークレット汎用 ----
+[[rules]]
+id = "password-assignment"
+description = "password=... の形"
+regex = '''(?i)(password|passwd|pwd)\s*[:=]\s*["'][^"']{6,}["']'''
+tags = ["password"]
+
+[[rules]]
+id = "private-key"
+description = "PEM形式の秘密鍵"
+regex = '''-----BEGIN ((RSA|EC|DSA|OPENSSH|PGP) )?PRIVATE KEY-----'''
+tags = ["key", "critical"]
+
+# ---- 6. age 秘密鍵（SOPS用） ----
+[[rules]]
+id = "age-secret-key"
+description = "age secret key"
+regex = '''AGE-SECRET-KEY-1[A-Z0-9]{50,}'''
+tags = ["age", "sops", "critical"]
+
+# ---- TODO (kagura_aoi) ----
+# - Cloudflareトークンの正規表現精度向上（entropy判定が望ましい）
+# - いくとPIIの確定リスト（メール・本名・住所等）をアオイが補完
+# - 社外人物・組織名（許諾なし）のリスト化

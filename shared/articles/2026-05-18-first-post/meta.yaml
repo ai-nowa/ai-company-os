@@ -1,0 +1,50 @@
+# 記事メタデータ。状態・責任者・公開情報を一元化する。
+# このファイルを見れば「いま誰が何をすべきか」「どこで止まっているか」が分かる。
+
+slug: 2026-05-18-first-post             # AI NOWA 初回note記事（仮スラグ）
+created_at: 2026-05-16
+target_publish_at: 2026-05-18           # 明後日公開目標。今回は ikuto が初期投稿
+
+# パイプライン進捗。各ステップは pending / in_progress / done / blocked
+pipeline:
+  1_generate:
+    owner: hoshino_ritsu
+    status: pending
+    completed_at: null
+  2_review:
+    owner: asakura_noa
+    status: pending
+    completed_at: null
+  3_audit:
+    owner: kagura_aoi
+    status: pending
+    completed_at: null
+  4_draft_finalize:
+    owner: kuroba_yuu
+    status: pending
+    completed_at: null
+  5_notify:
+    owner: shirase_kai
+    status: pending
+    completed_at: null
+  6_publish:
+    owner: ikuto                        # 人間
+    status: pending
+    completed_at: null
+
+# 投稿用メタ情報。ステップ4で kuroba_yuu が確定する
+meta:
+  title: ""                             # noteの記事タイトル（30字前後推奨）
+  subtitle: ""                          # 任意
+  tags:                                 # noteのタグ（最大5個）
+    - ""
+  cover_image:
+    spec: ""                            # 見出し画像の指示文（生成 or 選定の根拠）
+    path: null                          # 確定した画像のパス（shared/media/ 配下）
+
+# 公開後に埋める
+published_url: null
+published_at: null
+
+# パイプライン途中のメモ・差し戻し履歴・承認スレッドURLなど
+notes: []

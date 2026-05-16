@@ -1,0 +1,30 @@
+# AI NOWA pre-commit hook 設定
+# C採用方針（gitleaks自動検知 + 用途説明できない文字列は止める）
+#
+# セットアップ（明朝、gitleaks 本体インストール後）:
+#   pip install pre-commit
+#   pre-commit install
+#
+# 以降、commit 時に自動でスキャンが走る。検出時は commit 拒否される。
+# 一時的に回避したい時は `git commit --no-verify` だが、CI で別途検出される設計を推奨。
+
+repos:
+  # gitleaks: シークレット検出
+  - repo: https://github.com/zricethezav/gitleaks
+    rev: v8.18.4  # 明朝、最新タグに更新
+    hooks:
+      - id: gitleaks
+        args:
+          - "--config=.gitleaks-custom.toml"
+          - "--redact"
+
+  # （任意）大きなファイルの誤コミット防止
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.6.0
+    hooks:
+      - id: check-added-large-files
+        args: ["--maxkb=2048"]
+      - id: end-of-file-fixer
+        exclude: '\.jsonl$'  # ログファイルは末尾改行を強制しない
+      - id: check-merge-conflict
+      - id: detect-private-key

@@ -27,11 +27,67 @@ notes: |
 
 ### P0（最優先）
 
-_（Phase 1完了後、レイジとミオがここに最初のタスクを投入する）_
+```yaml
+id: T-001
+title: Zenn記事v0.1公開
+owner: hoshino_ritsu
+reviewer: hinata_nagi
+buddy: morinaga_haru
+audit: kagura_aoi
+status: in_progress
+priority: P0
+due: 2026-05-23
+created: 2026-05-16
+updated: 2026-05-16
+triad: m1_content
+deliverable: employees/hoshino_ritsu/outbox/zenn_article_v0.1.md
+notes: |
+  本文・published:true確定済み。監査クリア済み。
+  GitHub URL到着済み（2026-05-16 17:34 いくとより）: https://github.com/ai-nowa/ai-company-os
+  次手順: カイが138行目placeholder差し替え→push、リツがpublished:true→push再実行→Zenn公開。
+  URL配布先: arima_reiji, asakura_noa, kuroba_yuu。
+  5/23 23:59が最終期限（レイジ確定）。期限内未公開→翌週投稿自動停止。
+  完了状況レビュー担当: asakura_noa。
+```
+
+```yaml
+id: T-002
+title: 自律化切り分け表制作
+owner: shirase_kai
+reviewer: asakura_noa
+buddy: saegusa_mio
+status: in_progress
+priority: P0
+due: 2026-05-17
+created: 2026-05-16
+updated: 2026-05-16
+triad: business_decision
+deliverable: employees/shirase_kai/outbox/切り分け表_v0.1.md
+notes: |
+  列構造: 自律化項目 / 誰が嬉しいか（1行）/ 人間承認を残す理由 / カテゴリ
+  カテゴリ: 🟢自律可 / 🟡一度だけ人間セットアップ必要 / 🔴人間継続作業必要
+  17:00納品。ノアが「誰に効くか」1点だけレビュー（3軸: いくと手戻り/AI判断待ち/読者詰まり）。
+  アオイが🔴を🟡扱いにしていないか監査。ミオが実行判断に使用。
+```
 
 ### P1
 
-_未登録_
+```yaml
+id: T-003
+title: いくと非依存チャネルの読者価値評価軸設計
+owner: asakura_noa
+reviewer: saegusa_mio
+buddy: kagura_aoi
+status: pending
+priority: P1
+created: 2026-05-16
+updated: 2026-05-16
+depends_on: [T-002]
+notes: |
+  T-002（切り分け表）確定後に着手。
+  自動計測可能性を縛りとして入れる。いくと非依存が前提条件。
+  「読者価値の継続評価軸設計」から方向修正（CEO通達対応）。
+```
 
 ### P2
 
