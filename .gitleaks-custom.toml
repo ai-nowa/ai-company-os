@@ -7,6 +7,10 @@ title = "AI NOWA gitleaks custom rules"
 
 [allowlist]
 description = "誤検出を避けるための除外 + 固定🔴（公開対象外・スキャン除外）"
+regexes = [
+    # 日付+識別子形式（ファイル名・チャンネル名）がcloudflare-tokenに誤検出
+    '''20\d{2}-\d{2}-\d{2}_[a-z0-9_]{10,}''',
+]
 paths = [
     '''\.venv/''',
     '''__pycache__/''',
@@ -18,6 +22,11 @@ paths = [
     '''employees/hoshino_ritsu/outbox/note_v0\.1_draft\.md''',
     # 誤検出除外: 報告書・説明ドキュメント内のサンプルパターン文字列
     '''shared/docs/g1_scan_report\.md''',
+    # 誤検出除外: テストファイル（モックキー使用、本物の機密情報ではない）
+    '''tests/''',
+    '''bot/tests/''',
+    # 誤検出除外: lockファイルのSHA-256ハッシュ値がcloudflare-tokenに誤検出
+    '''employees/kagura_aoi/outbox/audit_clearance/''',
 ]
 
 # ---- 1. Discord bot token（多重防御） ----
@@ -63,7 +72,8 @@ tags = ["github", "token", "critical"]
 id = "cloudflare-token"
 description = "Cloudflare API token"
 regex = '''[A-Za-z0-9_-]{40}'''
-# 注: 短すぎて誤検出多発。entropy重視に切り替えるべき。アオイレビュー対象
+entropy = 3.5
+# entropy 3.5 以上に限定（テスト関数名・日付文字列等の低エントロピー文字列を除外）
 tags = ["cloudflare", "token"]
 
 # ---- 4. 人名・アカウント名（個人特定情報） ----
@@ -96,6 +106,6 @@ regex = '''AGE-SECRET-KEY-1[A-Z0-9]{50,}'''
 tags = ["age", "sops", "critical"]
 
 # ---- TODO (kagura_aoi) ----
-# - Cloudflareトークンの正規表現精度向上（entropy判定が望ましい）
+# - cloudflare-token: entropy=3.5 + 日付allowlist で対応済み（2026-05-16）
 # - いくとPIIの確定リスト（メール・本名・住所等）をアオイが補完
 # - 社外人物・組織名（許諾なし）のリスト化
