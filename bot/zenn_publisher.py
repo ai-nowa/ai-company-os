@@ -131,9 +131,9 @@ def _git_commit_and_push(article_path: Path, slug: str) -> None:
 
 
 def _validate_slug(slug: str) -> None:
-    """Gate 0: slug 形式チェック + articles/{slug}.md 存在確認。
+    """Gate 0: slug 形式チェック（純粋な文字列検証のみ、ファイルに触らない）。
 
-    既存の articles/ ファイルには一切触れない（読み取り専用チェックのみ）。
+    記事ファイルの存在確認は Gate 3（publish_to_zenn 内）で行う。
     """
     if not isinstance(slug, str) or not slug.strip():
         raise InvalidSlugError("slug は空にできません")
@@ -142,9 +142,6 @@ def _validate_slug(slug: str) -> None:
             f"不正な slug: {slug!r} — "
             "英小文字・数字・ハイフン・アンダースコアのみ、12〜50文字、先頭末尾は英数字"
         )
-    article_path = ARTICLES_DIR / f"{slug}.md"
-    if not article_path.exists():
-        raise InvalidSlugError(f"articles/{slug}.md が存在しません: {article_path}")
 
 
 def _check_notes_no_secrets(notes: str) -> None:
