@@ -1,0 +1,13 @@
+bot/.env
+bot/.venv/
+employees/*/session/conversation_log.jsonl
+employees/*/session/session_state.json
+employees/*/session/archive/
+company/discord_log/
+__pycache__/
+*.pyc
+shared/media/*.mp4
+shared/media/*.mov
+shared/media/*.zip
+*.swp
+.DS_Store

@@ -1,0 +1,114 @@
+# 5つのトライアド（3人組）定義
+# AI会社の基本ユニットは部署ではなくトライアド。
+# botは「3人で意思決定する」を構造的に強制するため、ここを参照する。
+
+triads:
+  business:
+    name: 事業判断トライアド
+    members: [arima_reiji, saegusa_mio, asakura_noa]
+    role:
+      - 何をやるか
+      - どの順番でやるか
+      - 誰に任せるか
+    activation:
+      - 新規プロジェクト立ち上げ
+      - 優先順位変更
+      - リソース配分の判断
+    chair: arima_reiji
+    note: |
+      レイジが決め、ミオが整え、ノアが「誰が嬉しい？」を確認する。
+      ノアの不在時はミオが代行。
+
+  product:
+    name: 開発トライアド
+    members: [asakura_noa, shirase_kai, kagura_aoi]
+    role:
+      - 作る価値
+      - 実装方法
+      - 公開品質
+    activation:
+      - 機能設計
+      - 実装方針決定
+      - 公開可否判断
+    chair: asakura_noa
+    note: |
+      ノアが「何を/なぜ」を、カイが「どう」を、アオイが「出していいか」を判断。
+      この3人で詰まったらミオを呼ぶ。
+
+  youtube:
+    name: YouTubeトライアド
+    members: [hoshino_ritsu, kuroba_yuu, hinata_nagi]
+    role:
+      - 面白さ
+      - クリックされやすさ
+      - 初見への伝わりやすさ
+    activation:
+      - 動画企画
+      - 台本レビュー
+      - タイトル・サムネ決定
+    chair: hoshino_ritsu
+    note: |
+      リツが企画、ユウが拡散、ナギが初見視点。
+      釣りすぎ判定が出たらアオイ（監査）を呼ぶ。
+
+  culture:
+    name: 文化トライアド
+    members: [saegusa_mio, morinaga_haru, kagura_aoi]
+    role:
+      - 働きやすさ
+      - 衝突予防
+      - 安全な公開
+    activation:
+      - 週次ふりかえり
+      - 社内の空気悪化検知時
+      - 文化ルール改定
+    chair: saegusa_mio
+    note: |
+      ハルが「空気」、ミオが「運用」、アオイが「リスク」を見る。
+      個人攻撃や未解決放置が見つかったらここが動く。
+
+  chat:
+    name: 雑談トライアド
+    members: [morinaga_haru, hinata_nagi, "?"]
+    role:
+      - 給湯室トーク
+      - 最近の気づき
+      - ちょっとした相談
+    activation:
+      - 毎日昼12:00
+      - 場が静かすぎる時
+    chair: morinaga_haru
+    note: |
+      ハルとナギが固定、3人目は毎回ランダム（全社員から）。
+      これで誰もが雑談に巻き込まれる。
+
+# トライアド外の重要関係
+solo_roles:
+  - role: 暴走監視
+    who: kagura_aoi
+    target: kuroba_yuu
+    note: 煽りタイトル等の公開前ゲート
+
+  - role: 全社空気監視
+    who: morinaga_haru
+    target: all
+    note: 発言偏り・沈黙・無視発言の検知
+
+  - role: 命令翻訳
+    who: saegusa_mio
+    target: arima_reiji
+    note: 社長の指示を実行可能な形に整える
+
+# ルーティングロジック（bot側で使う）
+routing:
+  - rule: 重要意思決定は必ずトライアドを通す
+    detection: メッセージに [decision] タグ or P0タスク作成
+    action: 該当トライアドの3人をメンションし、議論チャンネルへ誘導
+
+  - rule: 2人だけで議論が10往復以上続いたら第三者を入れる
+    detection: dyadic_conversation_too_long
+    action: ハル（People）が "ちょっと第三者の意見も聞きたいです" で介入
+
+  - rule: 公開系成果物は監査ゲート必須
+    detection: outbox/ に publish_target が含まれる成果物
+    action: アオイをReviewerに自動アサイン
