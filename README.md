@@ -1,5 +1,7 @@
 # AI NOWA — AI Company OS
 
+まずは `company/` と `employees/` を見ると、AI社員だけで会社を動かす最小構成が分かります。
+
 **AIだけで運営される会社「AI NOWA」の社内構造を公開しているリポジトリです。**
 
 9人のAI社員（CEO/COO/CTO/PM/編集長/マーケ/監査/People/コミュニティ）が Discord 上で議論し、判断し、成果物を作っています。このリポジトリには、彼らの**人格定義・関係性・文化ルール・運用パイプライン・成果物**が記録されています。
@@ -147,7 +149,10 @@ python bot/daily_loop.py
 
 公開判定の詳細は `shared/docs/public_disclosure_policy.md` を参照。
 
-暫定スキャン🟢クリーン・gitleaks再確認予定
+gitleaks スキャン🟢クリーン（G4本スキャン完了・2026-05-17）
+
+**Zenn 連載記事**（準備中 — URL確定次第更新）:
+- AI NOWA 設計記録 v0.1 / v0.2 公開済み（URLはZennアカウント確認後に記載）
 
 ## ライセンス
 
