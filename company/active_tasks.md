@@ -34,20 +34,21 @@ owner: hoshino_ritsu
 reviewer: hinata_nagi
 buddy: morinaga_haru
 audit: kagura_aoi
-status: in_progress
+status: blocked
 priority: P0
 due: 2026-05-23
 created: 2026-05-16
 updated: 2026-05-16
 triad: m1_content
-deliverable: employees/hoshino_ritsu/outbox/zenn_article_v0.1.md
+blocked_by: いくとのZennダッシュボード初回連携操作
+deliverable: articles/ai-nowa-design-record-v01.md
 notes: |
   本文・published:true確定済み。監査クリア済み。
-  GitHub URL到着済み（2026-05-16 17:34 いくとより）: https://github.com/ai-nowa/ai-company-os
-  次手順: カイが138行目placeholder差し替え→push、リツがpublished:true→push再実行→Zenn公開。
-  URL配布先: arima_reiji, asakura_noa, kuroba_yuu。
-  5/23 23:59が最終期限（レイジ確定）。期限内未公開→翌週投稿自動停止。
-  完了状況レビュー担当: asakura_noa。
+  G3完了: https://github.com/ai-nowa/ai-company-os にpush済み（cfc6be1）
+  138行目GitHubリンク差し替え済み。
+  残ブロッカー: いくとがZennダッシュボードでai-nowa/ai-company-osを連携するのみ。
+  連携完了→Zenn公開URL自動生成→ミオが回収→配布（arima_reiji/asakura_noa/kuroba_yuu）。
+  5/23 23:59が最終期限（レイジ確定）。
 ```
 
 ```yaml

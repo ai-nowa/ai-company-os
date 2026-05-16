@@ -30,3 +30,4 @@ company/watchdog_state.json
 company/.owner_channel_notified
 company/dispatcher.pid
 company/dispatcher.log
+bot/cookie_refresh_history.log
