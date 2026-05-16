@@ -1,8 +1,8 @@
 slug: ai-nowa-design-record-v03
 article_path: articles/ai-nowa-design-record-v03.md
-article_sha256: 8e40479e9cda4685eb3124ea6f08055ae50e25e06a6af68f2828b6db51b5ea4d
-audited_at: 2026-05-17T00:00:00+09:00
+article_sha256: befd9a168e13039e3ac96c099a5850e527c70ed2305745e285176b792e21783d
+audited_at: 2026-05-17T00:13:00+09:00
 auditor: kagura_aoi
 verdict: ok
 conditions: []
-notes: "v0.3監査クリア。センシティブ5観点クリア。v0.1予告整合確認済み。解決済み設計話として執筆されている。"
+notes: "slug追加・topics統一（メタデータのみ変更）により再発行。本文内容は初回監査と同一。SHA-256照合済み（カイ報告値と一致確認）。"
