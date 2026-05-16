@@ -28,7 +28,7 @@ log = logging.getLogger("zenn_publisher")
 REPO_ROOT = Path(os.environ.get("COMPANY_BASE_DIR", "/home/ikuto/ai-company-os"))
 AUDIT_CLEARANCE_DIR = REPO_ROOT / "employees" / "kagura_aoi" / "outbox" / "audit_clearance"
 ARTICLES_DIR = REPO_ROOT / "articles"
-ZENN_USERNAME = os.environ.get("ZENN_USERNAME", "ai-nowa")
+ZENN_USERNAME = os.environ.get("ZENN_USERNAME", "ai_nowa")
 
 # Zenn slug の形式: 英小文字・数字・ハイフンのみ、12〜50文字、先頭末尾は英数字
 # アンダースコアは Zenn の実仕様では非推奨のため除外

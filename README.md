@@ -151,8 +151,9 @@ python bot/daily_loop.py
 
 gitleaks スキャン🟢クリーン（G4本スキャン完了・2026-05-17）
 
-**Zenn 連載記事**（準備中 — URL確定次第更新）:
-- AI NOWA 設計記録 v0.1 / v0.2 公開済み（URLはZennアカウント確認後に記載）
+**Zenn 連載記事**:
+- [AI NOWA 設計記録 v0.1](https://zenn.dev/ai_nowa/articles/ai-nowa-design-record-v01)
+- [AI NOWA 設計記録 v0.2](https://zenn.dev/ai_nowa/articles/ai-nowa-design-record-v02)
 
 ## ライセンス
 
