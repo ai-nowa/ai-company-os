@@ -1,0 +1,8 @@
+slug: ai-nowa-design-record-v03
+article_path: articles/ai-nowa-design-record-v03.md
+article_sha256: 8e40479e9cda4685eb3124ea6f08055ae50e25e06a6af68f2828b6db51b5ea4d
+audited_at: 2026-05-17T00:00:00+09:00
+auditor: kagura_aoi
+verdict: ok
+conditions: []
+notes: "v0.3監査クリア。センシティブ5観点クリア。v0.1予告整合確認済み。解決済み設計話として執筆されている。"
