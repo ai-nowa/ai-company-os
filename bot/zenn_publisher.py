@@ -30,6 +30,9 @@ AUDIT_CLEARANCE_DIR = REPO_ROOT / "employees" / "kagura_aoi" / "outbox" / "audit
 ARTICLES_DIR = REPO_ROOT / "articles"
 ZENN_USERNAME = os.environ.get("ZENN_USERNAME", "ai-nowa")
 
+# Zenn slug の形式: 英小文字・数字・ハイフン・アンダースコア、12〜50文字、先頭末尾は英数字
+_SLUG_RE = re.compile(r"^[a-z0-9][a-z0-9_-]{10,48}[a-z0-9]$")
+
 
 # ── カスタム例外 ──────────────────────────────────────────────────────────────
 
@@ -46,6 +49,10 @@ class AuditConditionsPendingError(Exception):
 
 
 class PublishError(Exception):
+    pass
+
+
+class InvalidSlugError(Exception):
     pass
 
 
@@ -123,6 +130,23 @@ def _git_commit_and_push(article_path: Path, slug: str) -> None:
     log.info("push complete: %s", slug)
 
 
+def _validate_slug(slug: str) -> None:
+    """Gate 0: slug 形式チェック + articles/{slug}.md 存在確認。
+
+    既存の articles/ ファイルには一切触れない（読み取り専用チェックのみ）。
+    """
+    if not isinstance(slug, str) or not slug.strip():
+        raise InvalidSlugError("slug は空にできません")
+    if not _SLUG_RE.match(slug):
+        raise InvalidSlugError(
+            f"不正な slug: {slug!r} — "
+            "英小文字・数字・ハイフン・アンダースコアのみ、12〜50文字、先頭末尾は英数字"
+        )
+    article_path = ARTICLES_DIR / f"{slug}.md"
+    if not article_path.exists():
+        raise InvalidSlugError(f"articles/{slug}.md が存在しません: {article_path}")
+
+
 def _check_notes_no_secrets(notes: str) -> None:
     """notes フィールドに機密情報が混入していないか簡易チェック。
 
@@ -136,9 +160,8 @@ def _check_notes_no_secrets(notes: str) -> None:
         r"note_session_v5[=:]\s*\S{10,}",         # note session cookie
         r"AGE-SECRET-KEY-1[A-Z0-9]{20,}",         # age secret key
     ]
-    import re as _re
     for pat in danger_patterns:
-        if _re.search(pat, notes or "", flags=_re.IGNORECASE):
+        if re.search(pat, notes or "", flags=re.IGNORECASE):
             raise AuditTamperedError(
                 f"notes フィールドに機密情報パターンが検出されました。lockファイルを確認してください。"
             )
@@ -163,6 +186,9 @@ def publish_to_zenn(slug: str) -> str:
     zenn_url = f"https://zenn.dev/{ZENN_USERNAME}/articles/{slug}"
 
     try:
+        # Gate 0: slug バリデーション（不正 slug を保存前に停止）
+        _validate_slug(slug)
+
         # Gate 1: lockファイル存在確認
         if not lock_path.exists():
             raise AuditNotClearedError(
@@ -218,7 +244,7 @@ def publish_to_zenn(slug: str) -> str:
         _alert_discord(success_msg)
         return zenn_url
 
-    except (AuditNotClearedError, AuditTamperedError, AuditConditionsPendingError, PublishError) as exc:
+    except (InvalidSlugError, AuditNotClearedError, AuditTamperedError, AuditConditionsPendingError, PublishError) as exc:
         error_msg = f"🚫 Zenn公開停止: {slug}\n理由: {exc}"
         log.error(error_msg)
         _alert_discord(error_msg)
