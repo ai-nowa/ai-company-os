@@ -117,6 +117,14 @@ def _git_commit_and_push(article_path: Path, slug: str) -> None:
         check=True,
         capture_output=True,
     )
+    # nothing to commit の場合（published:true が既にpush済み）はスキップ
+    diff = subprocess.run(
+        ["git", "-C", str(REPO_ROOT), "diff", "--cached", "--quiet"],
+        capture_output=True,
+    )
+    if diff.returncode == 0:
+        log.info("nothing to commit, skipping commit+push: %s", slug)
+        return
     subprocess.run(
         ["git", "-C", str(REPO_ROOT), "commit", "-m",
          f"publish: Zenn公開 — {slug} [audit_cleared]"],
