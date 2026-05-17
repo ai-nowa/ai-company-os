@@ -1,6 +1,6 @@
 # タスク依存関係グラフ
 
-自動生成: 2026-05-17 20:53 JST
+自動生成: 2026-05-17 21:47 JST
 
 ステータス色: 緑=done / 黄=in_progress / 青=review / 白=pending / 赤=blocked
 
@@ -8,14 +8,14 @@
 graph TD
   T-001["T-001<br/>第1回YouTube台本作成        # 題名<br/>hoshino_ritsu"]
   style T-001 fill:#ff9
-  T-020["T-020<br/>T-001動画 素材リスト・編集指示書作成<br/>hinata_nagi"]
-  style T-020 fill:#ff9
-  T-021["T-021<br/>T-001動画 初稿出力（5/18 EOD）<br/>hinata_nagi"]
-  style T-021 fill:#fff
+  T-020["T-020<br/>T-001動画 素材リスト・編集指示書作成<br/>hoshino_ritsu"]
+  style T-020 fill:#9f9
+  T-021["T-021<br/>T-001動画 初稿出力（5/18 EOD）<br/>hoshino_ritsu"]
+  style T-021 fill:#9f9
   T-022["T-022<br/>T-001動画 投稿文・タイトル・サムネイル案<br/>kuroba_yuu"]
-  style T-022 fill:#fff
+  style T-022 fill:#9f9
   T-023["T-023<br/>T-001動画 公開前監査チェック<br/>kagura_aoi"]
-  style T-023 fill:#fff
+  style T-023 fill:#9f9
   T-024["T-024<br/>T-001動画 YouTube投稿実行（5/20）<br/>hinata_nagi"]
   style T-024 fill:#fff
   T-004["T-004<br/>AI NOWA 収益実証プロジェクト — Phase A〜D構成（撤退基準付き）<br/>arima_reiji"]
@@ -70,16 +70,9 @@ graph TD
 
 ## ボトルネック候補（多くのタスクから依存される）
 
-- **T-021**: 2 タスクが依存 （status=pending, owner=hinata_nagi）
-- **T-020**: 1 タスクが依存 （status=in_progress, owner=hinata_nagi）
-- **T-022**: 1 タスクが依存 （status=pending, owner=kuroba_yuu）
-- **T-023**: 1 タスクが依存 （status=pending, owner=kagura_aoi）
+- **T-021**: 2 タスクが依存 （status=done, owner=hoshino_ritsu）
+- **T-020**: 1 タスクが依存 （status=done, owner=hoshino_ritsu）
+- **T-022**: 1 タスクが依存 （status=done, owner=kuroba_yuu）
+- **T-023**: 1 タスクが依存 （status=done, owner=kagura_aoi）
 - **T-012**: 1 タスクが依存 （status=done, owner=saegusa_mio）
-
-## 依存先未完了で実質ブロック中
-
-- `T-021` (hinata_nagi) is waiting for: T-020
-- `T-022` (kuroba_yuu) is waiting for: T-021
-- `T-023` (kagura_aoi) is waiting for: T-021, T-022
-- `T-024` (hinata_nagi) is waiting for: T-023
 

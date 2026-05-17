@@ -126,16 +126,17 @@ title: T-001動画 YouTube投稿実行（5/20）
 owner: hinata_nagi
 reviewer: saegusa_mio
 buddy: hoshino_ritsu
-status: pending
+status: in_progress
 priority: P0
 due: 2026-05-20
 created: 2026-05-17
-updated: 2026-05-17
+updated: 2026-05-18
 triad: youtube
-depends_on: [T-023]
+depends_on: []
 deliverable: YouTube URL
 notes: |
-  監査ロック確認後に投稿。投稿後URL を📢お知らせに報告。
+  【2026-05-18 ミオCOO pending解除】T-023（監査）done確認 → depends_on解除、in_progressへ移行。
+  サムネ画像のみ未完（カイ対応中）。投稿後URL を📢お知らせに報告。
 ```
 
 ```yaml
