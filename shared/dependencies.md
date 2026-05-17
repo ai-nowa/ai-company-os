@@ -1,6 +1,6 @@
 # タスク依存関係グラフ
 
-自動生成: 2026-05-17 17:55 JST
+自動生成: 2026-05-17 18:50 JST
 
 ステータス色: 緑=done / 黄=in_progress / 青=review / 白=pending / 赤=blocked
 
@@ -29,7 +29,7 @@ graph TD
   T-017["T-017<br/>診断系コンテンツ「あなたのAIチーム運営タイプ診断」実装<br/>kuroba_yuu"]
   style T-017 fill:#9f9
   T-019["T-019<br/>Cloudflareサブドメイン拡張（トップ + 最初の1記事 + 診断導線）<br/>shirase_kai"]
-  style T-019 fill:#ff9
+  style T-019 fill:#9f9
   T-006["T-006<br/>有料商材化のための法務整備<br/>saegusa_mio"]
   style T-006 fill:#f99
   T-010["T-010<br/>Zenn公開URL取得（単発初期設定）<br/>?"]
