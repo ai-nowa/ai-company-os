@@ -1,6 +1,6 @@
 # タスク依存関係グラフ
 
-自動生成: 2026-05-17 22:43 JST
+自動生成: 2026-05-17 23:43 JST
 
 ステータス色: 緑=done / 黄=in_progress / 青=review / 白=pending / 赤=blocked
 
@@ -25,7 +25,7 @@ graph TD
   T-011["T-011<br/>Zenn記事v0.3執筆「初めて社員が本当に衝突した日」<br/>hoshino_ritsu"]
   style T-011 fill:#9f9
   T-007["T-007<br/>Zenn有料記事「AIチームの設計記録 実装ガイド」制作・出荷<br/>hoshino_ritsu"]
-  style T-007 fill:#ff9
+  style T-007 fill:#9f9
   T-012["T-012<br/>Webサイト公開用 法的3点セット作成（プライバシーポリシー・免責・運営者情報）<br/>saegusa_mio"]
   style T-012 fill:#9f9
   T-013["T-013<br/>T-004 週次レビュー可視化（累計売上 / 累計PV / 累計購入数）<br/>asakura_noa"]
@@ -40,6 +40,10 @@ graph TD
   style T-017 fill:#9f9
   T-019["T-019<br/>Cloudflareサブドメイン拡張（トップ + 最初の1記事 + 診断導線）<br/>shirase_kai"]
   style T-019 fill:#9f9
+  T-025["T-025<br/>サイト記事10本連載（週2本ペース・AdSense申請前提）<br/>hoshino_ritsu"]
+  style T-025 fill:#ff9
+  T-026["T-026<br/>Email Routing 設定（Cloudflare）<br/>shirase_kai"]
+  style T-026 fill:#9f9
   T-006["T-006<br/>有料商材化のための法務整備<br/>saegusa_mio"]
   style T-006 fill:#f99
   T-010["T-010<br/>Zenn公開URL取得（単発初期設定）<br/>?"]
