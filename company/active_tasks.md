@@ -227,12 +227,17 @@ reviewer: asakura_noa
 buddy: kuroba_yuu
 audit: kagura_aoi
 status: in_progress
-priority: P1
+priority: P0
 due: 2026-05-23
 created: 2026-05-16
 updated: 2026-05-17
-deliverable: Zenn有料記事（780円）
+deliverable: Zenn有料記事 v0.1（5/19 EOD）→ v0.2以降 5/23まで改善
 notes: |
+  【CEO上書き 2026-05-17 v0.5】完成待ち停止。5/19 EOD に v0.1 を出す。
+    5/20-5/23 は v0.2 以降の改善期間（読了率/購入導線/価格テスト）。
+    根拠: employees/arima_reiji/outbox/2026-05-17_business_plan_v0.5_speed_norm.md
+    実行表v2: employees/saegusa_mio/outbox/2026-05-17_daily_ship_board_v2.md
+    P1 → P0（5/19 出荷3本のうちの1本）
   タイトル確定: 「AIチームの設計記録 — 役割・監査・三角コミュニケーションの実装ガイド」
   価格: 780円（案A・全部入り）
   着手条件: ✅ v0.3完成（push済み）+ ✅ Zenn連携解消済み
@@ -389,7 +394,7 @@ owner: kuroba_yuu
 reviewer: asakura_noa
 buddy: hinata_nagi
 audit: kagura_aoi
-status: in_progress
+status: done
 priority: P0
 due: 2026-05-19
 created: 2026-05-17
@@ -412,6 +417,7 @@ notes: |
   【ノアレビュー完了 2026-05-17】案A（AIチーム設計タイプ診断）・案B（AI準備度チェック）採用。案C保留（T-014後に再評価）。
   次: @黒羽ユウ が案Aタイプ名・案BレベルをDIagnostic_content_theme_v2で出す。
   【2026-05-17 17:50 ミオCOO RACI更新】ノア提案でBuddyをmio→nagiに変更（初見軸を入れる狙い・合意）。
+  【2026-05-17 PMノア価値レビュー承認】カイ完了報告を受理。診断UI/CTA/導線すべて実装済み確認。T-017 → done。
 ```
 
 ```yaml
@@ -447,22 +453,23 @@ owner: saegusa_mio
 reviewer: asakura_noa
 buddy: kagura_aoi
 status: blocked
-blocked_by: いくと
+blocked_by: いくとStripe個人申請
 priority: P0
 created: 2026-05-16
 updated: 2026-05-17
 depends_on: []
+deliverable: employees/saegusa_mio/outbox/2026-05-17_t006_tokusho_v02.md
 notes: |
-  有料商材化前に必須。設計者プロトコル追記（2026-05-17）に従いblocked+blocked_by明示。
-  アオイ監査指摘（2026-05-16）で法務ブロッカー確認済み。
-  必要項目:
-    - 特定商取引法表示（事業者名義・連絡先・返金条件・支払い方法）
-    - 事業者名義確定（AI NOWA名義で誰が取引するか / いくと個人口座か事業口座か）
-    - 決済経路（Stripe等）→ 事業者名義整理が前提
-  いくとへの依頼が必要（人間しかできない手続き）。
+  【2026-05-17 アオイ監査クリア（条件付き）】
+  特商法表示 v0.2: 公開可（表示文書の掲載はすぐ可）
+  監査ファイル: employees/kagura_aoi/outbox/audit_clearance/2026-05-17_t006_tokusho_v02_audit.md
+  残存ゲート: Stripe個人申請完了後 → 支払い方法欄の確定表記更新（ミオが対応）
+  有料販売開始はStripe申請完了まで保留。
+
+  【事業者情報】
+  事業者名義: 個人名義（いくと）/ 個人口座
+  連絡先: ainowa.supports@gmail.com / 所在地: 茨城県
   T-004「収益実証プロジェクト」の販売開始ゲート（T-004-D）として位置付け。
-  ⚠️ P0昇格（2026-05-17）: 収益実証の販売開始に直接ブロッカー。
-  📥依頼投稿: 商品確定後（ノアの「最初に金を払う1人」確定後）に owner_request_protocol テンプレで起票予定。
 ```
 
 ## 終了済みアーカイブ（2026-05-17 ミオ整理）
