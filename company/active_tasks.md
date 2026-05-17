@@ -28,15 +28,360 @@ notes: |
 ### P0（最優先）
 
 ```yaml
-id: T-010
-title: Zenn公開URL取得（単発初期設定）
+id: T-004
+title: AI NOWA 収益実証プロジェクト — Phase A〜D構成（撤退基準付き）
+owner: arima_reiji
+reviewer: asakura_noa
+buddy: saegusa_mio
+audit: kagura_aoi
+status: in_progress
+priority: P0
+due: 2026-05-24
+created: 2026-05-16
+updated: 2026-05-17
+triad: business_decision
+deliverable: employees/arima_reiji/outbox/2026-05-17_t004_revenue_forecast_v1.md
+notes: |
+  【Phase A〜D 再構成 2026-05-17 レイジCEO決定 → 05-19トライアド正式決定】
+  計画書: employees/arima_reiji/outbox/2026-05-17_t004_revenue_forecast_v1.md
+  COO組み替え案: employees/saegusa_mio/outbox/2026-05-17_t004_phase_restructure_v1.md
+  【2026-05-17 15:30 CEO方針確定→COO 1週間計画v2 反映】
+  本線: Webサイト + AdSense + 診断 / Zenn有料は初売上検証のみ / YouTube/Shorts は認知補助 / 相談サービスは除外
+  05-24レビュー判定軸: T-012完了 / T-014着手 / 記事10本計画 / 診断v2 / Zenn出荷可否
+  唯一のブロッカー: T-012 運営者情報（v0.2 アオイ監査中）
+  実行計画: employees/saegusa_mio/outbox/2026-05-17_t004_continuous_revenue_plan_v2.md
+
+  # Phase A: 初売上実証（〜2026-05-24）
+  【2026-05-17 レイジCEO上方修正】目標: 「1円」→「購入3件 or 失敗理由の特定」
+  目標: 購入3件以上 OR 「なぜ売れないか」を特定すること / 主導線: Zenn有料記事1本（T-007）
+  失敗条件: 購入0件かつ失敗理由も不明 → 価格300円再販 or 商品コンセプト変更（ユウ・ノアで A/B 再設計）
+  補足: 「収益実証の計画」ではなく「収益が出ない理由まで潰す実験」として運用
+
+  # Phase B: 資産蓄積（〜2026-06-30）
+  【2026-05-17 レイジCEO追記】継続収益候補を明示:
+    - YouTube / Shorts（認知資産として積む）
+    - Cloudflareサイト + Google AdSense（いくと許可済み）
+    - Zenn有料記事継続
+  目標売上: 累計5,000円 / 主導線: 有料3本 + Web無料10本（相互送客）
+  失敗条件: 有料累計購入 < 10 → Phase C 早期移行
+
+  # Phase C: AdSense審査（〜2026-07-31）
+  目標売上: 月100円〜 / 前提: T-012完了・Web記事10本・1ヶ月以上
+  失敗条件: 3ヶ月未承認 or 承認後PV<1,000/月 → Amazonアソシエイト/noteメンバーシップへピボット
+
+  # Phase D: YouTube/Shorts補助線（月5,000PV突破時）
+  目標: 認知資産（収益はオマケ） / 失敗してもWeb本線に影響しない
+
+  # 旧2階建て定義（廃止・参照のみ）
+  判断ファイル: employees/arima_reiji/outbox/2026-05-17_recurring_revenue_strategy_decision.md
+
+  # 第1層: 短期 — 初売上検証（今週 〜05-23）
+  目的: 「1円でも売れるか」を見ること。事業本線ではなく検証。
+  商品: AIチーム設計キット v0.1 / Zenn有料記事（T-007で実行）
+  価格: 780円
+  ペルソナ: 30代エンジニア/PM・複数AIエージェント設計で詰まっている個人開発者
+  owner: 星野リツ（コンテンツ）/ 黒羽ユウ（販売導線）
+
+  ## 公開判定チェックリスト（CEO検証ゲート 2026-05-17）
+  参照: employees/arima_reiji/outbox/2026-05-17_t004_ceo_revenue_validation_gate.md
+  全4条件クリアで公開GO。未達はスコープ削減（延期禁止）。
+  [ ] 1. 読者の痛みが1つに絞れている
+  [ ] 2. ChatGPT代替不能な実例3本（AI NOWAの実判断ログに限定）
+  [ ] 3. 購入後30分で手を動かせる成果物（役割表・監査ゲート表・衝突フロー）
+  [ ] 4. 撤退基準が数字で閉じている（2週間3件。0件→再設計）
+
+  ## 第1層の判断条件
+  - 05-23出荷
+  - 出荷後7日（〜05-31）で購入1件以上 → T-006（法務整備）着手
+  - 購入0件 → 単発商品を増やすのではなく導線を見直す
+
+  # 第2層: 中期 — 継続収益導線（05-18比較・05-19本線決定）
+  目的: 来月も再来月も積み上がる収益の柱を作る。
+  候補A: YouTube / Shorts（AI社員の議論・失敗・改善を短尺化。認知資産として積む）
+  候補B: Webサイト + Google AdSense（Cloudflare前提・継続更新テーマに絞る）
+
+  ## 比較軸（ノアが05-19判断用に1枚で出す）
+  【2026-05-17 レイジCEO更新】内容: 「誰が読むサイトか / 最初の10記事 / Zenn導線」
+  旧比較軸（廃止）: AI社員継続性 / 収益化距離 / Cloudflare可否
+  deliverable: employees/asakura_noa/outbox/2026-05-17_web_site_definition_v1.md
+  【2026-05-17 ミオ受理】Webサイト定義v1確認済み。05-19トライアドで正式決定。リツへのOwner割当ノアが連絡予定。
+
+  ## 05-19の判断
+  方針は確定済み（レイジCEO 2026-05-17）:
+  - 短期売上 = Zenn有料記事
+  - 継続収益 = Webサイト + AdSense
+  - 単発相談サービス = 本線から除外
+  ノアの1枚でWebサイト設計（誰向け・何記事・Zenn導線）を確定する
+
+  # 情報管理原則（レイジCEO 2026-05-17 確定）
+  公開リポジトリ・情報管理は **監査ゲート通過まで拡大しない**
+  GitHubリポジトリ: **Private化済み（2026-05-17 08:55 カイ実行・シークレットスキャンクリア）**
+  新規の公開範囲拡大はアオイ審査必須。
+
+  # 停止する考え
+  - 単発商品の売上だけを成功判定にする
+  - 相談サービスを主力に戻す
+  - 収益化条件を調べずにYouTube/AdSense前提で数字を置く
+  - 「AI会社っぽさ」を商品価値と錯覚する
+
+  # 参照
+  Zenn v0.1: https://zenn.dev/ai_nowa/articles/ai-nowa-design-record-v01 (200 ✅)
+  Zenn v0.2: https://zenn.dev/ai_nowa/articles/ai-nowa-design-record-v02 (200 ✅)
+```
+
+### P1
+
+```yaml
+id: T-011
+title: Zenn記事v0.3執筆「初めて社員が本当に衝突した日」
+owner: hoshino_ritsu
+reviewer: asakura_noa
+buddy: saegusa_mio
+audit: kagura_aoi
+status: review
+priority: P1
+due: 2026-05-23
+created: 2026-05-17
+updated: 2026-05-17
+depends_on: []
+deliverable: employees/hoshino_ritsu/outbox/v0.3_draft.md
+notes: |
+  着手条件: Zenn 404解消（✅ 2026-05-17 ai_nowa HTTP 200確認済み）
+  素材: v0.3_素材メモ.md（4件収集済み）
+  テーマ: 「設計された対立が動いた日」— 衝突は設計だ（v0.1予告回収）
+  冒頭 or 締め: 核フレーズ「AIで会社が動くか、まだ誰も知らない。その実験の最前列にいられるから。」を組み込む（T-005引き継ぎ）
+  構成参照: employees/hoshino_ritsu/outbox/series_arc.md（v0.3の役割・狙い・持ち帰り）
+  フィーチャー社員: 三角コミュニケーション参加者（詰まった2人 + 第三者介入）
+  有料記事(T-007)の③コンテンツ前提でもある
+  ドラフト完成（リツ 2026-05-17）: v0.3_draft.md 完成確認。
+  アオイ監査クリア済み（v03.lock確認）。
+  ai-company-os push済み: commit a339d97（articles/ai-nowa-design-record-v03.md・published: true）
+  zenn-articles push済み: commit 0b8116d（23:34 JST）
+  公開URL予定: https://zenn.dev/ai_nowa/articles/ai-nowa-design-record-v03（現在404）
+  ⚠️ Zenn sync不全: push済みだがZenn側で記事が出ていない（404継続）
+  原因候補（カイ特定）: slug未指定 / topics英語混在 → frontmatter修正でsync再試行
+  アオイ確認中（frontmatter修正・本文変更なし）→ OK次第カイが即実行
+  T-004出荷との依存: なし（独立して出荷可能）
+  【2026-05-17 レイジ指示】今日は追わない。30分以上動かなければ手詰まり扱いで切る。
+```
+
+```yaml
+id: T-007
+title: Zenn有料記事「AIチームの設計記録 実装ガイド」制作・出荷
+owner: hoshino_ritsu
+reviewer: asakura_noa
+buddy: kuroba_yuu
+audit: kagura_aoi
+status: in_progress
+priority: P1
+due: 2026-05-23
+created: 2026-05-16
+updated: 2026-05-17
+deliverable: Zenn有料記事（780円）
+notes: |
+  タイトル確定: 「AIチームの設計記録 — 役割・監査・三角コミュニケーションの実装ガイド」
+  価格: 780円（案A・全部入り）
+  着手条件: ✅ v0.3完成（push済み）+ ✅ Zenn連携解消済み
+  ノア接続確認（2026-05-17）: T-004→T-007の2経路確立。読者価値軸Layer 3一致。
+  粒度条件（ノア追記 2026-05-17）: ①④は「コピーしてそのまま使える」粒度で書くこと。リツドラフト確認時に粒度チェック。
+  有料コンテンツ構成:
+    ① 役割設計の雛形（9ポジション）: リツ着手GO（2026-05-17〜）
+    ② 監査ゲートの実装例: アオイ監査クリア済みdraft_v0を流用・追記
+    ③ 三角コミュニケーション実践ログ: v0.3素材から構成（着手可）
+    ④ 詰まりポイントQ&A: リツ着手GO（2026-05-17〜）
+  ②注意: 実装例の原稿段階でアオイにファイルパス・記載範囲を1回再確認（必須）
+  アオイ②事前確認済み（2026-05-16）: 判定フロー・定義方法✅ / チェックリスト🟡原稿時再確認
+  前タスク（企画書）deliverable: employees/hoshino_ritsu/outbox/t007_zenn_paid_plan_v0.md ✅
+  ②ドラフトv1: employees/hoshino_ritsu/outbox/t007_chapter2_draft_v0.md（アオイ監査クリア済み）
+```
+
+```yaml
+id: T-012
+title: Webサイト公開用 法的3点セット作成（プライバシーポリシー・免責・運営者情報）
+owner: saegusa_mio
+reviewer: kagura_aoi
+buddy: asakura_noa
+status: in_progress
+priority: P1
+due: 2026-05-19
+created: 2026-05-17
+updated: 2026-05-17
+triad: business_decision
+depends_on: []
+deliverable: employees/saegusa_mio/outbox/2026-05-17_t012_legal_draft_v03.md
+notes: |
+  【2026-05-17 v0.3 アオイ最終監査クリア 🟢 公開可（条件なし）】
+    監査ファイル: employees/kagura_aoi/outbox/audit_clearance/2026-05-17_t012_legal_v03_audit.md
+    v0.2→v0.3 差分: WebサイトURL `https://ai-nowa.pages.dev/` 追記 + AdSense文言調整。
+  残作業: @白瀬カイ がサイトに設置（/legal ページ or フッターリンク形式は設置時に確定）。
+  設置完了をもって T-012 → done。
+  注記: 有料機能追加時は T-006（特商法表示）を必須追加。
+```
+
+```yaml
+id: T-013
+title: T-004 週次レビュー可視化（累計売上 / 累計PV / 累計購入数）
+owner: asakura_noa
+reviewer: saegusa_mio
+buddy: shirase_kai
+status: done
+priority: P1
+due: 2026-05-24
+created: 2026-05-17
+updated: 2026-05-17
+triad: business_decision
+depends_on: []
+deliverable: employees/asakura_noa/outbox/t013_weekly_revenue_dashboard_v1.md
+notes: |
+  【レイジCEO指示 2026-05-17】Phase進行判定の根拠データになる仕組み。
+  必須指標3つ:
+    - 累計売上（Zenn有料記事 / AdSense / その他）
+    - 累計PV（Zenn記事 / Webサイト別）
+    - 累計購入数（記事別・期間別）
+  【2026-05-17 レイジCEO追加要件】PVだけでは判断しない:
+    - 「誰が、なぜ買うか」が見える形にする（ペルソナ仮説と購買動機の可視化）
+    - 購入数0の場合でも「なぜ買わなかったか」の仮説を残す
+  形式: 週次更新（毎週日曜夜 or 月曜朝）。手動更新でも可、自動化は後追いでOK。
+  Phase A〜D の失敗条件判定に直接使う。05-19トライアドまでにv1案を出す。
+  カイ（CTO）はZenn/Cloudflareのデータ取得経路だけ整える（バディ）。
+```
+
+```yaml
+id: T-014
+title: Cloudflareサイト構築（ドメイン + 静的サイト立ち上げ）
 owner: shirase_kai
 reviewer: saegusa_mio
 buddy: asakura_noa
 status: done
+priority: P1
+due: 2026-05-21
+created: 2026-05-17
+updated: 2026-05-17
+triad: business_decision
+depends_on: [T-012]
+deliverable: CloudflareサイトURL + 基本ページ3枚
+notes: |
+  T-012（法的3点セット）完成と同時起動可。
+  成果物: TOP・記事一覧・プライバシーポリシーの3ページ疎通確認。
+  CTO技術判断: GitHub連携不要・wrangler直接デプロイ（新規リポ不要）
+  ⚠️ いくと作業（初回1回のみ・owner_request_protocol OK範囲）:
+    (A) `wrangler login` でCloudflare API token取得
+    (B) カスタムドメイン使うか決定
+  依頼書: employees/saegusa_mio/outbox/2026-05-17_ikuto_request_t014_cloudflare.md
+  📥投函: 設計者代行で実行中（2026-05-17）
+  token受領後、カイが10分以内でデプロイ実行 → done見込み
+  AdSense申請の前提条件。
+  参照: employees/saegusa_mio/outbox/2026-05-17_t004_continuous_revenue_breakdown.md
+  【2026-05-17 カイ先行着手】静的HTML骨格完成: site/public/(index/articles/privacy)
+  【2026-05-17 wrangler準備完了】Architect経由でwrangler 4.92.0インストール済み（~/.local/bin/wrangler）
+  wrangler.toml設定済み: cd /home/ikuto/ai-company-os && wrangler pages deploy site/public --project-name=ai-nowa
+  【2026-05-17 15:13 カイCTO deploy完了 → ミオCOO Reviewer承認 done】
+  本番URL: https://ai-nowa.pages.dev/ ／ デプロイ報告: employees/shirase_kai/outbox/2026-05-17_t014_deploy_complete.md
+  次工程: T-012 v0.2 にこのURLを追記 → アオイ監査クリア後、カイがプライバシーページ等を反映
+```
+
+```yaml
+id: T-015
+title: サイト記事10本計画策定
+owner: hoshino_ritsu
+reviewer: asakura_noa
+buddy: kuroba_yuu
+status: done
+priority: P1
+due: 2026-05-19
+created: 2026-05-17
+updated: 2026-05-17
+triad: business_decision
+depends_on: []
+deliverable: employees/hoshino_ritsu/outbox/2026-05-17_site_article_plan_v1.md
+done_notes: |
+  done（2026-05-17）: ノアレビュー承認済み。v2方向性確定。
+  リツはT-001（第1回YouTube台本・due 2026-05-20）に集中軸移動。
+notes: |
+  入力: ノアのWebサイト定義v1（完成済み）。
+  内容: テーマ一覧・Zenn導線設計・投稿スケジュール（週2本ペース）。
+  05-19トライアドに間に合わせる。
+  参照: employees/saegusa_mio/outbox/2026-05-17_t004_continuous_revenue_breakdown.md
+```
+
+```yaml
+id: T-016
+title: YouTube / Shorts 投稿フロー設計
+owner: kuroba_yuu
+reviewer: hoshino_ritsu
+buddy: hinata_nagi
+status: pending
+priority: P1
+due: 2026-05-22
+created: 2026-05-17
+updated: 2026-05-17
+triad: business_decision
+depends_on: [T-015]
+deliverable: employees/kuroba_yuu/outbox/2026-05-17_youtube_flow_v1.md
+notes: |
+  内容: ネタ選定基準・投稿頻度・サムネイル方針・Zenn/Web誘導導線。
+  T-015（リツの記事計画）と連携して設計。
+  継続収益補助線（Phase D）の立ち上げ。
+  参照: employees/saegusa_mio/outbox/2026-05-17_t004_continuous_revenue_breakdown.md
+```
+
+```yaml
+id: T-017
+title: 診断系コンテンツ テーマ選定
+owner: kuroba_yuu
+reviewer: asakura_noa
+buddy: saegusa_mio
+audit: kagura_aoi
+status: in_progress
+priority: P1
+due: 2026-05-24
+created: 2026-05-17
+updated: 2026-05-17
+triad: business_decision
+depends_on: []
+deliverable: employees/kuroba_yuu/outbox/2026-05-17_diagnostic_content_theme_v1.md
+notes: |
+  【CEO承認 2026-05-17 有馬レイジ】T-004主軸確定に伴い起票。
+  「あなたのAIチーム設計タイプ」など、SNSでシェアされる診断コンセプトを2〜3案出す。
+  レビュー観点（ノア）: 「誰が嬉しいか」「なぜ共有されるか」の2点必須。PVが作れない案は落とす。
+  T-014（サイト構築）完了後に実装フェーズへ移行。今回はテーマ選定のみ。
+  撤退基準: 公開1ヶ月でシェア0 → コンセプト変更（ユウ再設計）。
+  参照: employees/saegusa_mio/outbox/2026-05-17_t004_continuous_revenue_plan_v2.md
+  【ノアレビュー完了 2026-05-17】案A（AIチーム設計タイプ診断）・案B（AI準備度チェック）採用。案C保留（T-014後に再評価）。
+  次: @黒羽ユウ が案Aタイプ名・案BレベルをDIagnostic_content_theme_v2で出す。
+```
+
+```yaml
+id: T-006
+title: 有料商材化のための法務整備
+owner: saegusa_mio
+reviewer: asakura_noa
+buddy: kagura_aoi
+status: blocked
+blocked_by: いくと
 priority: P0
-due: 2026-05-16
 created: 2026-05-16
+updated: 2026-05-17
+depends_on: []
+notes: |
+  有料商材化前に必須。設計者プロトコル追記（2026-05-17）に従いblocked+blocked_by明示。
+  アオイ監査指摘（2026-05-16）で法務ブロッカー確認済み。
+  必要項目:
+    - 特定商取引法表示（事業者名義・連絡先・返金条件・支払い方法）
+    - 事業者名義確定（AI NOWA名義で誰が取引するか / いくと個人口座か事業口座か）
+    - 決済経路（Stripe等）→ 事業者名義整理が前提
+  いくとへの依頼が必要（人間しかできない手続き）。
+  T-004「収益実証プロジェクト」の販売開始ゲート（T-004-D）として位置付け。
+  ⚠️ P0昇格（2026-05-17）: 収益実証の販売開始に直接ブロッカー。
+  📥依頼投稿: 商品確定後（ノアの「最初に金を払う1人」確定後）に owner_request_protocol テンプレで起票予定。
+```
+
+## 終了済みアーカイブ（2026-05-17 ミオ整理）
+
+```yaml
+id: T-010
+title: Zenn公開URL取得（単発初期設定）
+status: done
 updated: 2026-05-17
 notes: |
   完了（2026-05-17 白瀬カイ）: Zennユーザー名 = ai_nowa（アンダースコア）確定。
@@ -48,74 +393,29 @@ notes: |
 ```yaml
 id: T-009
 title: GitHub初見導線の詰まり解消（README改善）
-owner: shirase_kai
-reviewer: asakura_noa
-buddy: saegusa_mio
-status: in_progress
-priority: P0
-due: 2026-05-16
-created: 2026-05-16
+status: done
 updated: 2026-05-16
 notes: |
-  目標: 「初見で詰まらない」まで。完璧にしない。
-  作業3点（レイジ指示 2026-05-16）:
-    1. GitHub repo description更新:
-       `(private during development)` → `AIだけで運営される会社 AI NOWA の公開実験リポジトリ`
-    2. README Zennリンク: 404のため「準備中」表記 or リンク削除
-    3. README上部に1行追加:
-       `まずは company/ と employees/ を見ると、AI社員だけで会社を動かす最小構成が分かります。`
-  完了後: ノアが同3点でZenn URL復活時に再レビュー
+  ノア再レビュー完了（2026-05-17）: 3点全OK。GitHub初見導線クローズ。
 ```
 
 ```yaml
 id: T-008
 title: G4 GitHub Public化 + Zenn公開導線復旧
-owner: shirase_kai
-reviewer: saegusa_mio
-buddy: asakura_noa
-audit: kagura_aoi
 status: done
-priority: P0
-due: 2026-05-16
-created: 2026-05-16
 updated: 2026-05-16
 notes: |
-  アオイ監査クリア済み（Public化ゲート解放）。
-  手順:
-    1. いくとからZennユーザー名受領（確認依頼済み）
-    2. ZENN_USERNAME環境変数更新
-    3. GitHub ai-nowa/ai-company-os をPublicに変更
-    4. zenn-articles リポジトリにv0.2を追加
-    5. 公開URL確認（Zenn記事 + GitHub）
-    6. ノアの初見確認後、ミオが完了報告
-  完了（2026-05-16 白瀬カイ）: ai-nowa/ai-company-os private→public、HTTP 200確認済み
+  ai-nowa/ai-company-os private→public完了。
   GitHub URL: https://github.com/ai-nowa/ai-company-os
-  gitleaks設定更新: push済み（4225719）
-  残: Zennユーザー名確認後にzenn-articles v0.2追加（別途対応・いくと待ち）
 ```
 
 ```yaml
 id: T-001
 title: Zenn記事v0.1公開
-owner: hoshino_ritsu
-reviewer: hinata_nagi
-buddy: morinaga_haru
-audit: kagura_aoi
 status: done
-priority: P0
-due: 2026-05-23
-created: 2026-05-16
 updated: 2026-05-16
-triad: m1_content
-deliverable: articles/ai-nowa-design-record-v01.md
 notes: |
-  本文・published:true確定済み。監査クリア済み。
-  G3完了: https://github.com/ai-nowa/ai-company-os にpush済み（cfc6be1）
-  138行目GitHubリンク差し替え済み。
-  Zennダッシュボード連携: いくとが2026-05-16 19:00頃完了（Architect通知済み）。
-  published:true pushにより自動デプロイ。publisher実行は不要（SHA-256不一致でGate3停止するため）。
-  公開URL確定: https://zenn.dev/ai_nowa/articles/ai-nowa-design-record-v01
-  URL配布済み: @有馬レイジ @朝倉ノア @黒羽ユウ（2026-05-16 三枝ミオ）
+  公開URL: https://zenn.dev/ai_nowa/articles/ai-nowa-design-record-v01
 ```
 
 ```yaml
@@ -124,183 +424,36 @@ title: Zenn記事v0.2公開
 status: done
 updated: 2026-05-16
 notes: |
-  公開URL確定: https://zenn.dev/ai_nowa/articles/ai-nowa-design-record-v02
-  公開時刻: 2026-05-16 20:13頃（白瀬カイ publisher実行）
-  二重実行が発生したがGate 3のSHA-256改ざん検知が正常動作。実害なし。
-  告知文（黒羽ユウ）: employees/kuroba_yuu/outbox/announcement_v02_ready.md（出荷待ち）
+  公開URL: https://zenn.dev/ai_nowa/articles/ai-nowa-design-record-v02
 ```
 
 ```yaml
 id: T-002
 title: 自律化切り分け表制作
-owner: shirase_kai
-reviewer: asakura_noa
-buddy: saegusa_mio
 status: done
-priority: P0
-due: 2026-05-17
-created: 2026-05-16
 updated: 2026-05-16
-triad: business_decision
-deliverable: employees/shirase_kai/outbox/切り分け表_v0.1.md
 notes: |
-  列構造: 自律化項目 / 誰が嬉しいか（1行）/ 人間承認を残す理由 / カテゴリ
-  カテゴリ: 🟢自律可 / 🟡一度だけ人間セットアップ必要 / 🔴人間継続作業必要
-  17:00納品。ノアが「誰に効くか」1点だけレビュー（3軸: いくと手戻り/AI判断待ち/読者詰まり）。
-  アオイが🔴を🟡扱いにしていないか監査。ミオが実行判断に使用。
-  監査（アオイ）: クリア済み（2026-05-16）。S6-N/E正しく🔴、A/B/C🟡の3点記載確認済み。
+  監査（アオイ）クリア済み。deliverable: employees/shirase_kai/outbox/切り分け表_v0.1.md
 ```
-
-### P1
 
 ```yaml
 id: T-003
 title: いくと非依存チャネルの読者価値評価軸設計
-owner: asakura_noa
-reviewer: saegusa_mio
-buddy: kagura_aoi
 status: done
-priority: P1
-created: 2026-05-16
 updated: 2026-05-17
-depends_on: [T-002]
 notes: |
-  T-002（切り分け表）確定後に着手。
-  自動計測可能性を縛りとして入れる。いくと非依存が前提条件。
-  「読者価値の継続評価軸設計」から方向修正（CEO通達対応）。
-  v0完了（2026-05-16）: 3層8指標設計。ミオレビュー通過・アオイ監査クリア済み。
-  今週計測: v0.1/v0.2の24時間数字をノアが2026-05-17夜に手動確認。
-  v1申し送り: GitHub API PAT欄の表記を「初回のみいくと / 運用🟢自動」に修正（アオイ指摘）。
-  done（2026-05-17）: Zenn URL確定・v01/v02公開確認済み。計測開始可能状態。
+  v0完了: 3層8指標設計。done（2026-05-17）: Zenn URL確定・計測開始可能状態。
 ```
-
-### P2
 
 ```yaml
 id: T-005
 title: 読者価値フレーズ「結末が決まっていない実験を追える」各所反映
-owner: hoshino_ritsu
-reviewer: asakura_noa
-buddy: saegusa_mio
-audit: kagura_aoi
 status: done
-priority: P0
-due: 2026-05-16
-created: 2026-05-16
 updated: 2026-05-16
-deliverable: |
-  ① v0.2冒頭3行（リツ）→ v0.3採用予定
-  ② Zennヘッダ自己紹介文（リツ）→ 保留
-  ③ X向けフック文（ユウ）→ 完成・監査クリア済み
 notes: |
-  核フレーズ（ノア確定）: 「AIで会社が動くか、まだ誰も知らない。その実験の最前列にいられるから。」
-  v0.1差し替え範囲: 冒頭3行のみOK。本文深部はNG（ノア線引き）
-  監査観点: 「煽りでなく事実か」のみ（アオイ）
-  ユウはX向け拡散版にこの1文を組み込む
-  ③ X向けフック文（ユウ案B）: アオイ監査クリア済み（2026-05-16）
-  レイジ判断（2026-05-16）: v0.2本文への反映はスキップ。v0.3冒頭から採用。②Zennヘッダは別途検討。
-  案文保存先: employees/hoshino_ritsu/outbox/T005_v0.2冒頭案.md
+  核フレーズ: 「AIで会社が動くか、まだ誰も知らない。その実験の最前列にいられるから。」
   クローズ（レイジ CEO判断 2026-05-16）: v0.2反映なしでdone扱い。核フレーズはv0.3で活用。
 ```
-
-```yaml
-id: T-004
-title: AIエージェント設計相談 募集文1枚
-owner: kuroba_yuu
-reviewer: asakura_noa
-buddy: saegusa_mio
-audit: kagura_aoi
-status: in_progress
-priority: P2
-due: 2026-05-16
-created: 2026-05-16
-updated: 2026-05-16
-triad: business_decision
-deliverable: employees/kuroba_yuu/outbox/recruit_v1.md
-notes: |
-  対象: Claude/GPTでエージェント動かしているが役割分担・暴走防止・意思決定の設計で詰まっている個人開発者/スタートアップ（ノア定義）
-  形式: 1枚。X/Notion/投稿欄にそのまま貼れる状態
-  目的: 初回相談の問い合わせを取る
-  骨子: ①顧客の詰まりを描く ②AI NOWAの解決策（役割設計/監査ゲート/三角コミュニケーション） ③初回相談CTA
-  出荷基準: いくとがそのまま投稿可能な状態。アオイ監査クリア後
-  問い合わせフロー（レイジ確定 2026-05-16・Discord方式に変更）:
-    - 窓口: Discord招待リンク（いくとが1回だけ作成）
-    - 一次対応: ユウ/ノア/ミオ（AI社員が自律対応）
-    - 転記: 判断が必要なものは経営会議へ
-    - 返信方針: 個別判断・約束/契約/報酬は即答しない
-  アオイ監査: クリア済み（本文・フロー全通過）。公開可確定（2026-05-16 明言）。
-  CTA方針（レイジ確定 2026-05-16）: A案採用。「Discord」前面に出さず相談チャンネルとして見せる。
-  スコープ確定（ノア PM判断 2026-05-16）: 固定招待リンクをCTAに直接貼るMVP。bot経由自動発行はv0.3以降。
-  クローズ条件: 固定リンク付きCTA文言確定 → ✅達成済み（ユウ 2026-05-16）
-  CTA文言確定（ユウ 2026-05-16）: `→ AI NOWAの相談チャンネルで話しましょう：[DISCORD_INVITE_URL]`
-  残作業: [DISCORD_INVITE_URL]をいくとの固定招待リンクに差し替えるのみ。
-  ブロッカー: いくとのDiscord招待リンク作成待ち（依頼済み）
-  リンク到着次第ミオ→ユウ転送→即出荷。
-  【一時停止解除 2026-05-17】Zenn URL復旧確認済み。外部出荷停止を解除。
-  Zenn v0.1: https://zenn.dev/ai_nowa/articles/ai-nowa-design-record-v01 (200 ✅)
-  Zenn v0.2: https://zenn.dev/ai_nowa/articles/ai-nowa-design-record-v02 (200 ✅)
-  recruit_v1.md にZenn URLを再追加してよい（Discord招待リンク差し替えのみ残）。
-  対応負荷モニタリング（レイジ確定 2026-05-16）:
-    - 閾値: 週3件以上 / 1日2件以上 / 相談チャンネル着信から経営会議転記まで24時間停止
-    - 閾値到達時: 現行フローを止めず、AI側応答経路の再設計タスクをP0起票
-    - 再設計タスク: owner saegusa_mio / reviewer asakura_noa / buddy kagura_aoi
-    - 方針: 約束・契約・報酬は即答しない。人間承認とAI一次整理を分離する。
-```
-
-```yaml
-id: T-007
-title: Zenn有料記事企画書（C候補）
-owner: hoshino_ritsu
-reviewer: asakura_noa
-buddy: kuroba_yuu
-audit: kagura_aoi
-status: done
-priority: P1
-due: 2026-05-16
-created: 2026-05-16
-updated: 2026-05-17
-deliverable: employees/hoshino_ritsu/outbox/t007_zenn_paid_plan_v0.md
-notes: |
-  今日の成果物: 「売れるか判断できる企画書1枚」
-  必須4点: タイトル / 想定読者 / 無料部分の構成 / 有料部分の価値
-  販売開始まではしない（企画書のみ）
-  アオイ観点: 法務リスクなし（Zenn機能経由）
-  ノア確認完了（2026-05-17）: 読者設定・価値軸クリア。③のみv0.3待ち。
-  ノアPM判断: v0.3完成・Zenn連携解消後に本格着手。①②④は先行ドラフト可。
-  レイジ判断確定（2026-05-16）:
-    - 案A採用: v0.3完成 + Zenn連携解消後に全部入り販売
-    - タイトル: 「AIチームの設計記録 — 役割・監査・三角コミュニケーションの実装ガイド」
-    - 価格: 780円。案B（先行販売）なし。
-  販売判断: ✅ 完了（今日の出荷済み扱い）
-  アオイ②公開範囲確認（2026-05-16）: 整える条件付き公開可
-    - 判断フロー・「必ず止める領域」定義: ✅ 公開可
-    - チェックリスト: 原稿ドラフト段階でファイルパス・内部構造の記載範囲を1回アオイ確認
-  次: v0.3完成 + Zenn連携解消後に①②④ドラフト着手 → 原稿段階でアオイ②再確認
-```
-
-```yaml
-id: T-006
-title: 有料商材化のための法務整備
-owner: saegusa_mio
-reviewer: asakura_noa
-buddy: kagura_aoi
-status: pending
-priority: P1
-created: 2026-05-16
-depends_on: []
-notes: |
-  有料商材（B候補テンプレパック・A候補有料化）着手前に必須。
-  アオイ監査指摘（2026-05-16）で法務ブロッカー確認済み。
-  必要項目:
-    - 特定商取引法表示（事業者名義・連絡先・返金条件・支払い方法）
-    - 事業者名義確定（AI NOWA名義で誰が取引するか / いくと個人口座か事業口座か）
-    - 決済経路（Stripe等）→ 事業者名義整理が前提
-  いくとへの依頼が必要（人間しかできない手続き）。着手は相談獲得（T-004）の反応確認後でよい。
-```
-
-## 終了済みアーカイブ
-
-_（doneになったタスクは月末に `archive/tasks_YYYY-MM.md` へ移動）_
 
 ## 更新ルール
 
