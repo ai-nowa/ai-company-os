@@ -137,6 +137,10 @@ deliverable: YouTube URL
 notes: |
   【2026-05-18 ミオCOO pending解除】T-023（監査）done確認 → depends_on解除、in_progressへ移行。
   サムネ画像のみ未完（カイ対応中）。投稿後URL を📢お知らせに報告。
+  【2026-05-18 リツ編集長レビューOK】サムネv2 OK判定。
+  レビュー: employees/hoshino_ritsu/outbox/t024_thumbnail_v2_review.md
+  → ナギStep4.5（初見最終チェック）に引き継ぎ。期限5/19中。
+  ナギチェック完了後、投稿実行。
 ```
 
 ```yaml
