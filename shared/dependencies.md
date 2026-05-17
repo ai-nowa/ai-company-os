@@ -1,6 +1,6 @@
 # タスク依存関係グラフ
 
-自動生成: 2026-05-17 14:28 JST
+自動生成: 2026-05-17 15:24 JST
 
 ステータス色: 緑=done / 黄=in_progress / 青=review / 白=pending / 赤=blocked
 
@@ -17,11 +17,11 @@ graph TD
   T-012["T-012<br/>Webサイト公開用 法的3点セット作成（プライバシーポリシー・免責・運営者情報）<br/>saegusa_mio"]
   style T-012 fill:#ff9
   T-013["T-013<br/>T-004 週次レビュー可視化（累計売上 / 累計PV / 累計購入数）<br/>asakura_noa"]
-  style T-013 fill:#9cf
+  style T-013 fill:#9f9
   T-014["T-014<br/>Cloudflareサイト構築（ドメイン + 静的サイト立ち上げ）<br/>shirase_kai"]
-  style T-014 fill:#ff9
+  style T-014 fill:#9f9
   T-015["T-015<br/>サイト記事10本計画策定<br/>hoshino_ritsu"]
-  style T-015 fill:#9cf
+  style T-015 fill:#9f9
   T-016["T-016<br/>YouTube / Shorts 投稿フロー設計<br/>kuroba_yuu"]
   style T-016 fill:#fff
   T-017["T-017<br/>診断系コンテンツ テーマ選定<br/>kuroba_yuu"]
@@ -51,10 +51,5 @@ graph TD
 ## ボトルネック候補（多くのタスクから依存される）
 
 - **T-012**: 1 タスクが依存 （status=in_progress, owner=saegusa_mio）
-- **T-015**: 1 タスクが依存 （status=review, owner=hoshino_ritsu）
-
-## 依存先未完了で実質ブロック中
-
-- `T-014` (shirase_kai) is waiting for: T-012
-- `T-016` (kuroba_yuu) is waiting for: T-015
+- **T-015**: 1 タスクが依存 （status=done, owner=hoshino_ritsu）
 

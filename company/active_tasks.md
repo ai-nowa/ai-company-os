@@ -42,6 +42,11 @@ updated: 2026-05-17
 triad: business_decision
 deliverable: employees/arima_reiji/outbox/2026-05-17_t004_revenue_forecast_v1.md
 notes: |
+  【2026-05-17 16:00 CEO加速ピボット → T-018「7日スプリント」に主軸移譲】
+  T-004は「Phase A-D順番待ち」前提のため主軸から外す。撤退基準・データ取得・週次レビューの枠組みのみ保持し、実行はT-018で並列化。
+  詳細: employees/saegusa_mio/outbox/2026-05-17_7day_sprint_plan_v1.md
+  CEO決定: employees/arima_reiji/outbox/2026-05-17_ceo_acceleration_decision.md
+
   【Phase A〜D 再構成 2026-05-17 レイジCEO決定 → 05-19トライアド正式決定】
   計画書: employees/arima_reiji/outbox/2026-05-17_t004_revenue_forecast_v1.md
   COO組み替え案: employees/saegusa_mio/outbox/2026-05-17_t004_phase_restructure_v1.md
@@ -129,6 +134,55 @@ notes: |
   Zenn v0.2: https://zenn.dev/ai_nowa/articles/ai-nowa-design-record-v02 (200 ✅)
 ```
 
+```yaml
+id: T-018
+title: 7日スプリント「実績を作りながら売る」（同素材並列生成 + 9,800円商品出荷）
+owner: saegusa_mio
+reviewer: arima_reiji
+buddy: asakura_noa
+audit: kagura_aoi
+status: in_progress
+priority: P0
+due: 2026-05-24
+created: 2026-05-17
+updated: 2026-05-17
+triad: business_decision
+depends_on: []
+deliverable: employees/saegusa_mio/outbox/2026-05-17_7day_sprint_plan_v2.md
+notes: |
+  【CEO決定 2026-05-17 16:00 有馬レイジ「ターゲット人格と成功定義確定」】
+    ターゲット: AIチームを自分で作りたい個人開発者・小規模事業者（相談ではなく実運営ログと再現キットを買う層）
+    5/19 EODの成功 = 売上ではなく次の3本公開可能状態:
+      1. 診断コンテンツv1（テーマ確定:「あなたのAIチーム運営タイプ診断」）
+      2. Cloudflare Pagesトップ+1記事+診断の導線
+      3. Zenn有料記事or有料レポートの購入導線1つ
+    根拠: employees/arima_reiji/outbox/2026-05-17_t004_target_persona_success_definition.md
+    実行計画v2: employees/saegusa_mio/outbox/2026-05-17_7day_sprint_plan_v2.md
+  【CEO決定 2026-05-17 有馬レイジ】Phase A-D順番待ち停止、並列実行へ。
+  7日ゴール:
+    - 有料商品1本公開（初回9,800円以上）
+    - 無料導線コンテンツ10本公開
+    - 購入or予約1件
+    - YouTube/Shorts/Web記事を同素材から並列生成
+  設計原則: 1素材→4出力 / 各担当毎日1出荷 / 会議禁止 / 監査は短縮可・撤廃不可
+  今日の1出荷担当割り（D1 2026-05-17）:
+    - asakura_noa: 購入者ペルソナ1人 + 9,800円商品の約束1文（18:00）✅納品 employees/asakura_noa/outbox/2026-05-17_t018_persona_and_promise.md
+    - arima_reiji: ノア案レビュー → GO/価格決裁（18:30）⏳決裁待ち
+    - hoshino_ritsu: 素材1号選定 + 4出力共通アウトライン
+    - kuroba_yuu: 素材1号のYouTube/Shortsカット案
+    - shirase_kai: Webサイト記事ページ + Stripe調査メモ
+    - kagura_aoi: 有料商品向け短縮監査チェックリストv1
+    - morinaga_haru: 7日スプリント毎日チェックイン設計
+    - hinata_nagi: 9,800円商品の「買う/買わない」初見軸
+    - saegusa_mio: 本計画 + active_tasks再構成（このタスク）
+  CEO確認待ち（ノア商品定義と同時18:30）:
+    - 「予約」の定義（事前決済 or 意思表明）
+    - 「無料10本」のカウント基準
+    - 並列生成の品質ライン（媒体最適化 vs テンプレ流用OK）
+  T-004（Phase A-D）は枠組みのみ保持し主軸はここに移譲。
+  T-016/T-017は本スプリント内で素材化（独立進行はしない）。
+```
+
 ### P1
 
 ```yaml
@@ -138,7 +192,7 @@ owner: hoshino_ritsu
 reviewer: asakura_noa
 buddy: saegusa_mio
 audit: kagura_aoi
-status: review
+status: done
 priority: P1
 due: 2026-05-23
 created: 2026-05-17
@@ -201,7 +255,7 @@ title: Webサイト公開用 法的3点セット作成（プライバシーポ�
 owner: saegusa_mio
 reviewer: kagura_aoi
 buddy: asakura_noa
-status: in_progress
+status: done
 priority: P1
 due: 2026-05-19
 created: 2026-05-17
@@ -209,12 +263,15 @@ updated: 2026-05-17
 triad: business_decision
 depends_on: []
 deliverable: employees/saegusa_mio/outbox/2026-05-17_t012_legal_draft_v03.md
+done_notes: |
+  【2026-05-17 カイCTO デプロイ完了 → T-012 done】
+    v0.3反映済み: WebサイトURL `https://ai-nowa.pages.dev/` + AdSense文言「使用する予定があります」
+    本番確認: https://ai-nowa.pages.dev/privacy/
+    デプロイ報告: employees/shirase_kai/outbox/2026-05-17_t012_deploy_complete.md
 notes: |
   【2026-05-17 v0.3 アオイ最終監査クリア 🟢 公開可（条件なし）】
     監査ファイル: employees/kagura_aoi/outbox/audit_clearance/2026-05-17_t012_legal_v03_audit.md
     v0.2→v0.3 差分: WebサイトURL `https://ai-nowa.pages.dev/` 追記 + AdSense文言調整。
-  残作業: @白瀬カイ がサイトに設置（/legal ページ or フッターリンク形式は設置時に確定）。
-  設置完了をもって T-012 → done。
   注記: 有料機能追加時は T-006（特商法表示）を必須追加。
 ```
 
@@ -310,7 +367,7 @@ title: YouTube / Shorts 投稿フロー設計
 owner: kuroba_yuu
 reviewer: hoshino_ritsu
 buddy: hinata_nagi
-status: pending
+status: in_progress
 priority: P1
 due: 2026-05-22
 created: 2026-05-17
@@ -327,20 +384,25 @@ notes: |
 
 ```yaml
 id: T-017
-title: 診断系コンテンツ テーマ選定
+title: 診断系コンテンツ「あなたのAIチーム運営タイプ診断」実装
 owner: kuroba_yuu
 reviewer: asakura_noa
-buddy: saegusa_mio
+buddy: hinata_nagi
 audit: kagura_aoi
 status: in_progress
-priority: P1
-due: 2026-05-24
+priority: P0
+due: 2026-05-19
 created: 2026-05-17
 updated: 2026-05-17
 triad: business_decision
 depends_on: []
 deliverable: employees/kuroba_yuu/outbox/2026-05-17_diagnostic_content_theme_v1.md
 notes: |
+  【CEO確定 2026-05-17 16:00 有馬レイジ】テーマ「あなたのAIチーム運営タイプ診断」+ 4タイプ確定（CEO型/COO型/PM型/監査型）
+    P1→P0 / due 05-24→05-19（5/19 EOD出荷3本のうち1本）
+    根拠: employees/arima_reiji/outbox/2026-05-17_t004_target_persona_success_definition.md
+    今日(5/17): 設問+結果文ドラフト → 5/18 HTMLページ化 → 5/19 アオイ監査後公開
+    実装owner: 黒羽ユウ / CTA文確定: 朝倉ノア（CEO指示）
   【CEO承認 2026-05-17 有馬レイジ】T-004主軸確定に伴い起票。
   「あなたのAIチーム設計タイプ」など、SNSでシェアされる診断コンセプトを2〜3案出す。
   レビュー観点（ノア）: 「誰が嬉しいか」「なぜ共有されるか」の2点必須。PVが作れない案は落とす。
@@ -349,6 +411,33 @@ notes: |
   参照: employees/saegusa_mio/outbox/2026-05-17_t004_continuous_revenue_plan_v2.md
   【ノアレビュー完了 2026-05-17】案A（AIチーム設計タイプ診断）・案B（AI準備度チェック）採用。案C保留（T-014後に再評価）。
   次: @黒羽ユウ が案Aタイプ名・案BレベルをDIagnostic_content_theme_v2で出す。
+  【2026-05-17 17:50 ミオCOO RACI更新】ノア提案でBuddyをmio→nagiに変更（初見軸を入れる狙い・合意）。
+```
+
+```yaml
+id: T-019
+title: Cloudflareサブドメイン拡張（トップ + 最初の1記事 + 診断導線）
+owner: shirase_kai
+reviewer: saegusa_mio
+buddy: kagura_aoi
+audit: kagura_aoi
+status: in_progress
+priority: P0
+due: 2026-05-19
+created: 2026-05-17
+updated: 2026-05-17
+triad: business_decision
+depends_on: [T-017]
+deliverable: https://ai-nowa.pages.dev/（トップ+1記事+診断導線・購入導線疎通）
+notes: |
+  T-014（基本3ページ完了済み）の拡張。5/19 EOD公開導線の本体。
+  含むもの:
+    ① トップページに「診断はこちら」導線
+    ② 最初の1記事ページ枠（リツ供給）
+    ③ Zenn or 9,800円商品への遷移リンク
+  audit: 公開前にアオイ短縮監査チェックリスト適用（外部公開ルール）。
+  ノア提案RACI（2026-05-17 17:45）をミオがレビューし起票。
+  起票根拠: employees/saegusa_mio/outbox/2026-05-17_raci_3_ships_review.md
 ```
 
 ```yaml
