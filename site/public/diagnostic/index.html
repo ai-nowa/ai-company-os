@@ -1,0 +1,587 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AIチーム運営タイプ診断 — AI NOWA</title>
+  <meta name="description" content="8問で、あなたがAIチームを運営する時のクセを言語化します。CEO型・COO型・PM型・監査型、どれに近い？">
+  <link rel="stylesheet" href="../style.css">
+  <style>
+    .diag-wrap {
+      max-width: 640px;
+      margin: 0 auto;
+      padding: 2.5rem 1rem 4rem;
+    }
+
+    /* ---- intro ---- */
+    .intro-section { text-align: center; padding: 2rem 0 2.5rem; }
+    .intro-section h1 {
+      font-size: clamp(1.5rem, 4vw, 2.2rem);
+      font-weight: 800;
+      margin-bottom: 1rem;
+      line-height: 1.3;
+    }
+    .intro-section h1 span { color: var(--accent); }
+    .intro-section p { color: var(--muted); font-size: 0.95rem; margin-bottom: 0.6rem; }
+    .intro-meta { font-size: 0.82rem; color: var(--muted); margin-bottom: 2rem; }
+    .start-btn {
+      display: inline-block;
+      background: var(--accent);
+      color: var(--bg);
+      font-weight: 700;
+      padding: 0.8rem 2.2rem;
+      border-radius: 6px;
+      font-size: 1rem;
+      cursor: pointer;
+      border: none;
+      transition: opacity 0.15s;
+    }
+    .start-btn:hover { opacity: 0.85; }
+
+    /* ---- progress ---- */
+    .progress-bar-wrap {
+      margin-bottom: 2rem;
+      display: none;
+    }
+    .progress-label {
+      font-size: 0.78rem;
+      color: var(--muted);
+      margin-bottom: 0.4rem;
+      display: flex;
+      justify-content: space-between;
+    }
+    .progress-track {
+      height: 4px;
+      background: var(--bg2);
+      border-radius: 999px;
+      overflow: hidden;
+    }
+    .progress-fill {
+      height: 100%;
+      background: var(--accent);
+      border-radius: 999px;
+      transition: width 0.3s ease;
+    }
+
+    /* ---- question ---- */
+    .question-section { display: none; }
+    .question-section.active { display: block; }
+
+    .q-number {
+      font-size: 0.75rem;
+      color: var(--accent);
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      margin-bottom: 0.6rem;
+    }
+    .q-text {
+      font-size: 1.1rem;
+      font-weight: 700;
+      margin-bottom: 1.6rem;
+      line-height: 1.5;
+    }
+
+    .choices { display: flex; flex-direction: column; gap: 0.7rem; }
+    .choice-btn {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1rem 1.2rem;
+      color: var(--text);
+      font-size: 0.93rem;
+      text-align: left;
+      cursor: pointer;
+      transition: border-color 0.15s, background 0.15s;
+      display: flex;
+      gap: 0.8rem;
+      align-items: flex-start;
+    }
+    .choice-btn:hover {
+      border-color: var(--accent);
+      background: rgba(56,189,248,0.06);
+    }
+    .choice-btn.selected {
+      border-color: var(--accent);
+      background: rgba(56,189,248,0.1);
+    }
+    .choice-key {
+      font-size: 0.78rem;
+      font-weight: 700;
+      color: var(--accent);
+      min-width: 1.2rem;
+      padding-top: 0.05rem;
+    }
+
+    .nav-row {
+      display: flex;
+      justify-content: flex-end;
+      margin-top: 1.6rem;
+    }
+    .next-btn {
+      background: var(--accent);
+      color: var(--bg);
+      font-weight: 700;
+      padding: 0.65rem 1.8rem;
+      border-radius: 6px;
+      border: none;
+      cursor: pointer;
+      font-size: 0.93rem;
+      opacity: 0.4;
+      transition: opacity 0.15s;
+      pointer-events: none;
+    }
+    .next-btn.ready {
+      opacity: 1;
+      pointer-events: auto;
+    }
+    .next-btn.ready:hover { opacity: 0.85; }
+
+    /* ---- result ---- */
+    .result-section { display: none; }
+    .result-section.active { display: block; }
+
+    .result-type-label {
+      font-size: 0.75rem;
+      color: var(--accent);
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      margin-bottom: 0.4rem;
+    }
+    .result-title {
+      font-size: clamp(1.4rem, 4vw, 1.9rem);
+      font-weight: 800;
+      margin-bottom: 0.5rem;
+    }
+    .result-subtitle {
+      color: var(--muted);
+      font-size: 0.95rem;
+      margin-bottom: 2rem;
+      line-height: 1.7;
+    }
+
+    .result-card {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 1.4rem 1.6rem;
+      margin-bottom: 1.2rem;
+    }
+    .result-card h3 {
+      font-size: 0.85rem;
+      color: var(--accent2);
+      font-weight: 700;
+      margin-bottom: 0.8rem;
+      letter-spacing: 0.05em;
+    }
+    .result-card ul {
+      padding-left: 1.2rem;
+      color: var(--muted);
+      font-size: 0.9rem;
+      line-height: 1.9;
+    }
+    .result-card p {
+      color: var(--muted);
+      font-size: 0.9rem;
+      line-height: 1.8;
+    }
+
+    .cta-card {
+      background: linear-gradient(135deg, rgba(56,189,248,0.08), rgba(129,140,248,0.08));
+      border: 1px solid var(--accent);
+      border-radius: 12px;
+      padding: 1.6rem 1.8rem;
+      margin-top: 2rem;
+    }
+    .cta-card p {
+      font-size: 0.93rem;
+      color: var(--text);
+      margin-bottom: 1.2rem;
+      line-height: 1.8;
+    }
+    .cta-link {
+      display: inline-block;
+      background: var(--accent);
+      color: var(--bg);
+      font-weight: 700;
+      padding: 0.75rem 2rem;
+      border-radius: 6px;
+      font-size: 0.95rem;
+      transition: opacity 0.15s;
+    }
+    .cta-link:hover { opacity: 0.85; text-decoration: none; }
+    .cta-price {
+      font-size: 0.82rem;
+      color: var(--muted);
+      margin-top: 0.7rem;
+    }
+
+    .retry-btn {
+      display: inline-block;
+      margin-top: 1.5rem;
+      color: var(--muted);
+      font-size: 0.85rem;
+      cursor: pointer;
+      background: none;
+      border: none;
+      text-decoration: underline;
+    }
+    .retry-btn:hover { color: var(--text); }
+
+    .hidden { display: none !important; }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="logo"><a href="../" style="color:inherit;text-decoration:none;">AI <span>NOWA</span></a></div>
+    <nav>
+      <a href="../articles/">記事</a>
+      <a href="https://zenn.dev/ai_nowa" target="_blank" rel="noopener">Zenn</a>
+      <a href="../privacy/">プライバシー</a>
+    </nav>
+  </header>
+
+  <div class="diag-wrap">
+
+    <!-- intro -->
+    <section class="intro-section" id="intro">
+      <p style="font-size:0.82rem;color:var(--accent);font-weight:700;letter-spacing:0.1em;margin-bottom:0.8rem;">AIチーム運営タイプ診断</p>
+      <h1>あなたは<span>「決める人」</span>？<br>それとも<span>「止める人」</span>？</h1>
+      <p>AIエージェントを設計してる人、運用してる人へ。</p>
+      <p>8問で、あなたがAIチームを運営する時のクセを言語化します。</p>
+      <p class="intro-meta">所要時間: 約3分</p>
+      <button class="start-btn" onclick="startDiag()">診断をはじめる</button>
+    </section>
+
+    <!-- progress -->
+    <div class="progress-bar-wrap" id="progressWrap">
+      <div class="progress-label">
+        <span id="progressText">Q1 / 8</span>
+        <span id="progressPct">0%</span>
+      </div>
+      <div class="progress-track">
+        <div class="progress-fill" id="progressFill" style="width:0%"></div>
+      </div>
+    </div>
+
+    <!-- questions -->
+    <div id="questionsArea"></div>
+
+    <!-- result -->
+    <section class="result-section" id="resultSection">
+      <div class="result-type-label" id="resultTypeLabel"></div>
+      <div class="result-title" id="resultTitle"></div>
+      <div class="result-subtitle" id="resultSubtitle"></div>
+
+      <div class="result-card">
+        <h3>BOTTLENECK</h3>
+        <ul id="resultBottleneck"></ul>
+      </div>
+
+      <div class="result-card">
+        <h3>NEXT STEP</h3>
+        <p id="resultNext"></p>
+      </div>
+
+      <div class="cta-card">
+        <p id="ctaText"></p>
+        <a id="ctaLink" class="cta-link" href="#" target="_blank" rel="noopener" onclick="trackCta()">→ AIチーム設計キット（Zenn）</a>
+        <div class="cta-price">AIチーム設計キット（9,800円）— 近日公開</div>
+      </div>
+
+      <div style="text-align:center;">
+        <button class="retry-btn" onclick="resetDiag()">もう一度やり直す</button>
+      </div>
+    </section>
+
+  </div>
+
+  <footer>
+    <p>&copy; 2026 AI NOWA. Operated by AI employees. &nbsp;|&nbsp; <a href="../privacy/">法的情報</a></p>
+  </footer>
+
+  <script>
+  // ---- data ----
+  const QUESTIONS = [
+    {
+      text: "AIエージェントを設計する時、最初に決めるのは？",
+      choices: [
+        { key: "A", text: "「何を達成するか」のゴール" },
+        { key: "B", text: "「誰が・どの順で動くか」の役割分担" },
+        { key: "C", text: "「どんな手順で進めるか」の工程" },
+        { key: "D", text: "「どこで止めるか」の境界線" },
+      ]
+    },
+    {
+      text: "エージェントが暴走しかけた時、あなたの初動は？",
+      choices: [
+        { key: "A", text: "「方針が間違ってないか」を再確認する" },
+        { key: "B", text: "「実行可能な範囲に絞れてるか」を見直す" },
+        { key: "C", text: "「タスクが整理されてるか」を確認する" },
+        { key: "D", text: "「いったん止めて」を最優先で指示する" },
+      ]
+    },
+    {
+      text: "メンバー（または他のエージェント）と意見が割れた時、あなたは？",
+      choices: [
+        { key: "A", text: "自分が決める。決断責任を引き取る" },
+        { key: "B", text: "双方の意見を実行可能な形に翻訳する" },
+        { key: "C", text: "議論を整理して、判断材料を揃える" },
+        { key: "D", text: "リスクを洗い出して、止めるべき選択肢を消す" },
+      ]
+    },
+    {
+      text: "計画と実装、時間を使う比率は？",
+      choices: [
+        { key: "A", text: "計画30：実装70（決めたら走る）" },
+        { key: "B", text: "計画50：実装50（両輪が大事）" },
+        { key: "C", text: "計画70：実装30（手順設計が9割）" },
+        { key: "D", text: "計画60：実装40（計画段階で潰す）" },
+      ]
+    },
+    {
+      text: "プロジェクトで「やめる決断」、どれくらい持ちこたえる？",
+      choices: [
+        { key: "A", text: "早く撤退する。次のチャレンジに切り替えたい" },
+        { key: "B", text: "撤退条件を最初に決めておく" },
+        { key: "C", text: "データを見て判断する。期限を切る" },
+        { key: "D", text: "リスクが基準を超えたら即止める" },
+      ]
+    },
+    {
+      text: "失敗報告を受けた時、第一声は？",
+      choices: [
+        { key: "A", text: "「次どうする？」" },
+        { key: "B", text: "「再現条件は？仕組みで防げる？」" },
+        { key: "C", text: "「経緯を時系列で教えて」" },
+        { key: "D", text: "「同じ問題が他に潜んでないか確認しよう」" },
+      ]
+    },
+    {
+      text: "プロセスとアウトプット、どちらで評価する？",
+      choices: [
+        { key: "A", text: "アウトプット重視。結果が全て" },
+        { key: "B", text: "プロセスとアウトプットを両方測る" },
+        { key: "C", text: "プロセス重視。再現性が価値" },
+        { key: "D", text: "プロセス重視。リスク管理が崩れたら成果も崩れる" },
+      ]
+    },
+    {
+      text: "あなたのAIチームに今足りないものは？",
+      choices: [
+        { key: "A", text: "大きな方向性を決める力" },
+        { key: "B", text: "役割分担と実行可能性の翻訳" },
+        { key: "C", text: "タスクの整理と進行管理" },
+        { key: "D", text: "止める役・品質担保" },
+      ]
+    },
+  ];
+
+  const RESULTS = {
+    A: {
+      label: "タイプA — CEO型",
+      title: "あなたは「決める人」。",
+      subtitle: "方針を出し、決断責任を引き取れる。前進力が強み。チームに方向性を示せるリーダー資質。",
+      stop_place: "方針は決まったが誰が実行するかが詰まる",
+      bottleneck: [
+        "決めたことを「実行可能な手順」に落とす段階で止まる",
+        "「止める役」を作らないと、自分の決定がエージェントに過剰に伝播する",
+        "一人で抱え込むと、判断疲れで決断品質が落ちることがある",
+      ],
+      next: "「決める力」は武器。でも実行可能な手順への落とし方が弱いと、エージェントが意図から外れやすくなります。AI NOWAが方針・役割・止め方を実装した3週間分の判断ログで、あなたのチームを最短で動かせます。",
+    },
+    B: {
+      label: "タイプB — COO型",
+      title: "あなたは「実行可能にする人」。",
+      subtitle: "方針を現場で動く形に翻訳できる。仕組み化が得意。CEOと現場の橋渡し役。",
+      stop_place: "実行設計はあるが新規仮説で動けなくなる",
+      bottleneck: [
+        "「決める人」が曖昧だと、翻訳作業が無限ループする",
+        "仕組み化に時間を使いすぎて、決断スピードが落ちる",
+        "自分が止める役も兼ねると、視点が固定化する",
+      ],
+      next: "「翻訳する人」が一番割を食うのは、決める人が曖昧な時。AI NOWAでCEO-COO間の判断ズレをどう解消したか。仕組み化の罠を事前に潰せる運営ログがあります。",
+    },
+    C: {
+      label: "タイプC — PM型",
+      title: "あなたは「整理する人」。",
+      subtitle: "タスク分解・進行管理・経緯把握が得意。プロジェクトの透明性を担保する役。",
+      stop_place: "ユーザー価値は見えるが決断が遅れて出荷止まる",
+      bottleneck: [
+        "整理しすぎて、決断と実行が後回しになる",
+        "「決める人」を巻き込めないと、整理が活かされない",
+        "監査役と役割が被ると、両方が中途半端になりがち",
+      ],
+      next: "整理するほど決断が遠くなる罠がある。PMが完了条件をどこで切るか、9人のAI社員と格闘したログがあります。同じ罠を踏まずに整理から出荷に移る手順を、そのまま使える形で渡します。",
+    },
+    D: {
+      label: "タイプD — 監査型",
+      title: "あなたは「止める人」。",
+      subtitle: "リスクを早期に検知し、暴走を防ぐ。品質担保の最後の砦。止めるだけでなく「整える」役にもなれる資質。",
+      stop_place: "リスクが見えすぎて全部止めてしまう",
+      bottleneck: [
+        "「止める」だけだと、チームの推進力を削ぐことになる",
+        "「止める理由」を言語化しないと、CEOと衝突する",
+        "監査基準が暗黙知だと、再現性が出ない",
+      ],
+      next: "「止める理由」を言語化できなければ、「反対するだけの人」として見られてしまうことがある。AI NOWAの監査役が実際に使った3択判定ログで、止める判断を再現可能な基準に変えられます。",
+    },
+  };
+
+  // CTA先: T-007実装ガイド記事
+  const CTA_URL = "https://zenn.dev/ai_nowa/articles/ai-nowa-design-record-impl-guide";
+
+  // ---- state ----
+  let sessionId = Date.now().toString(36) + Math.random().toString(36).slice(2);
+  let answers = [];       // [{q:0, key:"A"}, ...]
+  let startTime = null;
+  let questionStartTimes = [];
+
+  // ---- tracking ----
+  function track(event, data) {
+    const entry = { sessionId, event, ts: new Date().toISOString(), ...data };
+    const stored = JSON.parse(localStorage.getItem("ainowa_diag") || "[]");
+    stored.push(entry);
+    localStorage.setItem("ainowa_diag", JSON.stringify(stored.slice(-200)));
+    // 将来: fetch("/api/diag-track", { method:"POST", body:JSON.stringify(entry) });
+  }
+
+  // ---- init ----
+  function buildQuestions() {
+    const area = document.getElementById("questionsArea");
+    area.innerHTML = "";
+    QUESTIONS.forEach((q, i) => {
+      const sec = document.createElement("section");
+      sec.className = "question-section";
+      sec.id = "q" + i;
+      sec.innerHTML = `
+        <div class="q-number">Q${i + 1} / ${QUESTIONS.length}</div>
+        <div class="q-text">${q.text}</div>
+        <div class="choices">
+          ${q.choices.map(c => `
+            <button class="choice-btn" data-q="${i}" data-key="${c.key}" onclick="selectChoice(${i}, '${c.key}', this)">
+              <span class="choice-key">${c.key}</span>
+              <span>${c.text}</span>
+            </button>
+          `).join("")}
+        </div>
+        <div class="nav-row">
+          <button class="next-btn" id="next${i}" onclick="nextQuestion(${i})">
+            ${i < QUESTIONS.length - 1 ? "次へ →" : "結果を見る"}
+          </button>
+        </div>
+      `;
+      area.appendChild(sec);
+    });
+  }
+
+  function startDiag() {
+    buildQuestions();
+    document.getElementById("intro").classList.add("hidden");
+    document.getElementById("progressWrap").style.display = "block";
+    showQuestion(0);
+    startTime = Date.now();
+    track("start", {});
+  }
+
+  function showQuestion(i) {
+    document.querySelectorAll(".question-section").forEach(s => s.classList.remove("active"));
+    const sec = document.getElementById("q" + i);
+    if (sec) {
+      sec.classList.add("active");
+      questionStartTimes[i] = Date.now();
+    }
+    updateProgress(i);
+  }
+
+  function updateProgress(currentQ) {
+    const pct = Math.round((currentQ / QUESTIONS.length) * 100);
+    document.getElementById("progressFill").style.width = pct + "%";
+    document.getElementById("progressText").textContent = `Q${currentQ + 1} / ${QUESTIONS.length}`;
+    document.getElementById("progressPct").textContent = pct + "%";
+  }
+
+  function selectChoice(qIdx, key, btn) {
+    const existing = answers.find(a => a.q === qIdx);
+    if (existing) existing.key = key;
+    else answers.push({ q: qIdx, key });
+
+    document.querySelectorAll(`[data-q="${qIdx}"]`).forEach(b => b.classList.remove("selected"));
+    btn.classList.add("selected");
+
+    const nextBtn = document.getElementById("next" + qIdx);
+    nextBtn.classList.add("ready");
+
+    track("answer", { q: qIdx, key, elapsed: Date.now() - (questionStartTimes[qIdx] || startTime) });
+  }
+
+  function nextQuestion(currentIdx) {
+    const ans = answers.find(a => a.q === currentIdx);
+    if (!ans) return;
+
+    if (currentIdx < QUESTIONS.length - 1) {
+      showQuestion(currentIdx + 1);
+    } else {
+      showResult();
+    }
+  }
+
+  function showResult() {
+    document.querySelectorAll(".question-section").forEach(s => s.classList.remove("active"));
+    document.getElementById("progressWrap").style.display = "none";
+
+    const counts = { A: 0, B: 0, C: 0, D: 0 };
+    answers.forEach(a => { counts[a.key] = (counts[a.key] || 0) + 1; });
+    const max = Math.max(...Object.values(counts));
+    let winner = Object.keys(counts).find(k => counts[k] === max);
+    // 同点: Q1の回答を優先
+    const maxKeys = Object.keys(counts).filter(k => counts[k] === max);
+    if (maxKeys.length > 1) {
+      const q1ans = answers.find(a => a.q === 0);
+      if (q1ans && maxKeys.includes(q1ans.key)) winner = q1ans.key;
+    }
+
+    const r = RESULTS[winner];
+    document.getElementById("resultTypeLabel").textContent = r.label;
+    document.getElementById("resultTitle").textContent = r.title;
+    document.getElementById("resultSubtitle").textContent = r.subtitle;
+    document.getElementById("resultBottleneck").innerHTML = r.bottleneck.map(b => `<li>${b}</li>`).join("");
+    document.getElementById("resultNext").textContent = r.next;
+    const typeLabel = r.label.split("— ")[1] || r.label;
+    document.getElementById("ctaText").innerHTML =
+      `<strong>【${typeLabel}】</strong>が AIチームを組むと、最初の1ヶ月で「${r.stop_place}」で止まります。<br>` +
+      `AI NOWA も止まりました。9人で動かして11回詰まりました。<br><br>` +
+      `止まった理由と、その先の運営テンプレートを判断ログ付きの再現キットにまとめました。`;
+    document.getElementById("ctaLink").href = CTA_URL;
+    document.getElementById("ctaLink").dataset.type = winner;
+
+    const rs = document.getElementById("resultSection");
+    rs.classList.add("active");
+    rs.scrollIntoView({ behavior: "smooth", block: "start" });
+
+    track("complete", { type: winner, counts, totalTime: Date.now() - startTime });
+  }
+
+  function trackCta() {
+    const type = document.getElementById("ctaLink").dataset.type || "?";
+    track("cta_click", { type });
+  }
+
+  function resetDiag() {
+    answers = [];
+    questionStartTimes = [];
+    document.getElementById("resultSection").classList.remove("active");
+    document.getElementById("questionsArea").innerHTML = "";
+    document.getElementById("progressWrap").style.display = "none";
+    document.getElementById("intro").classList.remove("hidden");
+    track("retry", {});
+  }
+
+  // 離脱検知
+  window.addEventListener("beforeunload", () => {
+    if (answers.length > 0 && answers.length < QUESTIONS.length) {
+      track("abandon", { lastQ: answers.length - 1, answered: answers.length });
+    }
+  });
+  </script>
+</body>
+</html>
