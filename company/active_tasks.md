@@ -345,7 +345,7 @@ owner: hoshino_ritsu
 reviewer: asakura_noa
 buddy: kuroba_yuu
 audit: kagura_aoi
-status: in_progress
+status: done
 priority: P0
 due: 2026-05-23
 created: 2026-05-16
@@ -392,6 +392,8 @@ done_notes: |
     v0.3反映済み: WebサイトURL `https://ai-nowa.pages.dev/` + AdSense文言「使用する予定があります」
     本番確認: https://ai-nowa.pages.dev/privacy/
     デプロイ報告: employees/shirase_kai/outbox/2026-05-17_t012_deploy_complete.md
+  【2026-05-17 URL確定 → https://ai-nowa.com（ミオCOO更新）】
+    公式URL: https://ai-nowa.com/privacy/（旧 ai-nowa.pages.dev は内部用）
 notes: |
   【2026-05-17 v0.3 アオイ最終監査クリア 🟢 公開可（条件なし）】
     監査ファイル: employees/kagura_aoi/outbox/audit_clearance/2026-05-17_t012_legal_v03_audit.md
@@ -458,6 +460,7 @@ notes: |
   wrangler.toml設定済み: cd /home/ikuto/ai-company-os && wrangler pages deploy site/public --project-name=ai-nowa
   【2026-05-17 15:13 カイCTO deploy完了 → ミオCOO Reviewer承認 done】
   本番URL: https://ai-nowa.pages.dev/ ／ デプロイ報告: employees/shirase_kai/outbox/2026-05-17_t014_deploy_complete.md
+  【2026-05-17 公式ドメイン確定 → https://ai-nowa.com（ミオCOO更新）】外部告知はhttps://ai-nowa.com を使う。
   次工程: T-012 v0.2 にこのURLを追記 → アオイ監査クリア後、カイがプライバシーページ等を反映
 ```
 
@@ -568,6 +571,64 @@ notes: |
   audit: 公開前にアオイ短縮監査チェックリスト適用（外部公開ルール）。
   ノア提案RACI（2026-05-17 17:45）をミオがレビューし起票。
   起票根拠: employees/saegusa_mio/outbox/2026-05-17_raci_3_ships_review.md
+```
+
+```yaml
+id: T-025
+title: サイト記事10本連載（週2本ペース・AdSense申請前提）
+owner: hoshino_ritsu
+reviewer: asakura_noa
+buddy: kuroba_yuu
+audit: kagura_aoi
+status: in_progress
+priority: P1
+due: 2026-06-14
+created: 2026-05-17
+updated: 2026-05-17
+triad: business_decision
+depends_on: []
+deliverable: employees/hoshino_ritsu/outbox/site_articles/（連番記事ファイル群）
+notes: |
+  【起票: ミオCOO 2026-05-17 Architectドメイン公開完了通知を受けて】
+  計画は T-015（done）で確定済み。本タスクは実際の執筆・公開実行。
+  参照: employees/hoshino_ritsu/outbox/2026-05-17_site_article_plan_v1.md
+  週2本ペース（月/木投稿）で5週で10本到達目標。
+  各記事: アオイ短縮監査クリア後 https://ai-nowa.com に公開。
+  AdSense申請（Phase C）の前提: 10本公開 + 1ヶ月以上。
+  外部公開URLは https://ai-nowa.com を使う（ai-nowa.pages.devは内部用）。
+```
+
+```yaml
+id: T-026
+title: Email Routing 設定（Cloudflare）
+owner: shirase_kai
+reviewer: saegusa_mio
+buddy: arima_reiji
+status: done
+priority: P1
+due: 2026-05-21
+created: 2026-05-17
+updated: 2026-05-17
+triad: business_decision
+depends_on: []
+deliverable: ainowa.supports@gmail.com への転送疎通確認
+done_notes: |
+  【2026-05-17 ミオCOO done確認 — Architect完了報告受理】
+  - ainowa.supports@gmail.com → verified ✓
+  - contact@ai-nowa.com → ainowa.supports@gmail.com 転送ルール ✓
+  - catch-all（@ai-nowa.com 全部）→ ainowa.supports@gmail.com ✓
+  - Email Routing zone: enabled / status=ready
+  Architectフィードバック: Destination address追加・zone enable・ルール作成はAPI完結可能。
+  次回Cloudflare系作業はAPI優先（ブラウザ操作は verify メールクリックのみ）。
+notes: |
+  【起票: ミオCOO 2026-05-17 Architectドメイン公開完了通知を受けて】
+  Cloudflare Email Routing で ai-nowa.com ドメインのメールを ainowa.supports@gmail.com に転送設定。
+  CLOUDFLARE_API_TOKEN は bot/.env に保存済み（Architectが設定）。
+  設定先: Cloudflare ダッシュボード Email → Email Routing。
+  完了条件: test@ai-nowa.com → ainowa.supports@gmail.com 転送疎通確認。
+  T-006（特商法表示）の連絡先と合わせること。
+  【2026-05-17 カイ】DNS設定（MX x3, SPF, DKIM）API自動設定完了。
+  ブロッカー: ainowa.supports@gmail.com の Destination address 承認がいくとのブラウザ操作待ち。
 ```
 
 ```yaml

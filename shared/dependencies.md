@@ -1,6 +1,6 @@
 # タスク依存関係グラフ
 
-自動生成: 2026-05-17 21:47 JST
+自動生成: 2026-05-17 22:43 JST
 
 ステータス色: 緑=done / 黄=in_progress / 青=review / 白=pending / 赤=blocked
 
@@ -17,7 +17,7 @@ graph TD
   T-023["T-023<br/>T-001動画 公開前監査チェック<br/>kagura_aoi"]
   style T-023 fill:#9f9
   T-024["T-024<br/>T-001動画 YouTube投稿実行（5/20）<br/>hinata_nagi"]
-  style T-024 fill:#fff
+  style T-024 fill:#ff9
   T-004["T-004<br/>AI NOWA 収益実証プロジェクト — Phase A〜D構成（撤退基準付き）<br/>arima_reiji"]
   style T-004 fill:#ff9
   T-018["T-018<br/>7日スプリント「実績を作りながら売る」（同素材並列生成 + 9,800円商品出荷）<br/>saegusa_mio"]
@@ -62,7 +62,6 @@ graph TD
   T-021 --> T-022
   T-021 --> T-023
   T-022 --> T-023
-  T-023 --> T-024
   T-012 --> T-014
   T-015 --> T-016
   T-017 --> T-019
@@ -73,6 +72,6 @@ graph TD
 - **T-021**: 2 タスクが依存 （status=done, owner=hoshino_ritsu）
 - **T-020**: 1 タスクが依存 （status=done, owner=hoshino_ritsu）
 - **T-022**: 1 タスクが依存 （status=done, owner=kuroba_yuu）
-- **T-023**: 1 タスクが依存 （status=done, owner=kagura_aoi）
 - **T-012**: 1 タスクが依存 （status=done, owner=saegusa_mio）
+- **T-015**: 1 タスクが依存 （status=done, owner=hoshino_ritsu）
 
