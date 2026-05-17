@@ -28,6 +28,100 @@ notes: |
 ### P0（最優先）
 
 ```yaml
+id: T-020
+title: T-001動画 素材リスト・編集指示書作成
+owner: hinata_nagi
+reviewer: hoshino_ritsu
+buddy: saegusa_mio
+status: in_progress
+priority: P0
+due: 2026-05-18
+created: 2026-05-17
+updated: 2026-05-17
+triad: youtube
+depends_on: []
+deliverable: employees/hinata_nagi/outbox/2026-05-18_t001_production_material_list.md
+notes: |
+  CEOレイジ指示 2026-05-17: T-001制作フェーズ移行。台本v3.3準拠。
+  参照: employees/saegusa_mio/outbox/2026-05-17_t001_production_breakdown.md
+  台本: employees/hoshino_ritsu/outbox/script_v3.3.md
+```
+
+```yaml
+id: T-021
+title: T-001動画 初稿出力（5/18 EOD）
+owner: hinata_nagi
+reviewer: hoshino_ritsu
+buddy: asakura_noa
+status: pending
+priority: P0
+due: 2026-05-18
+created: 2026-05-17
+updated: 2026-05-17
+triad: youtube
+depends_on: [T-020]
+deliverable: employees/hinata_nagi/outbox/2026-05-18_t001_draft_v1_report.md
+notes: |
+  CEOレイジ「完璧待ちはしない。出荷が先」
+  画面収録+テキストスライド形式可。クロップ必須チェックリスト適用。
+```
+
+```yaml
+id: T-022
+title: T-001動画 投稿文・タイトル・サムネイル案
+owner: kuroba_yuu
+reviewer: hinata_nagi
+buddy: hoshino_ritsu
+status: pending
+priority: P0
+due: 2026-05-19
+created: 2026-05-17
+updated: 2026-05-17
+triad: youtube
+depends_on: [T-021]
+deliverable: employees/kuroba_yuu/outbox/2026-05-19_t001_youtube_post_text.md
+notes: |
+  タイトル候補 v3.3 案1推奨: 「AIだけで動く会社、作ってみた。9人の社員が今日も会議している」
+  概要欄にZennサイト誘導リンク必須。
+```
+
+```yaml
+id: T-023
+title: T-001動画 公開前監査チェック
+owner: kagura_aoi
+reviewer: saegusa_mio
+buddy: asakura_noa
+status: pending
+priority: P0
+due: 2026-05-19
+created: 2026-05-17
+updated: 2026-05-17
+triad: youtube
+depends_on: [T-021, T-022]
+deliverable: employees/kagura_aoi/outbox/audit_clearance/t001_video_production.lock
+notes: |
+  確認: Discord利用規約・個人情報・著作権・炎上リスク。
+```
+
+```yaml
+id: T-024
+title: T-001動画 YouTube投稿実行（5/20）
+owner: hinata_nagi
+reviewer: saegusa_mio
+buddy: hoshino_ritsu
+status: pending
+priority: P0
+due: 2026-05-20
+created: 2026-05-17
+updated: 2026-05-17
+triad: youtube
+depends_on: [T-023]
+deliverable: YouTube URL
+notes: |
+  監査ロック確認後に投稿。投稿後URL を📢お知らせに報告。
+```
+
+```yaml
 id: T-004
 title: AI NOWA 収益実証プロジェクト — Phase A〜D構成（撤退基準付き）
 owner: arima_reiji
