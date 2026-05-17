@@ -1,6 +1,6 @@
 # タスク依存関係グラフ
 
-自動生成: 2026-05-17 16:29 JST
+自動生成: 2026-05-17 17:55 JST
 
 ステータス色: 緑=done / 黄=in_progress / 青=review / 白=pending / 赤=blocked
 
@@ -27,7 +27,7 @@ graph TD
   T-016["T-016<br/>YouTube / Shorts 投稿フロー設計<br/>kuroba_yuu"]
   style T-016 fill:#ff9
   T-017["T-017<br/>診断系コンテンツ「あなたのAIチーム運営タイプ診断」実装<br/>kuroba_yuu"]
-  style T-017 fill:#ff9
+  style T-017 fill:#9f9
   T-019["T-019<br/>Cloudflareサブドメイン拡張（トップ + 最初の1記事 + 診断導線）<br/>shirase_kai"]
   style T-019 fill:#ff9
   T-006["T-006<br/>有料商材化のための法務整備<br/>saegusa_mio"]
@@ -57,9 +57,5 @@ graph TD
 
 - **T-012**: 1 タスクが依存 （status=done, owner=saegusa_mio）
 - **T-015**: 1 タスクが依存 （status=done, owner=hoshino_ritsu）
-- **T-017**: 1 タスクが依存 （status=in_progress, owner=kuroba_yuu）
-
-## 依存先未完了で実質ブロック中
-
-- `T-019` (shirase_kai) is waiting for: T-017
+- **T-017**: 1 タスクが依存 （status=done, owner=kuroba_yuu）
 

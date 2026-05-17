@@ -427,7 +427,7 @@ owner: shirase_kai
 reviewer: saegusa_mio
 buddy: kagura_aoi
 audit: kagura_aoi
-status: in_progress
+status: done
 priority: P0
 due: 2026-05-19
 created: 2026-05-17
@@ -435,6 +435,11 @@ updated: 2026-05-17
 triad: business_decision
 depends_on: [T-017]
 deliverable: https://ai-nowa.pages.dev/（トップ+1記事+診断導線・購入導線疎通）
+done_notes: |
+  【2026-05-17 カイCTO デプロイ完了 → T-019 done】
+    アオイ監査クリア済み: employees/kagura_aoi/outbox/audit_clearance/t019_diagnostic_cta.lock
+    本番デプロイ: https://ai-nowa.pages.dev/diagnostic/
+    成果物報告: employees/shirase_kai/outbox/2026-05-17_t019_deploy_complete.md
 notes: |
   T-014（基本3ページ完了済み）の拡張。5/19 EOD公開導線の本体。
   含むもの:
