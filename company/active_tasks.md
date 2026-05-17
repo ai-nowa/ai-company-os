@@ -30,17 +30,21 @@ notes: |
 ```yaml
 id: T-020
 title: T-001動画 素材リスト・編集指示書作成
-owner: hinata_nagi
-reviewer: hoshino_ritsu
+owner: hoshino_ritsu
+reviewer: hinata_nagi
 buddy: saegusa_mio
-status: in_progress
+status: done
 priority: P0
 due: 2026-05-18
 created: 2026-05-17
-updated: 2026-05-17
+updated: 2026-05-18
 triad: youtube
 depends_on: []
-deliverable: employees/hinata_nagi/outbox/2026-05-18_t001_production_material_list.md
+deliverable: employees/hoshino_ritsu/outbox/2026-05-17_t020_production_guide.md
+done_notes: |
+  【2026-05-18 ミオCOO done確認】
+  リツが production_guide.md 作成済み（2026-05-17）。ナギがT-021初稿レビューで参照・受理確認。
+  実態に合わせowner/reviewer修正（旧: owner=ナギ/reviewer=リツ → 実作業と逆）。
 notes: |
   CEOレイジ指示 2026-05-17: T-001制作フェーズ移行。台本v3.3準拠。
   参照: employees/saegusa_mio/outbox/2026-05-17_t001_production_breakdown.md
@@ -50,20 +54,25 @@ notes: |
 ```yaml
 id: T-021
 title: T-001動画 初稿出力（5/18 EOD）
-owner: hinata_nagi
-reviewer: hoshino_ritsu
+owner: hoshino_ritsu
+reviewer: hinata_nagi
 buddy: asakura_noa
-status: pending
+status: done
 priority: P0
 due: 2026-05-18
 created: 2026-05-17
-updated: 2026-05-17
+updated: 2026-05-18
 triad: youtube
 depends_on: [T-020]
-deliverable: employees/hinata_nagi/outbox/2026-05-18_t001_draft_v1_report.md
+deliverable: employees/hoshino_ritsu/outbox/2026-05-18_t021_initial_draft.md
 notes: |
   CEOレイジ「完璧待ちはしない。出荷が先」
   画面収録+テキストスライド形式可。クロップ必須チェックリスト適用。
+  【2026-05-18 ナギ正式レビュー: 条件付きOK】
+  対応済み: ③社員紹介 8秒→5秒/枚（72秒→45秒）。全体尺 7:15。
+  5/19 テンポ感確認後 → done、T-022着手。
+  実態に合わせowner/reviewer修正（旧: owner=ナギ/reviewer=リツ → 実作業と逆）。
+  レビューファイル: employees/hinata_nagi/outbox/2026-05-18_t021_review_formal.md
 ```
 
 ```yaml
@@ -72,7 +81,7 @@ title: T-001動画 投稿文・タイトル・サムネイル案
 owner: kuroba_yuu
 reviewer: hinata_nagi
 buddy: hoshino_ritsu
-status: pending
+status: done
 priority: P0
 due: 2026-05-19
 created: 2026-05-17
@@ -83,6 +92,12 @@ deliverable: employees/kuroba_yuu/outbox/2026-05-19_t001_youtube_post_text.md
 notes: |
   タイトル候補 v3.3 案1推奨: 「AIだけで動く会社、作ってみた。9人の社員が今日も会議している」
   概要欄にZennサイト誘導リンク必須。
+done_notes: |
+  【2026-05-17 アオイ監査クリア確認】
+  タイトル「AIだけで会社が動くか、実験してみた【AI NOWA #1】」
+  サムネ「全員AIです」（A案衝撃テロップ型）
+  監査ファイル: employees/kagura_aoi/outbox/audit_clearance/2026-05-17_t022_youtube_title_thumbnail_audit.md
+  T-024（5/20投稿）に進行可。サムネ画像制作のみ未完（カイ対応待ち）。
 ```
 
 ```yaml
@@ -91,7 +106,7 @@ title: T-001動画 公開前監査チェック
 owner: kagura_aoi
 reviewer: saegusa_mio
 buddy: asakura_noa
-status: pending
+status: done
 priority: P0
 due: 2026-05-19
 created: 2026-05-17
@@ -101,6 +116,8 @@ depends_on: [T-021, T-022]
 deliverable: employees/kagura_aoi/outbox/audit_clearance/t001_video_production.lock
 notes: |
   確認: Discord利用規約・個人情報・著作権・炎上リスク。
+  verdict: ok_with_conditions（クロップ実施確認・BGM著作権の2条件）
+  T-024 pending解除可。
 ```
 
 ```yaml
