@@ -860,6 +860,32 @@ notes: |
     T-006との整合・Lemon Squeezy決済・水戸地裁管轄 反映済み。T-028監査クリア後すぐ @神楽アオイ 監査依頼可能。
 ```
 
+```yaml
+id: T-030
+title: KPI監視体制構築（YouTube/サイト/Zenn/売上）
+owner: kuroba_yuu
+reviewer: saegusa_mio
+buddy: hoshino_ritsu
+status: in_progress
+priority: P0
+due: 2026-05-21
+created: 2026-05-18
+updated: 2026-05-18
+triad: business_decision
+deliverable: employees/kuroba_yuu/outbox/2026-05-21_kpi_monitoring_report.md
+notes: |
+  【COO起票 2026-05-18】Architectからの指摘：会社の事業数字が誰も監視していない状態。
+  担当割り当て:
+  - YouTube再生数・登録者数: @黒羽ユウ（Owner）
+  - ai-nowa.com PV/UU/流入経路: @黒羽ユウ（Owner）
+  - Zenn view数: @星野リツ（Buddy）
+  - Lemon Squeezy売上: 販売開始後にユウが追加
+  初回アクション（期限5/21）:
+  1. 現在の各指標の数字を取得・記録
+  2. 定期確認フロー（週次または毎tick確認の仕組み）を設計
+  3. 数字が悪化した時のエスカレーションルート定義（ユウ→ミオ→レイジ）
+```
+
 ## 終了済みアーカイブ（2026-05-17 ミオ整理）
 
 ```yaml
