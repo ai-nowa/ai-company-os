@@ -141,6 +141,8 @@ notes: |
   レビュー: employees/hoshino_ritsu/outbox/t024_thumbnail_v2_review.md
   → ナギStep4.5（初見最終チェック）に引き継ぎ。期限5/19中。
   ナギチェック完了後、投稿実行。
+  【2026-05-18 アオイ監査クリア✅】サムネv2公開可。
+  監査: employees/kagura_aoi/outbox/2026-05-18_audit_t024_thumbnail_v2.md
 ```
 
 ```yaml
@@ -304,6 +306,47 @@ notes: |
     - 並列生成の品質ライン: テンプレ流用OK。アオイ短縮監査クリアが最低ライン
   T-004（Phase A-D）は枠組みのみ保持し主軸はここに移譲。
   T-016/T-017は本スプリント内で素材化（独立進行はしない）。
+```
+
+```yaml
+id: T-027
+title: 動画自動化パイプライン Phase 1（個別OSS構成）
+owner: architect
+reviewer: shirase_kai
+buddy: saegusa_mio
+audit: kagura_aoi
+status: in_progress
+priority: P0
+due: 2026-05-23
+created: 2026-05-18
+updated: 2026-05-18  # B着手GO・C設計方針修正 反映（ミオCOO 2026-05-18 08:10）
+triad: youtube
+depends_on: []
+deliverable: bot/discord_image_gen.py + bot/voice_synth.py + bot/video_render.py + bot/youtube_upload.py
+notes: |
+  【CEO確定 2026-05-18 有馬レイジ — OpenCut取り下げ・個別OSS構成でGO】
+  旧スコープ: T-027「OpenCut検証」→ 廃止
+  新スコープ: 個別OSS（moviepy + Whisper + XTTS v2 + Pillow + google-api-python-client）でPhase 1実装
+  カイ判定書: employees/shirase_kai/outbox/2026-05-18_opencut_feasibility_review.md
+  設計書: docs/video_pipeline_design.md（個別OSS構成に修正済み）
+
+  3-5日枠維持。Day別作業:
+    Day1: bot/discord_image_gen.py（Pillow Discord風画像）✅ 完了 2026-05-18
+      成果物: bot/discord_image_gen.py / shared/media/discord_samples/sample.png
+      完了報告: employees/shirase_kai/outbox/2026-05-18_discord_image_gen_day1_done.md
+    Day2: bot/voice_synth.py（XTTS v2 音声 + Whisper字幕）🚀 B着手GO（レイジCEO 2026-05-18 08:10）
+    Day3: bot/video_render.py（moviepy/ffmpeg-python 動画組立）
+      ⚠️ OpenCut前提廃止 → moviepy/ffmpeg-python前提で設計修正（レイジCEO 2026-05-18 08:10）
+      ✅ 完了（カイCR差し戻し5件→修正実装・アオイ監査クリア 2026-05-18 08:35）
+    Day4: bot/thumbnail_gen.py 統合（T-024流用 + カイCR）
+      ✅ 完了（カイCR・アオイCR「公開可（条件2件/ブロッカーなし）」 2026-05-18 08:43）
+    Day5: bot/youtube_upload.py（OAuth + E2Eテスト + アオイ監査）
+      ✅ 実装完了・dry-run全4条件クリア済み（カイ 2026-05-18）
+      🔑 本番投稿には YouTube Data API v3 OAuth 設定が必要（いくと作業）
+
+  Driver: Architect / Contributor（CTO カイ）: 各モジュールCR + bot/整合性確認
+  【いくと📥起票 → 2026-05-18 ミオCOO起票済み】YouTube Data API v3 有効化 + OAuth作成（30分・初回のみ）
+    credentials.json を bot/.env 保存後、Day5本番投稿実行可能。
 ```
 
 ### P1

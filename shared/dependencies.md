@@ -1,6 +1,6 @@
 # タスク依存関係グラフ
 
-自動生成: 2026-05-18 06:35 JST
+自動生成: 2026-05-18 08:18 JST
 
 ステータス色: 緑=done / 黄=in_progress / 青=review / 白=pending / 赤=blocked
 
@@ -22,6 +22,8 @@ graph TD
   style T-004 fill:#ff9
   T-018["T-018<br/>7日スプリント「実績を作りながら売る」（同素材並列生成 + 9,800円商品出荷）<br/>saegusa_mio"]
   style T-018 fill:#ff9
+  T-027["T-027<br/>動画自動化パイプライン Phase 1（個別OSS構成）<br/>architect"]
+  style T-027 fill:#ff9
   T-011["T-011<br/>Zenn記事v0.3執筆「初めて社員が本当に衝突した日」<br/>hoshino_ritsu"]
   style T-011 fill:#9f9
   T-007["T-007<br/>design-kit-v1 有料販売検証（販売プラットフォーム選定 → 出荷）<br/>asakura_noa"]
