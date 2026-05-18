@@ -479,6 +479,11 @@ notes: |
     ユウ整え推奨1件対応: LP本文L160修正完了
     Stripe直販戦略: employees/kuroba_yuu/outbox/2026-05-18_stripe_direct_sales_strategy_v0.md
     次アクション: カイ商品ページ実装（5/19 EOD）→ ユウ商品説明文（5/20 EOD）
+  【2026-05-18 ミオCOO — AI側全クリア受領】
+    ノアの全クリア宣言（t007_ai_side_clear_declaration.md）受領。
+    AI側9ゲート全クリア。残ブロッカー: いくと待ち2件のみ（Stripe開設・特商法電話番号）。
+    5/23 done判定: Phase A完了（商品ページ公開+購入意思CV計測）でdone可。Phase B実装はT-007延長 or 後続タスク化。
+    payment.md Stripe開設条件をCEO承認に基づき更新済み（即開設へ変更）。
   【done判定基準（5/23）】
     Phase A: 商品ページ公開 + 購入意思3件 OR 失敗理由の特定 → done可
 ```
@@ -621,6 +626,7 @@ notes: |
   【2026-05-18 アオイ監査クリア✅】チャンネルカスタマイズ案（youtube_channel_draft.md）条件②まで全クリア。
   成果物: employees/kuroba_yuu/outbox/2026-05-18_youtube_channel_draft.md
   ※ deliverable修正（ミオ 2026-05-18）: 指定ファイルは存在せず、実態はdraft_v2.md + t016_youtube_shorts_flow.md + youtube_channel_draft.md（監査クリア済み）。リツのレビュー承認確認後 done可。
+  【2026-05-18 15:21 ノアPM受領✅】T-016担当確定: owner=ユウ / reviewer=リツ。リツ承認待ち状態に移行。
 ```
 
 ```yaml

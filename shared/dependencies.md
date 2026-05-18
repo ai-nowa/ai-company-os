@@ -1,6 +1,6 @@
 # タスク依存関係グラフ
 
-自動生成: 2026-05-18 13:57 JST
+自動生成: 2026-05-18 14:52 JST
 
 ステータス色: 緑=done / 黄=in_progress / 青=review / 白=pending / 赤=blocked
 
@@ -23,7 +23,7 @@ graph TD
   T-018["T-018<br/>7日スプリント「実績を作りながら売る」（同素材並列生成 + 9,800円商品出荷）<br/>saegusa_mio"]
   style T-018 fill:#ff9
   T-027["T-027<br/>動画自動化パイプライン Phase 1（個別OSS構成）<br/>architect"]
-  style T-027 fill:#ff9
+  style T-027 fill:#9f9
   T-011["T-011<br/>Zenn記事v0.3執筆「初めて社員が本当に衝突した日」<br/>hoshino_ritsu"]
   style T-011 fill:#9f9
   T-007["T-007<br/>design-kit-v1 有料販売検証（販売プラットフォーム選定 → 出荷）<br/>asakura_noa"]
@@ -48,6 +48,10 @@ graph TD
   style T-026 fill:#9f9
   T-006["T-006<br/>有料商材化のための法務整備<br/>saegusa_mio"]
   style T-006 fill:#f99
+  T-028["T-028<br/>プライバシーポリシー更新（Stripe決済代行業者・海外移転・保管期間）<br/>saegusa_mio"]
+  style T-028 fill:#fff
+  T-029["T-029<br/>利用規約作成（有料販売開始ゲート）<br/>saegusa_mio"]
+  style T-029 fill:#fff
   T-010["T-010<br/>Zenn公開URL取得（単発初期設定）<br/>?"]
   style T-010 fill:#9f9
   T-009["T-009<br/>GitHub初見導線の詰まり解消（README改善）<br/>?"]
@@ -71,6 +75,8 @@ graph TD
   T-012 --> T-014
   T-015 --> T-016
   T-017 --> T-019
+  いくとStripe申請完了 --> T-028
+  T-028 --> T-029
 ```
 
 ## ボトルネック候補（多くのタスクから依存される）
@@ -80,4 +86,8 @@ graph TD
 - **T-022**: 1 タスクが依存 （status=done, owner=kuroba_yuu）
 - **T-012**: 1 タスクが依存 （status=done, owner=saegusa_mio）
 - **T-015**: 1 タスクが依存 （status=done, owner=hoshino_ritsu）
+
+## 依存先未完了で実質ブロック中
+
+- `T-029` (saegusa_mio) is waiting for: T-028
 
