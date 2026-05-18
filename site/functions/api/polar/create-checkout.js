@@ -10,8 +10,15 @@
 const POLAR_API = "https://api.polar.sh/v1";
 const DEFAULT_PRODUCT_ID = "83b50b18-6f48-4cb2-a4ab-039429d06177"; // AIチーム設計キット v0.1 (980円)
 
+// 販売準備中フラグ: 監査クリア後に true に戻す（2026-05-23 予定）
+const CHECKOUT_ENABLED = false;
+
 export async function onRequestPost(context) {
   const { request, env } = context;
+
+  if (!CHECKOUT_ENABLED) {
+    return json({ error: "Checkout temporarily unavailable", message: "現在販売準備中です。" }, 503);
+  }
 
   const apiKey = env.POLAR_API_KEY;
   if (!apiKey) return json({ error: "POLAR_API_KEY not configured" }, 500);
@@ -57,6 +64,12 @@ export async function onRequestPost(context) {
 }
 
 export async function onRequestGet(context) {
+  if (!CHECKOUT_ENABLED) {
+    return new Response(
+      `<!DOCTYPE html><html lang="ja"><head><meta charset="UTF-8"><title>販売準備中 — AI NOWA</title><meta http-equiv="refresh" content="3;url=/shop/"></head><body style="font-family:sans-serif;max-width:480px;margin:4rem auto;padding:2rem;text-align:center;color:#222;"><h1 style="font-size:1.3rem;">現在販売準備中です</h1><p>3秒後に商品ページへ戻ります。</p><p><a href="/shop/">商品ページに戻る</a></p></body></html>`,
+      { status: 503, headers: { "Content-Type": "text/html; charset=utf-8" } }
+    );
+  }
   // ブラウザから直接アクセス時: そのまま Checkout URL を生成して 302 リダイレクト
   const fakeReq = new Request("https://internal/api/polar/create-checkout", {
     method: "POST",
