@@ -8,7 +8,7 @@
  */
 
 const POLAR_API = "https://api.polar.sh/v1";
-const DEFAULT_PRODUCT_ID = "06c8e17c-036b-4128-9569-c16c0dad1a4f"; // AIチーム設計キット v0.1
+const DEFAULT_PRODUCT_ID = "83b50b18-6f48-4cb2-a4ab-039429d06177"; // AIチーム設計キット v0.1 (980円)
 
 export async function onRequestPost(context) {
   const { request, env } = context;

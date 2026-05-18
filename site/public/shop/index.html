@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>AIチーム設計キット v0.1 — AI NOWA</title>
-  <meta name="description" content="9人のAI社員を動かした設計書、そのまま渡します。persona定義・失敗11件・prompt雛形一式。9,800円（早期割引 7,800円）">
+  <meta name="description" content="AI社員9人の役割設計テンプレ。止め役・監査役の設計書・衝突パターン・監査ゲート設計含む。980円。">
   <link rel="stylesheet" href="../style.css">
   <style>
     .shop-hero { text-align: center; padding: 3.5rem 0 2.5rem; }
@@ -20,10 +20,7 @@
       text-align: center;
       margin: 2.5rem 0;
     }
-    .price-box .price-normal { font-size: 0.85rem; color: var(--muted); text-decoration: line-through; }
     .price-box .price-sale { font-size: 2rem; font-weight: 800; color: var(--accent); margin: 0.3rem 0; }
-    .price-box .price-note { font-size: 0.8rem; color: var(--muted); margin-bottom: 1.2rem; }
-    .price-box .deadline { font-size: 0.82rem; color: var(--accent2); margin-bottom: 1.4rem; }
 
     .btn-buy {
       display: inline-block;
@@ -44,39 +41,33 @@
       margin-top: 0.9rem;
     }
 
-    .contents-list { list-style: none; padding: 0; }
-    .contents-list li {
-      padding: 0.8rem 0;
-      border-bottom: 1px solid var(--border);
-      display: flex;
-      gap: 0.8rem;
-      align-items: flex-start;
-    }
-    .contents-list li:last-child { border-bottom: none; }
-    .contents-list .icon { color: var(--accent); font-size: 1rem; flex-shrink: 0; margin-top: 0.1rem; }
-    .contents-list .item-title { font-weight: 700; font-size: 0.95rem; }
-    .contents-list .item-desc { font-size: 0.83rem; color: var(--muted); margin-top: 0.2rem; }
-
-    .target-list { list-style: none; padding: 0; }
-    .target-list li {
-      padding: 0.6rem 0 0.6rem 1.4rem;
+    .situation-list { list-style: none; padding: 0; }
+    .situation-list li {
+      padding: 0.7rem 0 0.7rem 1.4rem;
       position: relative;
       color: var(--muted);
       font-size: 0.92rem;
       border-bottom: 1px solid var(--border);
     }
-    .target-list li:last-child { border-bottom: none; }
-    .target-list li::before { content: "→"; position: absolute; left: 0; color: var(--accent2); }
+    .situation-list li:last-child { border-bottom: none; }
+    .situation-list li::before { content: "—"; position: absolute; left: 0; color: var(--accent2); }
 
-    .copy-block {
-      background: var(--bg2);
-      border-left: 3px solid var(--accent2);
-      padding: 1.2rem 1.4rem;
-      border-radius: 0 8px 8px 0;
-      margin: 1.5rem 0;
-      font-size: 0.93rem;
-      line-height: 1.8;
+    .contents-table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
+    .contents-table th {
+      text-align: left;
+      padding: 0.6rem 0.8rem;
+      border-bottom: 2px solid var(--border);
+      color: var(--muted);
+      font-weight: 600;
+      font-size: 0.8rem;
     }
+    .contents-table td {
+      padding: 0.8rem 0.8rem;
+      border-bottom: 1px solid var(--border);
+      vertical-align: top;
+    }
+    .contents-table tr:last-child td { border-bottom: none; }
+    .contents-table td:first-child { font-weight: 700; color: var(--text); white-space: nowrap; }
 
     .format-badge {
       display: inline-block;
@@ -103,81 +94,73 @@
   <main>
     <div class="shop-hero">
       <div class="catch">AIチーム設計キット v0.1</div>
-      <h1>9人のAI社員を動かした設計書、<br>そのまま渡します。</h1>
-      <p class="sub">persona定義・失敗11件の記録・prompt雛形一式。<br>動いている設計をテンプレ形式で。</p>
+      <h1>AIに役割を与えたのに、<br>誰も止めてくれない。</h1>
+      <p class="sub">AI社員9人の役割設計テンプレ ── 止め役・監査役の設計書つき</p>
     </div>
 
     <div class="price-box">
-      <div class="price-normal">通常価格 9,800円</div>
-      <div class="price-sale">7,800円<span style="font-size:1rem;font-weight:400;color:var(--muted);">（税込）</span></div>
-      <div class="deadline">早期割引 — 2026年5月24日 23:59 まで / 先着3名</div>
+      <div class="price-sale">980円<span style="font-size:1rem;font-weight:400;color:var(--muted);">（税込）</span></div>
+      <div style="margin-bottom:1.4rem;"></div>
       <a href="/api/polar/create-checkout" class="btn-buy" id="btn-buy-top">今すぐ購入する →</a>
-      <p class="delivery-note">Polar.sh 経由の安全な決済。購入後 2営業日以内にメールでダウンロードURLをお送りします。</p>
+      <p class="delivery-note">Polar.sh 経由の安全な決済。ご購入後、2営業日以内にメールでダウンロードリンクをお送りします。</p>
       <p class="delivery-note" style="margin-top:0.4rem;color:var(--accent2);font-size:0.78rem;">クレジットカード / PayPal 対応 &nbsp;|&nbsp; 海外決済代行（MoR）</p>
       <p class="delivery-note" style="margin-top:0.4rem;font-size:0.75rem;">※ AIが生成・補助したコンテンツを含みます。デジタルコンテンツの性質上、原則返金不可。</p>
     </div>
 
     <section style="margin-bottom:3rem;">
-      <h2 class="section-title">なぜこのキットが必要か</h2>
-      <div class="copy-block">
-        <p>AIエージェントを複数組み合わせようとすると、詰まる場所があります。</p>
-        <p style="margin-top:0.8rem;">技術じゃないんです、設計です。</p>
-        <p style="margin-top:0.8rem;">「どんな役割を持たせるか」「どう衝突させるか」「何を自律させて何を人間がやるか」——これを考えずにpromptを書き始めると、動いてるように見えて機能しないチームができます。</p>
-        <p style="margin-top:0.8rem;">AI NOWA は、この設計を9人分やりました。実際に動かしながら失敗11件を踏んで、その記録を全部残しています。</p>
-      </div>
+      <h2 class="section-title">こんな状況、ありませんか</h2>
+      <ul class="situation-list">
+        <li>ChatGPT / Claude に「エンジニア役」「レビュー役」と名付けたが、誰かが「それは間違い」と言う設計になっていない</li>
+        <li>AIが暴走したとき、止める役割を誰が持つか決まっていない</li>
+        <li>複数エージェントが動き始めると、役割の衝突パターンが読めない</li>
+      </ul>
     </section>
 
     <section style="margin-bottom:3rem;">
-      <h2 class="section-title">中身</h2>
-      <ul class="contents-list">
-        <li>
-          <span class="icon">▸</span>
-          <div>
-            <div class="item-title">persona定義ファイル × 9種</div>
-            <div class="item-desc">CEO〜視聴者代表まで、役職・性格・口癖・弱点・関係性を網羅。<span class="format-badge">YAML</span><span class="format-badge">Markdown</span></div>
-          </div>
-        </li>
-        <li>
-          <span class="icon">▸</span>
-          <div>
-            <div class="item-title">実例ログ抜粋</div>
-            <div class="item-desc">実際のDiscord上の会話。AI社員がどう動いたかの現物。</div>
-          </div>
-        </li>
-        <li>
-          <span class="icon">▸</span>
-          <div>
-            <div class="item-title">設計罠 11件</div>
-            <div class="item-desc">「自律ループが止まった」「社員が衝突しなかった」など、踏んで初めてわかる失敗の一覧と対策。</div>
-          </div>
-        </li>
-        <li>
-          <span class="icon">▸</span>
-          <div>
-            <div class="item-title">prompt雛形 × 4タイプ</div>
-            <div class="item-desc">自律指示型・相談型・審査型・報告型の使い分けテンプレ。Claude / GPT 両対応。</div>
-          </div>
-        </li>
-      </ul>
+      <h2 class="section-title">このテンプレで解決すること</h2>
+      <p style="font-size:0.93rem;color:var(--muted);margin-bottom:1.2rem;">AI NOWA が実際に稼働させている9人の役割設計を、そのまま渡します。</p>
+      <table class="contents-table">
+        <thead>
+          <tr>
+            <th>含まれるもの</th>
+            <th>内容</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>persona定義テンプレ</td>
+            <td>CEO・COO・CTO・PM・監査・マーケ他（<span class="format-badge">YAML</span><span class="format-badge">Markdown</span>）</td>
+          </tr>
+          <tr>
+            <td>止め役の設計書</td>
+            <td>「No を言う役」の権限範囲・介入タイミング</td>
+          </tr>
+          <tr>
+            <td>衝突パターン3例</td>
+            <td>「技術 vs. 出荷速度」など実際のログ付き</td>
+          </tr>
+          <tr>
+            <td>監査ゲート設計</td>
+            <td>公開前に必ず通す1枚チェックリスト（<span class="format-badge">JSON</span>）</td>
+          </tr>
+        </tbody>
+      </table>
       <p style="font-size:0.82rem;color:var(--muted);margin-top:1rem;">配信形式: PDF + Markdown + JSON サンプル</p>
     </section>
 
     <section style="margin-bottom:3rem;">
-      <h2 class="section-title">こんな人に</h2>
-      <ul class="target-list">
-        <li>Claude / GPT で複数エージェントを動かしているが、役割設計で詰まっている</li>
-        <li>「止める役」をどう設計するか分からない</li>
-        <li>AI会社・AIチームを作りたいが、最初の一歩がわからない</li>
-        <li>ChatGPTのAPIは触れる、でも「チームを組む設計」で詰まっているエンジニア</li>
-      </ul>
+      <h2 class="section-title">こんな人が使っています</h2>
+      <p style="font-size:0.92rem;color:var(--muted);line-height:1.8;">
+        副業で複数AIエージェントを試している方。<br>
+        「役割を与えたけど、暴走したときの止め方が分からない」というのが最初の詰まりポイントです。
+      </p>
     </section>
 
     <div class="price-box">
-      <div class="price-normal">通常価格 9,800円</div>
-      <div class="price-sale">7,800円<span style="font-size:1rem;font-weight:400;color:var(--muted);">（税込）</span></div>
-      <div class="deadline">早期割引 — 2026年5月24日 23:59 まで / 先着3名</div>
+      <div class="price-sale">980円<span style="font-size:1rem;font-weight:400;color:var(--muted);">（税込）</span></div>
+      <div style="margin-bottom:1.4rem;"></div>
       <a href="/api/polar/create-checkout" class="btn-buy" id="btn-buy-bottom">今すぐ購入する →</a>
-      <p class="delivery-note">Polar.sh 経由の安全な決済。購入後 2営業日以内にメールでダウンロードURLをお送りします。</p>
+      <p class="delivery-note">Polar.sh 経由の安全な決済。ご購入後、2営業日以内にメールでダウンロードリンクをお送りします。</p>
       <p class="delivery-note" style="margin-top:0.4rem;color:var(--accent2);font-size:0.78rem;">クレジットカード / PayPal 対応 &nbsp;|&nbsp; 海外決済代行（MoR）</p>
       <p class="delivery-note" style="margin-top:0.4rem;font-size:0.75rem;">※ AIが生成・補助したコンテンツを含みます。デジタルコンテンツの性質上、原則返金不可。</p>
     </div>
