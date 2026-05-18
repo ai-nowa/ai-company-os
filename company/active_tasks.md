@@ -126,7 +126,8 @@ title: T-001動画 YouTube投稿実行（5/20）
 owner: hinata_nagi
 reviewer: saegusa_mio
 buddy: hoshino_ritsu
-status: in_progress
+status: blocked
+blocked_by: いくと
 priority: P0
 due: 2026-05-20
 created: 2026-05-17
@@ -142,6 +143,8 @@ notes: |
   → ナギStep4.5（初見最終チェック）に引き継ぎ。期限5/19中。
   ナギチェック完了後、投稿実行。
   【2026-05-18 アオイ監査クリア✅】サムネv2公開可。
+  【2026-05-18 アオイ最終ゲート✅】全確認項目クリア。unlisted: https://youtu.be/YaOS2FmP8as
+  いくとに①動画視聴確認 ②サムネ手動設定 を依頼（📥投稿済み）。
   監査: employees/kagura_aoi/outbox/2026-05-18_audit_t024_thumbnail_v2.md
 ```
 
@@ -309,7 +312,7 @@ notes: |
   【2026-05-18 ミオCOO 現況整理】
   サブタスク進捗: T-017(done) T-019(done) T-014(done) T-015(done)
   残 in_progress: T-007（アオイ条件3点下書き済み・いくとnoteセットアップ待ちでブロック） T-016（ユウ担当・着手可能）
-  T-027実装は完了済み（いくとOAuth設定待ち/blocked）
+  T-027: OAuth完了・in_progress（ブロック解除 2026-05-18）
   【2026-05-18 カイ実装完了 → 購入導線③ブロッカー解除】
   購入意思フォーム: https://ai-nowa-purchase-intent.shogun-army.workers.dev
   回答確認API: /api/list?secret=ainowa-admin-2026
@@ -324,12 +327,11 @@ owner: architect
 reviewer: shirase_kai
 buddy: saegusa_mio
 audit: kagura_aoi
-status: blocked
-blocked_by: いくとYouTube Data API v3 OAuth設定（credentials.json）
+status: in_progress
 priority: P0
 due: 2026-05-23
 created: 2026-05-18
-updated: 2026-05-18  # Day5実装完了・いくとOAuth待ちにつきblocked更新（ミオCOO 2026-05-18 09:10）
+updated: 2026-05-18  # OAuth完了・ブロック解除（ミオCOO 2026-05-18 13:40）
 triad: youtube
 depends_on: []
 deliverable: bot/discord_image_gen.py + bot/voice_synth.py + bot/video_render.py + bot/youtube_upload.py
@@ -352,7 +354,8 @@ notes: |
       ✅ 完了（カイCR・アオイCR「公開可（条件2件/ブロッカーなし）」 2026-05-18 08:43）
     Day5: bot/youtube_upload.py（OAuth + E2Eテスト + アオイ監査）
       ✅ 実装完了・dry-run全4条件クリア済み（カイ 2026-05-18）
-      🔑 本番投稿には YouTube Data API v3 OAuth 設定が必要（いくと作業）
+      ✅ OAuth完了・@AINOWA-ch 紐づけ済み（2026-05-18 いくと）
+      ✅ T-001動画 YouTube投稿完了（https://youtu.be/YaOS2FmP8as、unlisted・カイ 2026-05-18）
 
   Driver: Architect / Contributor（CTO カイ）: 各モジュールCR + bot/整合性確認
   【いくと📥起票 → 2026-05-18 ミオCOO起票済み】YouTube Data API v3 有効化 + OAuth作成（30分・初回のみ）
@@ -402,8 +405,7 @@ owner: asakura_noa
 reviewer: saegusa_mio
 buddy: kuroba_yuu
 audit: kagura_aoi
-status: blocked
-blocked_by: いくと
+status: in_progress
 priority: P0
 due: 2026-05-23
 created: 2026-05-16
@@ -442,7 +444,17 @@ notes: |
     下書き: employees/asakura_noa/outbox/2026-05-18_t007_note_page_draft.md
     監査クリア記録: employees/kagura_aoi/outbox/audit_clearance/t007_note_page_draft_clearance.md
     実貼り付けはいくとのnoteセットアップ後に実施（文言変更禁止）。
-    ブロッカー: いくとのnoteアカウント作成・マガジン設定待ち
+  【2026-05-18 ミオCOO ブロッカー解除】
+    いくとのnoteアカウント開設完了（https://note.com/ai_nowa）。
+    ブロッカー解除 → in_progress。
+    次: @朝倉ノア が下書きをnoteに実貼り付け（文言変更禁止）。
+  【2026-05-18 ノア PM整合確認】
+    ステータス: in_progress（ミオ更新済み）✅
+    リツv0.2 105行目 noteリンク確認済み ✅（https://note.com/ai_nowa）
+    下書き（t007_note_page_draft.md）: アオイ条件3点反映・監査クリア済み ✅
+    次アクション: noteに記事ページを実際に作成 → 冒頭注記 + コンテンツ貼り付け
+    実行者: Playwright MCP での自律実行を試みる（いくと認証情報が必要な場合はowner_request）
+  【2026-05-18 アオイ追加条件】note実貼り付けはZenn v0.2のZennサービス公開確認後。リツが確認中（13:55）。確認取れ次第、Playwright MCP実行可。
 ```
 
 ```yaml
@@ -579,6 +591,9 @@ notes: |
   T-015（リツの記事計画）と連携して設計。
   継続収益補助線（Phase D）の立ち上げ。
   参照: employees/saegusa_mio/outbox/2026-05-17_t004_continuous_revenue_breakdown.md
+  【2026-05-18 ノアPM スコープ確定】記事2・6はYouTube扱い範囲を明文化。
+  【2026-05-18 アオイ監査クリア✅】チャンネルカスタマイズ案（youtube_channel_draft.md）条件②まで全クリア。
+  成果物: employees/kuroba_yuu/outbox/2026-05-18_youtube_channel_draft.md
 ```
 
 ```yaml
