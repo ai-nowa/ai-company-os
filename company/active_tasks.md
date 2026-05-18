@@ -327,11 +327,11 @@ owner: architect
 reviewer: shirase_kai
 buddy: saegusa_mio
 audit: kagura_aoi
-status: in_progress
+status: done
 priority: P0
 due: 2026-05-23
 created: 2026-05-18
-updated: 2026-05-18  # OAuth完了・ブロック解除（ミオCOO 2026-05-18 13:40）
+updated: 2026-05-18
 triad: youtube
 depends_on: []
 deliverable: bot/discord_image_gen.py + bot/voice_synth.py + bot/video_render.py + bot/youtube_upload.py
@@ -346,7 +346,7 @@ notes: |
     Day1: bot/discord_image_gen.py（Pillow Discord風画像）✅ 完了 2026-05-18
       成果物: bot/discord_image_gen.py / shared/media/discord_samples/sample.png
       完了報告: employees/shirase_kai/outbox/2026-05-18_discord_image_gen_day1_done.md
-    Day2: bot/voice_synth.py（XTTS v2 音声 + Whisper字幕）🚀 B着手GO（レイジCEO 2026-05-18 08:10）
+    Day2: bot/voice_synth.py（gTTS + Whisper字幕）✅ 完了 2026-05-18（gTTS fallback採用）
     Day3: bot/video_render.py（moviepy/ffmpeg-python 動画組立）
       ⚠️ OpenCut前提廃止 → moviepy/ffmpeg-python前提で設計修正（レイジCEO 2026-05-18 08:10）
       ✅ 完了（カイCR差し戻し5件→修正実装・アオイ監査クリア 2026-05-18 08:35）
@@ -360,6 +360,10 @@ notes: |
   Driver: Architect / Contributor（CTO カイ）: 各モジュールCR + bot/整合性確認
   【いくと📥起票 → 2026-05-18 ミオCOO起票済み】YouTube Data API v3 有効化 + OAuth作成（30分・初回のみ）
     credentials.json を bot/.env 保存後、Day5本番投稿実行可能。
+  【2026-05-18 カイCTO done確認】
+    全Day(1-5)完了。成果物: discord_image_gen.py / voice_synth.py / video_render.py / thumbnail_gen.py / youtube_upload.py / youtube_pipeline.py
+    T-001動画投稿完了: https://youtu.be/YaOS2FmP8as（unlisted・5/20公開予定）
+    T-024 ブロッカー: いくとの視聴確認 + サムネ手動設定（📥投稿済み）
 ```
 
 ### P1
@@ -455,6 +459,14 @@ notes: |
     次アクション: noteに記事ページを実際に作成 → 冒頭注記 + コンテンツ貼り付け
     実行者: Playwright MCP での自律実行を試みる（いくと認証情報が必要な場合はowner_request）
   【2026-05-18 アオイ追加条件】note実貼り付けはZenn v0.2のZennサービス公開確認後。リツが確認中（13:55）。確認取れ次第、Playwright MCP実行可。
+  【2026-05-18 ノア プラットフォーム撤退・転換（設計者いくと判断）】
+    note撤退理由: note公式API不在 → AI完結不可 → いくと禁止令抵触
+    新本線: Stripe + ai-nowa.com 直販（shared/brand/payment.md 準拠）
+    Phase A（5/23まで）: 商品ページ公開 + 購入意思フォーム（CV計測） = Stripe不要
+    Phase B（購入意思3件確認後）: いくとStripe開設 → 実決済本実装
+    価格: 9,800円（早期7,800円 〜5/24）変更なし
+    判断詳細: employees/asakura_noa/outbox/2026-05-18_t007_platform_v2_stripe.md
+    残作業: カイ商品ページ実装（5/19 EOD）/ ユウ商品説明文（5/20 EOD）/ レイジCEO承認
 ```
 
 ```yaml
@@ -585,7 +597,7 @@ created: 2026-05-17
 updated: 2026-05-17
 triad: business_decision
 depends_on: [T-015]
-deliverable: employees/kuroba_yuu/outbox/2026-05-17_youtube_flow_v1.md
+deliverable: employees/kuroba_yuu/outbox/2026-05-17_t016_youtube_flow_draft_v2.md
 notes: |
   内容: ネタ選定基準・投稿頻度・サムネイル方針・Zenn/Web誘導導線。
   T-015（リツの記事計画）と連携して設計。
@@ -594,6 +606,7 @@ notes: |
   【2026-05-18 ノアPM スコープ確定】記事2・6はYouTube扱い範囲を明文化。
   【2026-05-18 アオイ監査クリア✅】チャンネルカスタマイズ案（youtube_channel_draft.md）条件②まで全クリア。
   成果物: employees/kuroba_yuu/outbox/2026-05-18_youtube_channel_draft.md
+  ※ deliverable修正（ミオ 2026-05-18）: 指定ファイルは存在せず、実態はdraft_v2.md + t016_youtube_shorts_flow.md + youtube_channel_draft.md（監査クリア済み）。リツのレビュー承認確認後 done可。
 ```
 
 ```yaml
