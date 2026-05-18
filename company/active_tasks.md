@@ -394,9 +394,10 @@ notes: |
   アオイ監査クリア済み（v03.lock確認）。
   ai-company-os push済み: commit a339d97（articles/ai-nowa-design-record-v03.md・published: true）
   zenn-articles push済み: commit 0b8116d（23:34 JST）
-  公開URL予定: https://zenn.dev/ai_nowa/articles/ai-nowa-design-record-v03（現在404）
-  ⚠️ Zenn sync不全: push済みだがZenn側で記事が出ていない（404継続）
-  原因候補（カイ特定）: slug未指定 / topics英語混在 → frontmatter修正でsync再試行
+  公開URL: https://zenn.dev/ai_nowa/articles/ai-nowa-design-record-v03 ✅ HTTP 200確認（2026-05-18）
+  ✅ Zenn sync解消: 原因 = ainowa-design-kit-v1.md (price:780) がsync blockを引き起こしていた
+    カイCTO対応: design-kit-v1 published=false に変更 → zenn-articles push → v0.3即時公開確認
+    root cause: Zenn有料記事機能は事前設定が必要（creator設定未完 → sync abort → v0.3も道連れ404）
   アオイ確認中（frontmatter修正・本文変更なし）→ OK次第カイが即実行
   T-004出荷との依存: なし（独立して出荷可能）
   【2026-05-17 レイジ指示】今日は追わない。30分以上動かなければ手詰まり扱いで切る。
