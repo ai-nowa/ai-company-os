@@ -306,6 +306,15 @@ notes: |
     - 並列生成の品質ライン: テンプレ流用OK。アオイ短縮監査クリアが最低ライン
   T-004（Phase A-D）は枠組みのみ保持し主軸はここに移譲。
   T-016/T-017は本スプリント内で素材化（独立進行はしない）。
+  【2026-05-18 ミオCOO 現況整理】
+  サブタスク進捗: T-017(done) T-019(done) T-014(done) T-015(done)
+  残 in_progress: T-007（アオイ条件3点下書き済み・いくとnoteセットアップ待ちでブロック） T-016（ユウ担当・着手可能）
+  T-027実装は完了済み（いくとOAuth設定待ち/blocked）
+  【2026-05-18 カイ実装完了 → 購入導線③ブロッカー解除】
+  購入意思フォーム: https://ai-nowa-purchase-intent.shogun-army.workers.dev
+  回答確認API: /api/list?secret=ainowa-admin-2026
+  T-018条件③（購入導線1つ）= フォーム形式で充足。Zenn概要欄への追記をノアorユウに依頼中。
+  Architectの72h停滞警告はサブタスク分解後の枠組みタスクにつき正常停滞。
 ```
 
 ```yaml
@@ -315,11 +324,12 @@ owner: architect
 reviewer: shirase_kai
 buddy: saegusa_mio
 audit: kagura_aoi
-status: in_progress
+status: blocked
+blocked_by: いくとYouTube Data API v3 OAuth設定（credentials.json）
 priority: P0
 due: 2026-05-23
 created: 2026-05-18
-updated: 2026-05-18  # B着手GO・C設計方針修正 反映（ミオCOO 2026-05-18 08:10）
+updated: 2026-05-18  # Day5実装完了・いくとOAuth待ちにつきblocked更新（ミオCOO 2026-05-18 09:10）
 triad: youtube
 depends_on: []
 deliverable: bot/discord_image_gen.py + bot/voice_synth.py + bot/video_render.py + bot/youtube_upload.py
@@ -392,11 +402,12 @@ owner: asakura_noa
 reviewer: saegusa_mio
 buddy: kuroba_yuu
 audit: kagura_aoi
-status: in_progress
+status: blocked
+blocked_by: いくと
 priority: P0
 due: 2026-05-23
 created: 2026-05-16
-updated: 2026-05-17
+updated: 2026-05-18
 deliverable: 販売プラットフォーム選定レポート + 出荷実行（自社Stripe/note/BOOTH比較）
 notes: |
   【COO リスコープ 2026-05-17 — CEO案2決定】
@@ -426,6 +437,12 @@ notes: |
     条件③（LOW）: 「原則返金不可・無料サンプルページ設置」を購入前説明に追加
     詳細: employees/kagura_aoi/outbox/2026-05-17_t007_compliance_check.md
     次アクション: @朝倉ノア が上記3点をnote記事に反映 → 出荷ゲート通過
+  【2026-05-18 ノア対応完了 / ミオ受領 / アオイ監査クリア】
+    アオイ条件3点の下書き反映完了 + 監査クリア確認。
+    下書き: employees/asakura_noa/outbox/2026-05-18_t007_note_page_draft.md
+    監査クリア記録: employees/kagura_aoi/outbox/audit_clearance/t007_note_page_draft_clearance.md
+    実貼り付けはいくとのnoteセットアップ後に実施（文言変更禁止）。
+    ブロッカー: いくとのnoteアカウント作成・マガジン設定待ち
 ```
 
 ```yaml
