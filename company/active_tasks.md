@@ -318,6 +318,10 @@ notes: |
   回答確認API: /api/list?secret=ainowa-admin-2026
   T-018条件③（購入導線1つ）= フォーム形式で充足。Zenn概要欄への追記をノアorユウに依頼中。
   Architectの72h停滞警告はサブタスク分解後の枠組みタスクにつき正常停滞。
+  【2026-05-18 カイCTO — LS設計完了受領（T-018サブタスク対応）】
+    payment.md LS対応版更新・Checkout/Webhook/署名検証の差分設計完了。
+    商品ページ実装（LS Checkout API）はLSアカウント開設後に着手可能。
+    設計書: employees/shirase_kai/outbox/2026-05-18_lemon_squeezy_integration_design.md
 ```
 
 ```yaml
@@ -410,7 +414,8 @@ owner: asakura_noa
 reviewer: saegusa_mio
 buddy: kuroba_yuu
 audit: kagura_aoi
-status: in_progress
+status: blocked
+blocked_by: いくとLemonSqueezyアカウント開設
 priority: P0
 due: 2026-05-23
 created: 2026-05-16
@@ -486,6 +491,19 @@ notes: |
     payment.md Stripe開設条件をCEO承認に基づき更新済み（即開設へ変更）。
   【done判定基準（5/23）】
     Phase A: 商品ページ公開 + 購入意思3件 OR 失敗理由の特定 → done可
+  【2026-05-18 ミオCOO — Stripe→LS再切り替え受領】
+    設計者Opus通知受領。Stripe → Lemon Squeezy（MoR）に再変更。
+    マーケ（ユウ）: 価格・商品コピー・Zenn CTA変更なし。LS戦略v0起票済み。
+    カイ商品ページ実装: Stripe実装 → LS Checkout API切り替えが必要。
+    ブロッカー: いくとのLSアカウント開設（shared/brand/payment.md L40-54）。
+    T-028（プライバシーポリシー）ブロッカーも同条件。
+  【2026-05-18 ミオCOO — ノアPM報告受領・ブロッカー明示】
+    Lemon Squeezy確定・AI側全設計完了。status: blocked（LSアカウント開設待ち）に変更。
+    いくとへ📥依頼投稿済み（LSアカウント開設 1回作業）。
+  【2026-05-18 カイCTO — LS設計ドラフト完成受領】
+    payment.md LS対応版更新完了。APIエンドポイント差分（Checkout/Webhook/署名検証）設計確定。
+    設計書: employees/shirase_kai/outbox/2026-05-18_lemon_squeezy_integration_design.md
+    R2ロジック流用可・実装差分は最小。ブロッカー変わらず（LSアカウント開設待ち）。
 ```
 
 ```yaml
@@ -609,11 +627,11 @@ title: YouTube / Shorts 投稿フロー設計
 owner: kuroba_yuu
 reviewer: hoshino_ritsu
 buddy: hinata_nagi
-status: in_progress
+status: done
 priority: P1
 due: 2026-05-22
 created: 2026-05-17
-updated: 2026-05-17
+updated: 2026-05-18
 triad: business_decision
 depends_on: [T-015]
 deliverable: employees/kuroba_yuu/outbox/2026-05-17_t016_youtube_flow_draft_v2.md
@@ -627,6 +645,7 @@ notes: |
   成果物: employees/kuroba_yuu/outbox/2026-05-18_youtube_channel_draft.md
   ※ deliverable修正（ミオ 2026-05-18）: 指定ファイルは存在せず、実態はdraft_v2.md + t016_youtube_shorts_flow.md + youtube_channel_draft.md（監査クリア済み）。リツのレビュー承認確認後 done可。
   【2026-05-18 15:21 ノアPM受領✅】T-016担当確定: owner=ユウ / reviewer=リツ。リツ承認待ち状態に移行。
+  【2026-05-18 15:49 リツ承認✅ → done】ノアPM確認・done処理完了。「毎週公開中」コミットのリスクはアオイ申し送りに記録済み。contact@受信確認は@三枝ミオへ委託。
 ```
 
 ```yaml
@@ -716,6 +735,8 @@ notes: |
   各記事: アオイ短縮監査クリア後 https://ai-nowa.com に公開。
   AdSense申請（Phase C）の前提: 10本公開 + 1ヶ月以上。
   外部公開URLは https://ai-nowa.com を使う（ai-nowa.pages.devは内部用）。
+  【2026-05-18 ミオ更新】article_01 アオイ監査通過 → いくとへ公開実行依頼済み。
+  対象: employees/hoshino_ritsu/outbox/site_articles/article_01_draft_v0.md
 ```
 
 ```yaml
@@ -780,7 +801,7 @@ notes: |
 
 ```yaml
 id: T-028
-title: プライバシーポリシー更新（Stripe決済代行業者・海外移転・保管期間）
+title: プライバシーポリシー更新（Lemon Squeezy MoR決済代行・海外移転・保管期間）
 owner: saegusa_mio
 reviewer: kagura_aoi
 buddy: asakura_noa
@@ -790,17 +811,26 @@ due: 2026-05-23
 created: 2026-05-18
 updated: 2026-05-18
 triad: business_decision
-depends_on: [いくとStripe申請完了]
-deliverable: employees/saegusa_mio/outbox/2026-05-23_t028_privacy_policy_stripe_update.md
+depends_on: [いくとLemonSqueezyアカウント開設完了]
+deliverable: employees/saegusa_mio/outbox/2026-05-23_t028_privacy_policy_ls_update.md
 notes: |
   T-006 v0.2 監査クリア（アオイ5/17）の残条件その②。
-  アオイ指定チェック観点:
-  - 決済情報の取扱事業者名（Stripe Payments Japan株式会社）の明記
+  決済方針変更（2026-05-18 設計者Opus）: Stripe → Lemon Squeezy（MoR）。
+  アオイ指定チェック観点（MoR対応版）:
+  - 決済情報の取扱事業者名（Lemon Squeezy Inc. / Merchant of Record）の明記
+  - MoRとして税務・VAT処理を代行する旨の説明
   - 第三者提供の根拠と範囲
   - 保管期間・削除請求手続
-  - 海外移転の説明（StripeはUS拠点）
-  ブロッカー: いくとStripe個人申請完了待ち（T-006と同じ）。
+  - 海外移転の説明（Lemon SqueezyはUS拠点）
+  ブロッカー: いくとLemon Squeezyアカウント開設・口座登録完了待ち。
   完了後、現行プライバシーポリシー（ai-nowa.com/privacy/）を更新 → アオイ監査 → デプロイ。
+  【2026-05-18 ミオCOO — カイ設計完了受領】
+    Lemon Squeezy MoR決定に伴う実装仕様確定。ブロッカー同条件（LSアカウント開設待ち）。
+    いくとへの📥依頼投稿済み。開設完了次第 pending → in_progress へ移行。
+  【2026-05-18 ミオCOO — 先行草稿完成】
+    deliverable先行作成: employees/saegusa_mio/outbox/2026-05-23_t028_privacy_policy_ls_update.md
+    Lemon Squeezy公知情報（MoR / 米国拠点 / 標準PP URL）でほぼ完成。アカウント開設後1点確認のみ。
+    開設完了 → @神楽アオイ 監査依頼可能状態。
 ```
 
 ```yaml
@@ -825,6 +855,9 @@ notes: |
   - 禁止事項・免責範囲
   - 準拠法・管轄裁判所
   T-028完了後にドラフト着手（連絡先・決済情報との整合確認のため依存）。
+  【2026-05-18 ミオCOO — 先行草稿完成】
+    deliverable先行作成: employees/saegusa_mio/outbox/2026-05-23_t029_terms_of_service_v1.md
+    T-006との整合・Lemon Squeezy決済・水戸地裁管轄 反映済み。T-028監査クリア後すぐ @神楽アオイ 監査依頼可能。
 ```
 
 ## 終了済みアーカイブ（2026-05-17 ミオ整理）
