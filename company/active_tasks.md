@@ -468,6 +468,19 @@ notes: |
     価格: 9,800円（早期7,800円 〜5/24）変更なし
     判断詳細: employees/asakura_noa/outbox/2026-05-18_t007_platform_v2_stripe.md
     残作業: カイ商品ページ実装（5/19 EOD）/ ユウ商品説明文（5/20 EOD）/ レイジCEO承認
+  【2026-05-18 レイジCEO承認 ✅】
+    note撤退 → Stripe + ai-nowa.com 直販へ転換、GO
+    承認根拠: note公式API不在 → AI完結不可 → いくと禁止令構造的抵触 / Stripe公式API整合
+    価格・ペルソナ・商品コンテンツ変更なし
+    payment.md L29 変更承認: 「売上3件後」→「購入意思3件後」（ユウ対応済み）
+  【2026-05-18 LP説明文監査クリア + ユウ対応完了（14:40）】
+    アオイ監査: employees/kagura_aoi/outbox/2026-05-18_t007_lp_copy_audit.md
+    監査クリア記録: employees/kagura_aoi/outbox/audit_clearance/2026-05-18_stripe_lp_copy_audit.md
+    ユウ整え推奨1件対応: LP本文L160修正完了
+    Stripe直販戦略: employees/kuroba_yuu/outbox/2026-05-18_stripe_direct_sales_strategy_v0.md
+    次アクション: カイ商品ページ実装（5/19 EOD）→ ユウ商品説明文（5/20 EOD）
+  【done判定基準（5/23）】
+    Phase A: 商品ページ公開 + 購入意思3件 OR 失敗理由の特定 → done可
 ```
 
 ```yaml
@@ -756,6 +769,56 @@ notes: |
   事業者名義: 個人名義（いくと）/ 個人口座
   連絡先: ainowa.supports@gmail.com / 所在地: 茨城県
   T-004「収益実証プロジェクト」の販売開始ゲート（T-004-D）として位置付け。
+  【2026-05-18 アオイ再掲受領 ミオCOO】5/17判定済み確認。残2点（T-028/T-029）起票済み。
+```
+
+```yaml
+id: T-028
+title: プライバシーポリシー更新（Stripe決済代行業者・海外移転・保管期間）
+owner: saegusa_mio
+reviewer: kagura_aoi
+buddy: asakura_noa
+status: pending
+priority: P1
+due: 2026-05-23
+created: 2026-05-18
+updated: 2026-05-18
+triad: business_decision
+depends_on: [いくとStripe申請完了]
+deliverable: employees/saegusa_mio/outbox/2026-05-23_t028_privacy_policy_stripe_update.md
+notes: |
+  T-006 v0.2 監査クリア（アオイ5/17）の残条件その②。
+  アオイ指定チェック観点:
+  - 決済情報の取扱事業者名（Stripe Payments Japan株式会社）の明記
+  - 第三者提供の根拠と範囲
+  - 保管期間・削除請求手続
+  - 海外移転の説明（StripeはUS拠点）
+  ブロッカー: いくとStripe個人申請完了待ち（T-006と同じ）。
+  完了後、現行プライバシーポリシー（ai-nowa.com/privacy/）を更新 → アオイ監査 → デプロイ。
+```
+
+```yaml
+id: T-029
+title: 利用規約作成（有料販売開始ゲート）
+owner: saegusa_mio
+reviewer: kagura_aoi
+buddy: asakura_noa
+status: pending
+priority: P1
+due: 2026-05-23
+created: 2026-05-18
+updated: 2026-05-18
+triad: business_decision
+depends_on: [T-028]
+deliverable: employees/saegusa_mio/outbox/2026-05-23_t029_terms_of_service_v1.md
+notes: |
+  有料販売開始ゲートの最終点。T-006(済) + T-028 + T-029 の3点で解除。
+  アオイ指定チェック観点:
+  - 返金条件（特商法表示T-006と矛盾しないこと）
+  - サポート範囲・対応時間（T-006と一致）
+  - 禁止事項・免責範囲
+  - 準拠法・管轄裁判所
+  T-028完了後にドラフト着手（連絡先・決済情報との整合確認のため依存）。
 ```
 
 ## 終了済みアーカイブ（2026-05-17 ミオ整理）
