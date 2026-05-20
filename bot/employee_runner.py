@@ -294,7 +294,11 @@ def _claude_effort_for(employee_id: str, mode: str, sender: str, text: str) -> s
     return "medium"
 
 
-def _codex_effort_for(mode: str, sender: str, text: str) -> str:
+def _codex_effort_for(employee_id: str, mode: str, sender: str, text: str) -> str:
+    # CEOの判断品質は会社全体の手戻りコストに直結する。
+    # レイジは低頻度で呼び、呼ぶ時は常に最上位の推論を使う。
+    if employee_id == "arima_reiji":
+        return "xhigh"
     if mode == "executive":
         return "xhigh"
     if mode == "work":
@@ -327,7 +331,7 @@ def _resolve_model_route(
         return ModelRoute(
             backend=backend,
             model=base_model or "gpt-5.5",
-            effort=_codex_effort_for(mode, sender, text),
+            effort=_codex_effort_for(employee_id, mode, sender, text),
         )
 
     model = model_override or base_model or "claude-sonnet-4-6"
