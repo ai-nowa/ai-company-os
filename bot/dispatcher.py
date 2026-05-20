@@ -473,6 +473,25 @@ async def process_architect_outbox_loop() -> None:
                     chunks = [text[i:i + 1900] for i in range(0, len(text), 1900)] or ["(空)"]
                     for c in chunks:
                         await ch.send(c)
+                    dispatch_targets = data.get("dispatch_to") or []
+                    if isinstance(dispatch_targets, str):
+                        dispatch_targets = [dispatch_targets]
+                    for target in dispatch_targets:
+                        if target not in EMPLOYEES:
+                            log.warning("architect_outbox: unknown dispatch target: %s", target)
+                            continue
+                        try:
+                            await dispatch_to_employee(
+                                target,
+                                data["content"],
+                                "設計者（Architect）",
+                                ch,
+                                0,
+                                {target},
+                                origin="architect",
+                            )
+                        except Exception:
+                            log.exception("architect_outbox dispatch failed: %s", target)
                     f.unlink()
                     log.info(f"architect_outbox posted: {f.name} -> {ch.name}")
                 except Exception:

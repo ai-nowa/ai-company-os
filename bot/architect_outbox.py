@@ -14,13 +14,19 @@ from .config import BASE_DIR, now_jst_iso
 OUTBOX_DIR = BASE_DIR / "company" / ".architect_outbox"
 
 
-def submit_post(channel: str, content: str, label: str = "") -> Path:
+def submit_post(
+    channel: str,
+    content: str,
+    label: str = "",
+    dispatch_to: Optional[list[str]] = None,
+) -> Path:
     """Discord 投稿要求を提出。dispatcher が10秒以内に拾って投稿する。
 
     Args:
         channel: 投稿先チャンネル名（部分一致）
         content: 投稿内容
         label: ファイル名に使う短いラベル（オプション）
+        dispatch_to: 投稿後に同じ内容で直接起動する社員ID（オプション）
     """
     OUTBOX_DIR.mkdir(parents=True, exist_ok=True)
     stamp = now_jst_iso().replace(":", "-").replace("+", "_")
@@ -29,7 +35,12 @@ def submit_post(channel: str, content: str, label: str = "") -> Path:
     path = OUTBOX_DIR / fname
     path.write_text(
         json.dumps(
-            {"channel": channel, "content": content, "created_at": now_jst_iso()},
+            {
+                "channel": channel,
+                "content": content,
+                "dispatch_to": dispatch_to or [],
+                "created_at": now_jst_iso(),
+            },
             ensure_ascii=False,
             indent=2,
         ),
