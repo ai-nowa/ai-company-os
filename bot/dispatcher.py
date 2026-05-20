@@ -12,6 +12,7 @@ import asyncio
 import logging
 import os
 import re
+import uuid
 from typing import Optional
 
 import discord
@@ -23,11 +24,15 @@ from .config import (
     EMPLOYEES,
     append_discord_log,
 )
-from .employee_runner import run_employee
+from .employee_runner import run_employee_result
 from .mention_chain import (
-    MAX_DEPTH,
+    chain_call_limit,
+    enqueue_deferred_mention,
     extract_mentions,
     extract_meta_tag,
+    max_depth,
+    mentions_per_response_limit,
+    mode_for_mention,
     parse_meta_tag,
     strip_meta_tag,
 )
@@ -112,19 +117,33 @@ async def send_employee_response(
     emp_id: str,
     channel: discord.abc.Messageable,
     content: str,
-) -> None:
+) -> bool:
     """社員 bot として投稿。社員 client が無ければメインbot代理（プレフィックス付き）"""
     if not content:
-        content = "(空応答)"
+        return False
+    channel_name = getattr(channel, "name", "dm")
     if hasattr(channel, "id"):
         ok = await multi_client.send_as_employee(emp_id, channel.id, content)
         if ok:
-            return
+            append_discord_log(channel_name, {
+                "kind": "employee",
+                "author": EMPLOYEES[emp_id]["display"],
+                "employee_id": emp_id,
+                "text": content,
+            })
+            return True
     # フォールバック
     display = EMPLOYEES[emp_id]["display"]
     chunks = [content[i:i + 1900] for i in range(0, len(content), 1900)]
     for i, chunk in enumerate(chunks):
         await channel.send((f"**{display}**:\n" if i == 0 else "") + chunk)
+    append_discord_log(channel_name, {
+        "kind": "employee",
+        "author": display,
+        "employee_id": emp_id,
+        "text": content,
+    })
+    return True
 
 
 async def send_chunked(channel: discord.abc.Messageable, header: str, text: str) -> None:
@@ -208,19 +227,33 @@ async def process_mention_chain(
     channel: discord.abc.Messageable,
     depth: int,
     visited: set[str],
-) -> None:
+    chain_id: Optional[str] = None,
+    call_count: int = 0,
+    origin: str = "mention",
+) -> int:
     """応答本文からメンション抽出 → 各社員を順次起動 → さらに連鎖"""
-    if depth >= MAX_DEPTH:
-        log.warning(f"連鎖深さ {MAX_DEPTH} 到達、打ち切り")
-        return
+    chain_id = chain_id or uuid.uuid4().hex[:12]
+    channel_name = getattr(channel, "name", "dm")
+    targets = extract_mentions(text, exclude=visited)
+    if depth >= max_depth():
+        for target in targets:
+            enqueue_deferred_mention(
+                target,
+                text=text,
+                sender=sender,
+                channel=channel_name,
+                chain_id=chain_id,
+                depth=depth,
+                reason=f"chain_depth_limit:{max_depth()}",
+            )
+        log.warning(f"連鎖深さ {max_depth()} 到達、残りメンションはinboxへ退避")
+        return 0
 
     in_thread = isinstance(channel, discord.Thread)
     allowed_set: Optional[set[str]] = None
     if in_thread:
         allowed_set = set(thread_registry.get_participants(channel.id))
 
-    # テキスト中の @ メンションを抽出（社員間の連鎖、Discord ネイティブもこの中でカバー）
-    targets = extract_mentions(text, exclude=visited)
     if allowed_set is not None:
         new_targets: list[str] = []
         for t in targets:
@@ -232,10 +265,46 @@ async def process_mention_chain(
                     new_targets.append(t)
         targets = new_targets
 
-    for target in targets:
-        await dispatch_to_employee(
-            target, text, sender, channel, depth + 1, visited | {target}
+    per_response = mentions_per_response_limit(text, origin=origin)
+    immediate_targets = targets[:per_response]
+    for deferred in targets[per_response:]:
+        enqueue_deferred_mention(
+            deferred,
+            text=text,
+            sender=sender,
+            channel=channel_name,
+            chain_id=chain_id,
+            depth=depth,
+            reason=f"per_response_limit:{per_response}",
         )
+
+    total_used = 0
+    max_calls = chain_call_limit(origin=origin)
+    for target in immediate_targets:
+        if call_count + total_used >= max_calls:
+            enqueue_deferred_mention(
+                target,
+                text=text,
+                sender=sender,
+                channel=channel_name,
+                chain_id=chain_id,
+                depth=depth,
+                reason=f"chain_call_limit:{max_calls}",
+            )
+            continue
+        used = await dispatch_to_employee(
+            target,
+            text,
+            sender,
+            channel,
+            depth + 1,
+            visited | {target},
+            chain_id=chain_id,
+            call_count=call_count + total_used,
+            origin=origin,
+        )
+        total_used += used
+    return total_used
 
 
 async def dispatch_to_employee(
@@ -245,12 +314,16 @@ async def dispatch_to_employee(
     channel: discord.abc.Messageable,
     depth: int,
     visited: set[str],
-) -> None:
+    chain_id: Optional[str] = None,
+    call_count: int = 0,
+    origin: str = "mention",
+) -> int:
     """1人の社員を起動 → 応答投稿 → メタタグ処理 → 連鎖"""
     if target not in EMPLOYEES:
-        return
+        return 0
 
     channel_name = getattr(channel, "name", "dm")
+    chain_id = chain_id or uuid.uuid4().hex[:12]
 
     # typing インジケータは「その社員 bot」名義で出す
     typing_target: discord.abc.Messageable = channel
@@ -261,14 +334,32 @@ async def dispatch_to_employee(
 
     try:
         async with typing_target.typing():
-            raw_response = await run_employee(
-                target, user_message, sender=sender, channel=channel_name
+            result = await run_employee_result(
+                target,
+                user_message,
+                sender=sender,
+                channel=channel_name,
+                mode=mode_for_mention(user_message),
+                reason=f"mention_chain from {sender} in #{channel_name}",
+                chain_id=chain_id,
+                depth=depth,
             )
     except Exception as e:
         log.exception(f"dispatch_to_employee failed: {target}")
-        raw_response = f"(エラー: {type(e).__name__}: {e})"
+        return 0
+
+    call_used = 1 if result.prompt_chars > 0 else 0
+    if not result.ok or not result.text:
+        log.info(
+            "employee response suppressed: target=%s reason=%s error=%s",
+            target,
+            result.skipped_reason,
+            result.system_error,
+        )
+        return call_used
 
     # メタタグ抽出
+    raw_response = result.text
     meta_raw = extract_meta_tag(raw_response)
     meta = parse_meta_tag(meta_raw) if meta_raw else {}
     clean_text = strip_meta_tag(raw_response)
@@ -299,7 +390,9 @@ async def dispatch_to_employee(
                 post_target = new_thread
 
     # 投稿（その社員 bot として、Discord native mention に変換済み）
-    await send_employee_response(target, post_target, discord_text)
+    posted = await send_employee_response(target, post_target, discord_text)
+    if not posted:
+        return call_used
 
     # スレッドクローズ
     if meta.get("close_thread") and isinstance(channel, discord.Thread):
@@ -315,7 +408,18 @@ async def dispatch_to_employee(
     if "いくと依頼" in post_channel_name or "📥" in post_channel_name:
         log.info(f"いくと依頼チャンネル内では連鎖スキップ: {target}")
     else:
-        await process_mention_chain(clean_text, target, post_target, depth, {target})
+        child_used = await process_mention_chain(
+            clean_text,
+            target,
+            post_target,
+            depth,
+            {target},
+            chain_id=chain_id,
+            call_count=call_count + call_used,
+            origin=origin,
+        )
+        return call_used + child_used
+    return call_used
 
 
 async def ensure_required_channels() -> None:
@@ -421,12 +525,12 @@ async def on_ready() -> None:
     from .heartbeat import make_heartbeat_scheduler
     hb_scheduler = make_heartbeat_scheduler(main_client)
     hb_scheduler.start()
-    log.info("Heartbeat scheduler started (check=5min, idle_threshold=10min, silent=23-7時)")
+    log.info("Heartbeat scheduler started (check=30min, idle_threshold=90min, daily_limit=4, silent=23-7時)")
 
-    # 各社員の自律ループ: 5〜30分ランダム間隔で自発行動（タスク進行・ファイル作成・自発発言）
+    # 各社員の自律ループ: 起動前に should_wake_employee で安く判定し、必要時だけLLM実行
     from .employee_autonomy import start_all_autonomy_loops
     start_all_autonomy_loops(main_client)
-    log.info("Employee autonomy loops started (9社員、各自5〜30分間隔の鼓動、silent=23-7時)")
+    log.info("Employee autonomy loops started (9社員、wake判定付き、silent=23-7時)")
 
     # 初回限定: いくと依頼チャンネル開設の通知（フラグファイルで1回保証）
     asyncio.create_task(notify_owner_channel_once())

@@ -96,7 +96,18 @@ def _recent_mentions(employee_id: str, max_items: int = 5) -> list[str]:
     を「未対応」として再応答してしまい、「それはもう解決してますよー」が繰り返される。
     """
     last_out = _last_own_out_ts(employee_id)
-    items: list[str] = []
+    items: list[tuple[str, str]] = []
+    inbox_path = BASE_DIR / "employees" / employee_id / "inbox" / "mentions.jsonl"
+    for event in _read_jsonl(inbox_path, limit=100):
+        ts = str(event.get("ts", ""))
+        if last_out and ts <= last_out:
+            continue
+        sender = event.get("sender", "?")
+        channel = event.get("channel", "?")
+        reason = event.get("deferred_reason", "deferred")
+        text = str(event.get("text", ""))
+        items.append((ts, f"- {ts} #{channel} {sender} ({reason}): {_short(text, 220)}"))
+
     for event in reversed(_recent_discord_events()):
         ts = str(event.get("ts", ""))
         # 自分が最後に発言した時刻より新しいメンションだけ拾う
@@ -107,10 +118,11 @@ def _recent_mentions(employee_id: str, max_items: int = 5) -> list[str]:
             continue
         channel = event.get("_channel", "?")
         author = event.get("author", event.get("from", "?"))
-        items.append(f"- {ts} #{channel} {author}: {_short(text, 220)}")
-        if len(items) >= max_items:
+        items.append((ts, f"- {ts} #{channel} {author}: {_short(text, 220)}"))
+        if len(items) >= max_items * 2:
             break
-    return list(reversed(items))
+    items.sort(key=lambda x: x[0])
+    return [item for _, item in items[-max_items:]]
 
 
 def _active_task_items(employee_id: str, max_items: int = 5) -> list[str]:
@@ -128,11 +140,15 @@ def _active_task_items(employee_id: str, max_items: int = 5) -> list[str]:
     blocks: list[list[str]] = []
     current: list[str] = []
     in_yaml = False
+    in_current_tasks = False
     for line in lines:
         stripped = line.strip()
+        if stripped.startswith("## 現在のタスク"):
+            in_current_tasks = True
         if stripped.startswith("```yaml"):
-            in_yaml = True
-            current = []
+            if in_current_tasks:
+                in_yaml = True
+                current = []
             continue
         if stripped == "```" and in_yaml:
             in_yaml = False
@@ -147,8 +163,14 @@ def _active_task_items(employee_id: str, max_items: int = 5) -> list[str]:
     for block in blocks:
         block_text = "\n".join(block)
         block_lower = block_text.lower()
-        # 自分が関係しているか（owner/reviewer/buddy/audit）
-        if not any(t.lower() in block_lower for t in tokens):
+        role_lines: list[str] = []
+        for ln in block:
+            s = ln.strip()
+            if s.startswith(("owner:", "reviewer:", "buddy:", "audit:", "assignee:")):
+                role_lines.append(s.split(":", 1)[1].split("#", 1)[0].strip())
+        role_text = " ".join(role_lines).lower()
+        # 自分が明示的に関係しているか（notes本文の名前は拾わない）
+        if not role_text or not any(t.lower() in role_text for t in tokens):
             continue
         # 動けないステータスは除外（blocked / done / closed / archived）
         if "status: blocked" in block_lower or "status: done" in block_lower:

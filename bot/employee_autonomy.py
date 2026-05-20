@@ -20,7 +20,8 @@ import discord
 
 from .config import EMPLOYEES, JST
 from . import multi_client
-from .employee_runner import run_employee
+from .context_assembler import should_wake_employee, write_usage_metric
+from .employee_runner import run_employee_result
 
 log = logging.getLogger("employee_autonomy")
 
@@ -79,30 +80,16 @@ def build_self_prompt(emp_id: str) -> str:
     return f"""\
 あなた自身の時間です。誰かに呼ばれたわけではありません。あなたは {info['display']}（{info['role']}）として、今の状況を見て、自分の判断で動いてください。
 
-## あなたの自由度
+## まずstate_digestを見る
 
-応答は **conversation_log にあなたの内省ログとして保存** されます（Discord には投稿されません）。
-つまり応答の中で自由にやっていい:
-- 思考・独り言・整理・計画
-- ファイル作成・編集（Read / Edit / Write / Bash すべて使える）
-- 調査・分析・メモ書き
-- 「今やってること」を自分の言葉で記録
-
-人間の社員と同じく、1日中喋ってる必要はない。考えたり手を動かしたりしている時間が大半でいい。
-
-## まず状況を把握する（必ず最初にやる）
-
-人間の社員は、メンションされなくてもチャットを見ているし、誰が何をしているかは把握しています:
-
-1. **直近のチャット** — `company/discord_log/` から、あなたがアクセスできるチャンネルのログ末尾を読む
-2. **誰が何をやってるか** — `company/active_tasks.md` で進行中タスクと Owner を把握
-3. **最近の成果物** — `shared/docs/`, `shared/data/`, 他社員の `employees/*/outbox/` の新規ファイル
+今回必要な未読メンション、担当タスク、関連ログ、新規成果物はstate_digestに整理されています。
+micro/routine相当の自律時間では、巨大ログ・全チャンネル・全outboxを走査しないでください。
 
 ## 自分の判断で動く
 
 - 関心ある会話があれば自発的に参加する判断もしてOK
-- タスクを進める（必要なファイルを作る・編集する）
-- 自分のタスク状態を `active_tasks.md` に反映
+- タスクを進める（必要なファイルを作る・編集する。ただしroutineでは最小限）
+- 自分のタスク状態を必要な時だけ `active_tasks.md` に反映
 - 同僚に話す or 静かに作業する、両方OK
 - 「今は何もすべきことがない」と判断したら、本当に何もしない（応答も空でOK）
 
@@ -165,16 +152,35 @@ async def employee_self_loop(emp_id: str, main_client: discord.Client) -> None:
                 continue
 
             log.info(f"autonomy tick: {emp_id}")
+            should_wake, score, wake_reason = should_wake_employee(emp_id)
+            if not should_wake:
+                write_usage_metric(
+                    employee_id=emp_id,
+                    mode="routine",
+                    reason="self_loop preflight",
+                    skipped_reason=f"wake_score={score}: {wake_reason}",
+                )
+                log.info("autonomy skip: %s score=%s reason=%s", emp_id, score, wake_reason)
+                continue
             prompt = build_self_prompt(emp_id)
             try:
                 # 自律 tick 時は Sonnet で usage 節約
-                msg = await run_employee(emp_id, prompt, sender="self_loop",
-                                         model_override=AUTONOMY_MODEL_OVERRIDE)
+                result = await run_employee_result(
+                    emp_id,
+                    prompt,
+                    sender="self_loop",
+                    model_override=AUTONOMY_MODEL_OVERRIDE,
+                    mode="routine",
+                    reason=f"self_loop: {wake_reason}",
+                )
             except Exception:
                 log.exception(f"autonomy run_employee failed: {emp_id}")
                 continue
+            if not result.ok or not result.text:
+                log.info("autonomy response suppressed: %s reason=%s", emp_id, result.skipped_reason)
+                continue
 
-            await _post_blocks_and_chain(emp_id, msg, main_client)
+            await _post_blocks_and_chain(emp_id, result.text, main_client)
 
         except asyncio.CancelledError:
             log.info(f"autonomy loop cancelled: {emp_id}")
@@ -186,7 +192,7 @@ async def employee_self_loop(emp_id: str, main_client: discord.Client) -> None:
 
 async def _post_blocks_and_chain(emp_id: str, msg: str, main_client: discord.Client) -> None:
     """POST ブロックを抽出して該当チャンネルに投稿。連鎖も発火。"""
-    from .dispatcher import convert_text_mentions_to_discord, process_mention_chain
+    from .dispatcher import convert_text_mentions_to_discord, process_mention_chain, send_employee_response
 
     blocks = extract_post_blocks(msg)
     if not blocks:
@@ -208,9 +214,9 @@ async def _post_blocks_and_chain(emp_id: str, msg: str, main_client: discord.Cli
             continue
 
         discord_text = convert_text_mentions_to_discord(content)
-        chunks = [discord_text[i:i + 1900] for i in range(0, len(discord_text), 1900)] or ["(空)"]
-        for chunk in chunks:
-            await ch.send(chunk)
+        posted = await send_employee_response(emp_id, ch, discord_text)
+        if not posted:
+            continue
         log.info(f"autonomy: {emp_id} posted to {ch.name} ({len(content)} chars)")
 
         # 連鎖発火

@@ -1,19 +1,90 @@
 """メンション抽出 + 連鎖制御。
 
 応答テキストから @表示名・名前・英語IDを抽出し、次の社員を呼び出すための ID リストを返す。
-並列メンションは1深さ。連鎖深さ100で安全弁。
+並列メンションは1深さ。深さ・総呼び出し数・1応答内即時起動数で安全弁。
 メタタグ部分（<!-- META: ... -->）は抽出前に除去する。
 """
 from __future__ import annotations
 
+import json
 import re
 from typing import Optional
 
-from .config import EMPLOYEES
+from .config import EMPLOYEES, employee_home, now_jst_iso
 
-MAX_DEPTH = 30  # 安全弁（usage 暴走防止）。通常はメンションが尽きて自然終了
+MAX_DEPTH = 4
 
 META_RE = re.compile(r"<!--\s*META:\s*([^>]+?)\s*-->", re.DOTALL | re.IGNORECASE)
+HIGH_PRIORITY_MARKERS = (
+    "[URGENT]", "[REVIEW]", "[DECISION]", "[MEETING]", "[WORK]",
+    "緊急", "レビュー依頼", "重要判断", "設計会議", "リリース判断",
+)
+
+
+def _cfg(path: str, default: int) -> int:
+    try:
+        from .dynamic_config import get
+        return int(get(path, default))
+    except Exception:
+        return default
+
+
+def max_depth() -> int:
+    return _cfg("mention_chain.max_depth", MAX_DEPTH)
+
+
+def chain_call_limit(origin: str = "mention") -> int:
+    if origin == "heartbeat":
+        return _cfg("mention_chain.heartbeat_chain_calls", 1)
+    return _cfg("mention_chain.max_chain_calls", 6)
+
+
+def mentions_per_response_limit(text: str, origin: str = "mention") -> int:
+    base = _cfg("mention_chain.max_mentions_per_response", 2)
+    if origin == "heartbeat":
+        return min(base, _cfg("mention_chain.heartbeat_chain_calls", 1))
+    if is_high_priority(text):
+        return max(base, 4)
+    return base
+
+
+def is_high_priority(text: str) -> bool:
+    upper = text.upper()
+    return any(marker.upper() in upper for marker in HIGH_PRIORITY_MARKERS)
+
+
+def mode_for_mention(text: str) -> str:
+    if "[DECISION]" in text.upper() or "重要判断" in text or "リリース判断" in text:
+        return "executive"
+    if "[WORK]" in text.upper() or "実装" in text or "設計" in text:
+        return "work"
+    return "routine"
+
+
+def enqueue_deferred_mention(
+    employee_id: str,
+    *,
+    text: str,
+    sender: str,
+    channel: str,
+    chain_id: Optional[str],
+    depth: int,
+    reason: str,
+) -> None:
+    inbox = employee_home(employee_id) / "inbox"
+    inbox.mkdir(parents=True, exist_ok=True)
+    path = inbox / "mentions.jsonl"
+    event = {
+        "ts": now_jst_iso(),
+        "sender": sender,
+        "channel": channel,
+        "text": text[:2000],
+        "chain_id": chain_id,
+        "depth": depth,
+        "deferred_reason": reason,
+    }
+    with path.open("a", encoding="utf-8") as f:
+        f.write(json.dumps(event, ensure_ascii=False) + "\n")
 
 
 def strip_meta_tag(text: str) -> str:

@@ -31,6 +31,17 @@ company/.owner_channel_notified
 company/dispatcher.pid
 company/dispatcher.log
 bot/cookie_refresh_history.log
+company/.llm_circuit_state.json
+
+# Runtime caches / generated binary artifacts
+.wrangler/
+**/.wrangler/
+**/.playwright-mcp/
+data/
+shared/media/
+employees/**/*.png
+employees/**/*.wav
+employees/**/*.mp4
 
 # GA4 credentials (service account は Google UI バグで未使用、OAuth ルートを採用)
 bot/ga4_service_account.json

@@ -1,4 +1,4 @@
-"""会社の鼓動。5分ごとに沈黙チェック、10分以上沈黙していたら社員1人を起動。
+"""会社の鼓動。30分ごとに沈黙チェック、90分以上沈黙していたら社員1人を軽く起動。
 
 設計はシンプル:
 - ロジックを社員側に任せる（時間帯・役割の if 分岐は持たない）
@@ -24,12 +24,13 @@ from apscheduler.triggers.interval import IntervalTrigger
 
 from .config import BASE_DIR, EMPLOYEES, JST
 from . import multi_client
-from .employee_runner import run_employee
+from .employee_runner import run_employee_result
 
 log = logging.getLogger("heartbeat")
 
-CHECK_INTERVAL = 300       # 5分ごとに沈黙チェック
-IDLE_THRESHOLD = 600       # 10分沈黙したら発火
+CHECK_INTERVAL = 1800      # 30分ごとに沈黙チェック
+IDLE_THRESHOLD = 5400      # 90分沈黙したら発火
+DAILY_HEARTBEAT_LIMIT = 4
 SILENT_HOUR_START = 23     # 23時〜
 SILENT_HOUR_END = 7        # 7時 まではサイレント
 
@@ -37,13 +38,7 @@ SILENT_HOUR_END = 7        # 7時 まではサイレント
 WEIGHTS: dict[str, int] = {
     "morinaga_haru": 4,    # People（空気作り、雑談振り）
     "saegusa_mio":   4,    # COO（タスク整理、進捗確認）
-    "arima_reiji":   3,    # CEO（方針出し、「今日、何を出荷する？」）
-    "asakura_noa":   2,    # PM（完了条件確認）
-    "kagura_aoi":    1,
-    "shirase_kai":   1,
-    "hoshino_ritsu": 1,
-    "kuroba_yuu":    1,
-    "hinata_nagi":   1,
+    "hinata_nagi":   1,    # 視聴者代表（軽い外部目線）
 }
 
 
@@ -95,6 +90,31 @@ def get_last_heartbeat_time() -> Optional[datetime]:
     return latest
 
 
+def get_today_heartbeat_count() -> int:
+    today = datetime.now(JST).date()
+    count = 0
+    for emp_id in EMPLOYEES.keys():
+        log_file = BASE_DIR / "employees" / emp_id / "session" / "conversation_log.jsonl"
+        if not log_file.exists():
+            continue
+        try:
+            for line in log_file.read_text(encoding="utf-8").splitlines():
+                try:
+                    e = json.loads(line)
+                    if e.get("kind") != "in" or e.get("from") != "heartbeat":
+                        continue
+                    ts = datetime.fromisoformat(e["ts"])
+                    if ts.tzinfo is None:
+                        ts = ts.replace(tzinfo=JST)
+                    if ts.date() == today:
+                        count += 1
+                except (json.JSONDecodeError, ValueError, KeyError):
+                    continue
+        except Exception:
+            continue
+    return count
+
+
 def pick_employee() -> str:
     employees = list(WEIGHTS.keys())
     weights = [WEIGHTS[e] for e in employees]
@@ -118,6 +138,9 @@ async def heartbeat_tick(main_client: discord.Client) -> None:
     idle = (now - last_activity).total_seconds()
     if idle < IDLE_THRESHOLD:
         return
+    if get_today_heartbeat_count() >= DAILY_HEARTBEAT_LIMIT:
+        log.info("heartbeat: daily limit reached")
+        return
 
     # 直前の heartbeat 発火から最低 IDLE_THRESHOLD 経っていることを確認（連発防止）
     last_hb = get_last_heartbeat_time()
@@ -129,17 +152,26 @@ async def heartbeat_tick(main_client: discord.Client) -> None:
 
     prompt = (
         f"会社で {int(idle/60)} 分ほど誰の発言もない状態です。"
-        f"あなたの人格・役割として、自発的に発言してください。"
-        f"進行中のタスク確認、雑談、気になること、何でもOK。"
-        f"他の社員に話を振りたい時は **必ず `@表示名`** でメンションしてください。"
-        f"連鎖を続けたければ、応答内に1人以上の `@他社員` を入れること。"
+        f"あなたの人格・役割として、Discordに短く自然な一言を投稿してください。"
+        f"雑談・軽い空気作り・必要なら1人だけへの軽い声かけに留めてください。"
+        f"300文字以内。緊急でない限り複数人を呼ばないでください。"
     )
 
     try:
-        msg = await run_employee(emp, prompt, sender="heartbeat")
+        result = await run_employee_result(
+            emp,
+            prompt,
+            sender="heartbeat",
+            mode="micro",
+            reason=f"heartbeat idle {int(idle/60)}min",
+        )
     except Exception:
         log.exception(f"heartbeat run_employee failed: {emp}")
         return
+    if not result.ok or not result.text:
+        log.info("heartbeat response suppressed: emp=%s reason=%s", emp, result.skipped_reason)
+        return
+    msg = result.text
 
     # 投稿先: その社員の default_channels の最初（"all" の場合は給湯室）
     info = EMPLOYEES[emp]
@@ -161,16 +193,17 @@ async def heartbeat_tick(main_client: discord.Client) -> None:
     except Exception:
         discord_text = msg
 
-    chunks = [discord_text[i:i + 1900] for i in range(0, len(discord_text), 1900)] or ["(空)"]
-    for chunk in chunks:
-        await ch.send(chunk)
+    from .dispatcher import send_employee_response
+    posted = await send_employee_response(emp, ch, discord_text)
+    if not posted:
+        return
 
     # 連鎖発火（メンションが含まれていれば次の社員が動く）
     try:
         from .dispatcher import process_mention_chain
         from .mention_chain import strip_meta_tag
         await process_mention_chain(
-            strip_meta_tag(msg), emp, ch, depth=0, visited={emp}
+            strip_meta_tag(msg), emp, ch, depth=0, visited={emp}, origin="heartbeat"
         )
     except Exception:
         log.exception("heartbeat 連鎖発火失敗")

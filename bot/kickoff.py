@@ -11,6 +11,7 @@ import discord
 
 from .architect import run_architect
 from . import multi_client
+from .config import EMPLOYEES, append_discord_log
 from .employee_runner import run_employee
 
 log = logging.getLogger("kickoff")
@@ -35,6 +36,9 @@ async def post_as_main(channel: Optional[discord.TextChannel], header: str, text
 
 
 async def post_as_employee(emp_id: str, channel_needle: str, text: str) -> bool:
+    if not text:
+        log.info("kickoff post suppressed: empty response emp=%s channel=%s", emp_id, channel_needle)
+        return False
     ch = await multi_client.find_channel_for_employee(emp_id, channel_needle)
     if ch is None:
         log.warning(f"channel '{channel_needle}' not visible to {emp_id}")
@@ -42,6 +46,12 @@ async def post_as_employee(emp_id: str, channel_needle: str, text: str) -> bool:
     chunks = [text[i:i + 1900] for i in range(0, len(text), 1900)] or ["(空)"]
     for chunk in chunks:
         await ch.send(chunk)
+    append_discord_log(getattr(ch, "name", channel_needle), {
+        "kind": "employee",
+        "author": EMPLOYEES[emp_id]["display"],
+        "employee_id": emp_id,
+        "text": text,
+    })
     return True
 
 
@@ -70,6 +80,7 @@ async def kickoff(main_client: discord.Client) -> None:
         "「今日、何を出荷する？」をどう適用するか、自律運営をどう始めるかを含めて。"
         "@三枝ミオ に事業判断トライアドの招集を依頼することも宣言してください（必ず @ を付けて）。",
         sender="いくと",
+        mode="executive",
     )
     await post_as_employee("arima_reiji", "お知らせ", reiji_msg)
 
@@ -84,6 +95,7 @@ async def kickoff(main_client: discord.Client) -> None:
         "(2) @有馬レイジ と @朝倉ノア に開始を呼びかける（@ 必須）、"
         "(3) 期限の目安を提案する。",
         sender="いくと",
+        mode="routine",
     )
     await post_as_employee("saegusa_mio", "経営会議", mio_msg)
 
