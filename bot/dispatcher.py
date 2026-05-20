@@ -25,6 +25,7 @@ from .config import (
     append_discord_log,
 )
 from .employee_runner import run_employee_result
+from .idea_capture import capture_ideas_from_text
 from .mention_chain import (
     chain_call_limit,
     enqueue_deferred_mention,
@@ -131,6 +132,7 @@ async def send_employee_response(
                 "employee_id": emp_id,
                 "text": content,
             })
+            capture_ideas_from_text(emp_id, channel_name, content)
             return True
     # フォールバック
     display = EMPLOYEES[emp_id]["display"]
@@ -143,6 +145,7 @@ async def send_employee_response(
         "employee_id": emp_id,
         "text": content,
     })
+    capture_ideas_from_text(emp_id, channel_name, content)
     return True
 
 
