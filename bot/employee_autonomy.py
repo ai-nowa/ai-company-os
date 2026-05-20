@@ -38,7 +38,7 @@ INTERVALS: dict[str, tuple[int, int]] = {
     "hinata_nagi":   (3600, 7200),   # 視聴者代表 1-2時間
 }
 
-# 自律 tick 時のモデル（usage 節約のためデフォルト Sonnet。Opus は重要判断時のみ）
+# 自律 tick 時のClaudeモデル。Codex社員には渡さない。
 AUTONOMY_MODEL_OVERRIDE = "claude-sonnet-4-6"
 
 SILENT_HOUR_START = 23
@@ -165,12 +165,17 @@ async def employee_self_loop(emp_id: str, main_client: discord.Client) -> None:
                 continue
             prompt = build_self_prompt(emp_id)
             try:
-                # 自律 tick 時は Sonnet で usage 節約
+                # 自律 tick 時のClaude社員はSonnet。Codex社員は各自の設定を維持する。
+                model_override = (
+                    AUTONOMY_MODEL_OVERRIDE
+                    if EMPLOYEES[emp_id].get("backend") == "claude"
+                    else None
+                )
                 result = await run_employee_result(
                     emp_id,
                     prompt,
                     sender="self_loop",
-                    model_override=AUTONOMY_MODEL_OVERRIDE,
+                    model_override=model_override,
                     mode="routine",
                     reason=f"self_loop: {wake_reason}",
                 )

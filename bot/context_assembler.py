@@ -372,6 +372,8 @@ def write_usage_metric(
     prompt_chars: int = 0,
     response_chars: int = 0,
     used_resume: bool = False,
+    model: Optional[str] = None,
+    effort: Optional[str] = None,
     chain_id: Optional[str] = None,
     depth: Optional[int] = None,
     skipped_reason: Optional[str] = None,
@@ -385,6 +387,8 @@ def write_usage_metric(
         "prompt_chars": prompt_chars,
         "response_chars": response_chars,
         "used_resume": used_resume,
+        "model": model,
+        "effort": effort,
         "chain_id": chain_id,
         "depth": depth,
         "skipped_reason": skipped_reason,
@@ -460,6 +464,8 @@ def write_usage_report(days: int = 1) -> Path:
 
     by_mode = Counter(str(r.get("mode", "?")) for r in rows)
     by_emp = Counter(str(r.get("employee_id", "?")) for r in rows)
+    by_model = Counter(str(r.get("model", "?")) for r in rows if r.get("model"))
+    by_effort = Counter(str(r.get("effort", "?")) for r in rows if r.get("effort"))
     skipped = sum(1 for r in rows if r.get("skipped_reason"))
     prompt_chars = sum(int(r.get("prompt_chars") or 0) for r in rows)
     response_chars = sum(int(r.get("response_chars") or 0) for r in rows)
@@ -477,6 +483,12 @@ def write_usage_report(days: int = 1) -> Path:
         "",
         "## By mode",
         *[f"- {mode}: {count}" for mode, count in by_mode.most_common()],
+        "",
+        "## By model",
+        *[f"- {model}: {count}" for model, count in by_model.most_common()],
+        "",
+        "## By effort",
+        *[f"- {effort}: {count}" for effort, count in by_effort.most_common()],
         "",
         "## By employee",
         *[f"- {emp}: {count}" for emp, count in by_emp.most_common()],

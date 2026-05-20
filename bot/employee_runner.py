@@ -3,7 +3,7 @@
 各社員は独立した Claude Code セッション（または Codex CLI セッション）として動く。
 - CLAUDE.md は最小人格・不変ルールだけを保持
 - 動的情報は state_digest として毎回の prompt に渡す
-- Claude Code の --resume は work/executive のみ許可
+- Claude Code/Codex の model effort は mode・sender・役割で切り替える
 - backend=codex の社長レイジは Codex CLI、それ以外は Claude Code（MAX プラン認証）
 - 受信/送信は conversation_log.jsonl に追記、閾値超過で自動圧縮
 
@@ -49,12 +49,17 @@ OPUS_TRIGGER_KEYWORDS = [
     "炎上", "監査判定", "重要判断", "P0", "[important]", "[critical]",
     "本番投入", "契約", "支出", "違反",
 ]
+CRISIS_TRIGGER_KEYWORDS = [
+    "障害", "停止", "流出", "炎上", "返金", "法務", "契約解除", "重大",
+    "critical", "[critical]", "p0", "security", "incident",
+]
 OPUS_MODEL = "claude-opus-4-7"
 RUN_MODES = {"micro", "routine", "work", "executive"}
 RESUME_MODES = {"work", "executive"}
 CIRCUIT_SKIP_MODES = {"micro", "routine"}
 CIRCUIT_STATE_PATH = COMPANY_DIR / ".llm_circuit_state.json"
 FRESH_ROUTINE_SENDERS = {"self_loop", "heartbeat", "daily_loop", "watchdog"}
+HIGH_STAKES_EMPLOYEES = {"saegusa_mio", "shirase_kai", "kagura_aoi"}
 
 
 @dataclass
@@ -67,16 +72,30 @@ class EmployeeRunResult:
     prompt_chars: int = 0
     response_chars: int = 0
     used_resume: bool = False
+    model: Optional[str] = None
+    effort: Optional[str] = None
     chain_id: Optional[str] = None
     depth: Optional[int] = None
     skipped_reason: Optional[str] = None
     system_error: Optional[str] = None
 
 
+@dataclass(frozen=True)
+class ModelRoute:
+    backend: str
+    model: str
+    effort: str
+
+
 def needs_opus(text: str) -> bool:
     """メッセージに重要判断系のキーワードが含まれていれば opus に切り替える"""
     lower = text.lower()
     return any(kw.lower() in lower for kw in OPUS_TRIGGER_KEYWORDS)
+
+
+def needs_crisis_effort(text: str) -> bool:
+    lower = text.lower()
+    return any(kw.lower() in lower for kw in CRISIS_TRIGGER_KEYWORDS)
 
 
 def build_employee_system_prompt(employee_id: str) -> str:
@@ -255,6 +274,73 @@ def _should_use_resume(mode: str, sender: str, reason: str, user_message: str) -
     return True
 
 
+def _is_real_conversation(sender: str) -> bool:
+    return sender not in FRESH_ROUTINE_SENDERS
+
+
+def _claude_effort_for(employee_id: str, mode: str, sender: str, text: str) -> str:
+    if mode == "executive":
+        return "max" if needs_crisis_effort(text) else "xhigh"
+    if mode == "work":
+        return "high"
+    if mode == "micro":
+        return "low"
+    if mode == "routine":
+        if _is_real_conversation(sender):
+            return "high"
+        if employee_id in HIGH_STAKES_EMPLOYEES:
+            return "high"
+        return "medium"
+    return "medium"
+
+
+def _codex_effort_for(mode: str, sender: str, text: str) -> str:
+    if mode == "executive":
+        return "xhigh"
+    if mode == "work":
+        return "high"
+    if mode == "micro":
+        return "low"
+    if mode == "routine":
+        return "high" if _is_real_conversation(sender) else "medium"
+    return "medium"
+
+
+def _resolve_model_route(
+    employee_id: str,
+    mode: str,
+    sender: str,
+    user_message: str,
+    run_reason: str,
+    model_override: Optional[str],
+) -> ModelRoute:
+    """会社全体の品質/usageバランスを決める単一のルータ。
+
+    低すぎる reasoning は手戻りを増やすので、実会話・実作業は high 以上にする。
+    heartbeat/self_loop だけ medium/low に落とし、重要判断だけ最上位へ寄せる。
+    """
+    backend = EMPLOYEES[employee_id]["backend"]
+    text = f"{run_reason}\n{user_message}"
+    base_model = EMPLOYEES[employee_id].get("model", "")
+
+    if backend == "codex":
+        return ModelRoute(
+            backend=backend,
+            model=base_model or "gpt-5.5",
+            effort=_codex_effort_for(mode, sender, text),
+        )
+
+    model = model_override or base_model or "claude-sonnet-4-6"
+    if mode == "executive":
+        model = OPUS_MODEL
+        log.info("opus triggered for %s: executive mode", employee_id)
+    return ModelRoute(
+        backend=backend,
+        model=model,
+        effort=_claude_effort_for(employee_id, mode, sender, text),
+    )
+
+
 def _allowed_dirs_for_mode(employee_id: str, mode: str) -> list[str]:
     from .config import BASE_DIR
 
@@ -277,6 +363,7 @@ async def _exec_claude(
     employee_id: str,
     prompt: str,
     model: str,
+    effort: str,
     session_id: Optional[str],
     mode: str,
 ) -> tuple[str, Optional[str], str, int]:
@@ -287,6 +374,7 @@ async def _exec_claude(
         CLAUDE_CLI_PATH, "-p",
         "--output-format", "json",
         "--model", model,
+        "--effort", effort,
         "--dangerously-skip-permissions",
     ]
     for d in _allowed_dirs_for_mode(employee_id, mode):
@@ -314,16 +402,24 @@ async def _exec_claude(
     return out.get("result", ""), out.get("session_id"), stderr_text, 0
 
 
-async def run_claude_code(employee_id: str, prompt: str, mode: str, use_resume: bool) -> tuple[str, bool]:
+async def run_claude_code(
+    employee_id: str,
+    prompt: str,
+    mode: str,
+    use_resume: bool,
+    route: ModelRoute,
+) -> tuple[str, bool]:
     """Claude Code CLI を社員ホームで起動。usage cap 検知時は Haiku にフォールバック"""
     state = load_session_state(employee_id)
     raw_session_id = state.get("claude_session_id")
     session_id = raw_session_id if use_resume else None
     used_resume = bool(session_id)
-    primary_model = EMPLOYEES[employee_id].get("model", "claude-sonnet-4-6")
+    primary_model = route.model
 
     # 1st: 通常モデルで実行
-    result, new_sid, err, rc = await _exec_claude(employee_id, prompt, primary_model, session_id, mode)
+    result, new_sid, err, rc = await _exec_claude(
+        employee_id, prompt, primary_model, route.effort, session_id, mode
+    )
     if rc == 0 and result:
         if new_sid and new_sid != session_id:
             state["claude_session_id"] = new_sid
@@ -344,7 +440,7 @@ async def run_claude_code(employee_id: str, prompt: str, mode: str, use_resume: 
             "本来の人格と口癖は維持してください）\n\n" + prompt
         )
         result, new_sid, err2, rc2 = await _exec_claude(
-            employee_id, fallback_prompt, FALLBACK_MODEL, session_id, mode
+            employee_id, fallback_prompt, FALLBACK_MODEL, "low", session_id, mode
         )
         if rc2 == 0 and result:
             if new_sid and new_sid != session_id:
@@ -355,11 +451,14 @@ async def run_claude_code(employee_id: str, prompt: str, mode: str, use_resume: 
         rc = rc2
 
     if not err:
-        log.error("CLI 終了（stderr 空）: rc=%d, employee=%s, model=%s", rc, employee_id, primary_model)
+        log.error(
+            "CLI 終了（stderr 空）: rc=%d, employee=%s, model=%s, effort=%s",
+            rc, employee_id, primary_model, route.effort,
+        )
     raise RuntimeError(f"Claude Code CLI failed (rc={rc}): {err[:300] or '(no stderr)'}")
 
 
-async def run_codex(employee_id: str, prompt: str) -> str:
+async def run_codex(employee_id: str, prompt: str, route: ModelRoute) -> str:
     """Codex CLI を社員ホームで起動。失敗時の二重LLMフォールバックはしない。"""
     home = employee_home(employee_id)
 
@@ -373,9 +472,11 @@ async def run_codex(employee_id: str, prompt: str) -> str:
         "--output-last-message", out_path,
         "-",
     ]
-    model = EMPLOYEES[employee_id].get("model")
-    if model:
-        args[2:2] = ["-m", model]
+    if route.model:
+        args[2:2] = [
+            "-m", route.model,
+            "-c", f'model_reasoning_effort="{route.effort}"',
+        ]
 
     try:
         proc = await asyncio.create_subprocess_exec(
@@ -450,17 +551,14 @@ async def run_employee_result(
             skipped_reason=circuit_reason,
         )
 
-    backend = EMPLOYEES[employee_id]["backend"]
-    # 一時的にモデルを差し替える
-    # - 自律 tick は Sonnet (model_override で指定)
-    # - 重要判断キーワード検知時は Opus に格上げ（model_override より優先）
-    original_model = EMPLOYEES[employee_id].get("model")
-    effective_model: Optional[str] = model_override
-    if backend == "claude" and resolved_mode == "executive":
-        effective_model = OPUS_MODEL
-        log.info(f"opus triggered for {employee_id}: 重要判断キーワード検知")
-    if effective_model:
-        EMPLOYEES[employee_id]["model"] = effective_model
+    route = _resolve_model_route(
+        employee_id,
+        resolved_mode,
+        sender,
+        user_message,
+        run_reason,
+        model_override,
+    )
 
     ensure_claude_md(employee_id)
     prompt = _compose_prompt(employee_id, user_message, sender, resolved_mode, run_reason)
@@ -471,11 +569,13 @@ async def run_employee_result(
     try:
         # 同時実行制限（最大 2並列まで） - usage 制御
         async with _concurrency_semaphore:
-            if backend == "codex":
-                response = await run_codex(employee_id, prompt)
+            if route.backend == "codex":
+                response = await run_codex(employee_id, prompt, route)
                 used_resume = False
             else:
-                response, used_resume = await run_claude_code(employee_id, prompt, resolved_mode, use_resume)
+                response, used_resume = await run_claude_code(
+                    employee_id, prompt, resolved_mode, use_resume, route
+                )
     except Exception as e:
         log.exception(f"社員 {employee_id} 実行失敗")
         system_error = f"{type(e).__name__}: {e}"
@@ -492,6 +592,8 @@ async def run_employee_result(
             prompt_chars=prompt_chars,
             response_chars=0,
             used_resume=used_resume,
+            model=route.model,
+            effort=route.effort,
             chain_id=chain_id,
             depth=depth,
             skipped_reason="system_error",
@@ -505,14 +607,13 @@ async def run_employee_result(
             reason=run_reason,
             prompt_chars=prompt_chars,
             used_resume=used_resume,
+            model=route.model,
+            effort=route.effort,
             chain_id=chain_id,
             depth=depth,
             skipped_reason="system_error",
             system_error=system_error,
         )
-    finally:
-        if effective_model:
-            EMPLOYEES[employee_id]["model"] = original_model
 
     response = response.strip()
     append_conversation_log(employee_id, {
@@ -528,6 +629,8 @@ async def run_employee_result(
     state["last_summary"] = response[:300]
     state["last_prompt_chars"] = prompt_chars
     state["last_response_chars"] = len(response)
+    state["last_model"] = route.model
+    state["last_effort"] = route.effort
     state["total_messages"] = state.get("total_messages", 0) + 2
     save_session_state(employee_id, state)
 
@@ -538,6 +641,8 @@ async def run_employee_result(
         prompt_chars=prompt_chars,
         response_chars=len(response),
         used_resume=used_resume,
+        model=route.model,
+        effort=route.effort,
         chain_id=chain_id,
         depth=depth,
     )
@@ -552,6 +657,8 @@ async def run_employee_result(
         prompt_chars=prompt_chars,
         response_chars=len(response),
         used_resume=used_resume,
+        model=route.model,
+        effort=route.effort,
         chain_id=chain_id,
         depth=depth,
     )
