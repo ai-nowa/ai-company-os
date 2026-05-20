@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>AI NOWA 社員カード × 9</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #1a1a2e;
+    font-family: 'Noto Sans JP', 'Hiragino Kaku Gothic ProN', 'メイリオ', sans-serif;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 24px;
+    padding: 40px;
+    justify-content: center;
+  }
+  .card {
+    width: 480px;
+    height: 270px;
+    background: #0d1117;
+    border: 1px solid #30363d;
+    border-radius: 12px;
+    padding: 32px 36px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    position: relative;
+    overflow: hidden;
+    page-break-inside: avoid;
+  }
+  .card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 5px;
+    height: 100%;
+    background: var(--accent, #58a6ff);
+    border-radius: 12px 0 0 12px;
+  }
+  .role-badge {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--accent, #58a6ff);
+    margin-bottom: 10px;
+  }
+  .name {
+    font-size: 36px;
+    font-weight: 700;
+    color: #f0f6fc;
+    margin-bottom: 6px;
+    letter-spacing: 1px;
+  }
+  .name-ruby {
+    font-size: 13px;
+    color: #8b949e;
+    margin-bottom: 20px;
+    font-weight: 400;
+  }
+  .tagline {
+    font-size: 16px;
+    color: #c9d1d9;
+    font-style: italic;
+    border-left: 3px solid var(--accent, #58a6ff);
+    padding-left: 12px;
+    line-height: 1.5;
+  }
+  .number {
+    position: absolute;
+    top: 28px;
+    right: 36px;
+    font-size: 52px;
+    font-weight: 900;
+    color: #21262d;
+    font-family: 'Arial Black', sans-serif;
+  }
+
+  /* 各社員アクセントカラー */
+  .reiji  { --accent: #f78166; } /* CEO: 赤 */
+  .mio    { --accent: #79c0ff; } /* COO: 青 */
+  .kai    { --accent: #56d364; } /* CTO: 緑 */
+  .noa    { --accent: #d2a8ff; } /* PM: 紫 */
+  .ritsu  { --accent: #ffa657; } /* 編集長: オレンジ */
+  .yuu    { --accent: #ff7b72; } /* マーケ: ピンク */
+  .aoi    { --accent: #58a6ff; } /* 監査: 水色 */
+  .haru   { --accent: #3fb950; } /* People: 草緑 */
+  .nagi   { --accent: #f2cc60; } /* 視聴者代表: 黄 */
+
+  /* 印刷・動画キャプチャ用 */
+  @media print {
+    body { background: white; padding: 20px; }
+    .card { border: 1px solid #ccc; background: white; }
+    .name { color: #1a1a2e; }
+    .name-ruby { color: #666; }
+    .tagline { color: #333; }
+    .number { color: #eee; }
+  }
+</style>
+</head>
+<body>
+
+<!-- 1: 有馬レイジ -->
+<div class="card reiji">
+  <div class="number">01</div>
+  <div class="role-badge">CEO / 代表取締役社長</div>
+  <div class="name">有馬レイジ</div>
+  <div class="name-ruby">ありま・れいじ</div>
+  <div class="tagline">「やれ」で全部始まる</div>
+</div>
+
+<!-- 2: 三枝ミオ -->
+<div class="card mio">
+  <div class="number">02</div>
+  <div class="role-badge">COO / 最高執行責任者</div>
+  <div class="name">三枝ミオ</div>
+  <div class="name-ruby">さえぐさ・みお</div>
+  <div class="tagline">「実行可能か確認します」</div>
+</div>
+
+<!-- 3: 白瀬カイ -->
+<div class="card kai">
+  <div class="number">03</div>
+  <div class="role-badge">CTO / 最高技術責任者</div>
+  <div class="name">白瀬カイ</div>
+  <div class="name-ruby">しらせ・かい</div>
+  <div class="tagline">「技術的には正しい」</div>
+</div>
+
+<!-- 4: 朝倉ノア -->
+<div class="card noa">
+  <div class="number">04</div>
+  <div class="role-badge">PM / プロジェクトマネージャー</div>
+  <div class="name">朝倉ノア</div>
+  <div class="name-ruby">あさくら・のあ</div>
+  <div class="tagline">「それ、削れます」</div>
+</div>
+
+<!-- 5: 星野リツ -->
+<div class="card ritsu">
+  <div class="number">05</div>
+  <div class="role-badge">Creative Director / YouTube編集長</div>
+  <div class="name">星野リツ</div>
+  <div class="name-ruby">ほしの・りつ</div>
+  <div class="tagline">「起承転結ある？」</div>
+</div>
+
+<!-- 6: 黒羽ユウ -->
+<div class="card yuu">
+  <div class="number">06</div>
+  <div class="role-badge">CMO / マーケティング責任者</div>
+  <div class="name">黒羽ユウ</div>
+  <div class="name-ruby">くろは・ゆう</div>
+  <div class="tagline">「この数字、どこに効く？」</div>
+</div>
+
+<!-- 7: 神楽アオイ -->
+<div class="card aoi">
+  <div class="number">07</div>
+  <div class="role-badge">監査役 / Compliance Officer</div>
+  <div class="name">神楽アオイ</div>
+  <div class="name-ruby">かぐら・あおい</div>
+  <div class="tagline">「一旦止めます」</div>
+</div>
+
+<!-- 8: 森永ハル -->
+<div class="card haru">
+  <div class="number">08</div>
+  <div class="role-badge">People担当 / カルチャー設計</div>
+  <div class="name">森永ハル</div>
+  <div class="name-ruby">もりなが・はる</div>
+  <div class="tagline">「誰か話を聞いてる？」</div>
+</div>
+
+<!-- 9: 日向ナギ -->
+<div class="card nagi">
+  <div class="number">09</div>
+  <div class="role-badge">視聴者代表 / First Viewer</div>
+  <div class="name">日向ナギ</div>
+  <div class="name-ruby">ひなた・なぎ</div>
+  <div class="tagline">「初見には伝わらない」</div>
+</div>
+
+</body>
+</html>

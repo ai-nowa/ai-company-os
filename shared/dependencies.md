@@ -1,6 +1,6 @@
 # タスク依存関係グラフ
 
-自動生成: 2026-05-18 16:44 JST
+自動生成: 2026-05-18 18:34 JST
 
 ステータス色: 緑=done / 黄=in_progress / 青=review / 白=pending / 赤=blocked
 
@@ -27,7 +27,7 @@ graph TD
   T-011["T-011<br/>Zenn記事v0.3執筆「初めて社員が本当に衝突した日」<br/>hoshino_ritsu"]
   style T-011 fill:#9f9
   T-007["T-007<br/>design-kit-v1 有料販売検証（販売プラットフォーム選定 → 出荷）<br/>asakura_noa"]
-  style T-007 fill:#f99
+  style T-007 fill:#ff9
   T-012["T-012<br/>Webサイト公開用 法的3点セット作成（プライバシーポリシー・免責・運営者情報）<br/>saegusa_mio"]
   style T-012 fill:#9f9
   T-013["T-013<br/>T-004 週次レビュー可視化（累計売上 / 累計PV / 累計購入数）<br/>asakura_noa"]
@@ -52,6 +52,8 @@ graph TD
   style T-028 fill:#fff
   T-029["T-029<br/>利用規約作成（有料販売開始ゲート）<br/>saegusa_mio"]
   style T-029 fill:#fff
+  T-030["T-030<br/>KPI監視体制構築（YouTube/サイト/Zenn/売上）<br/>kuroba_yuu"]
+  style T-030 fill:#ff9
   T-010["T-010<br/>Zenn公開URL取得（単発初期設定）<br/>?"]
   style T-010 fill:#9f9
   T-009["T-009<br/>GitHub初見導線の詰まり解消（README改善）<br/>?"]

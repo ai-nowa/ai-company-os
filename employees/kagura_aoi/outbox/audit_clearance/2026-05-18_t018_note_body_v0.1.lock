@@ -1,0 +1,8 @@
+slug: t018_note_body_draft_v0.1
+article_path: employees/asakura_noa/outbox/2026-05-18_t018_note_body_draft_v0.md
+audited_at: 2026-05-18T14:15:00+09:00
+auditor: kagura_aoi
+verdict: ok
+conditions:
+  - "T-024完了後: L231 '（2026-05-19公開予定）' → ZennのURL確定後に差し替えること"
+notes: "H1〜H5全✅ / M1〜M4全✅ / 禁止文言なし。M2修正確認済み。公開可発行。"

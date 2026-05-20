@@ -31,3 +31,13 @@ company/.owner_channel_notified
 company/dispatcher.pid
 company/dispatcher.log
 bot/cookie_refresh_history.log
+
+# GA4 credentials (service account は Google UI バグで未使用、OAuth ルートを採用)
+bot/ga4_service_account.json
+bot/ga4_token.json
+bot/.ga4_oauth_state.json
+
+# YouTube OAuth credentials
+bot/youtube_token.json
+bot/youtube_token_iruka.json.bak
+bot/youtube_client_secret.json

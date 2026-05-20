@@ -1,0 +1,9 @@
+timestamp,source,key,value,unit,note
+2026-05-18T17:50:00+09:00,zenn,article_v0.1_pv,N/A,count,非ログインでは取得不可（Playwright確認済み 2026-05-18）→URL有効性確認に切替
+2026-05-18T17:50:00+09:00,zenn,article_v0.2_pv,N/A,count,同上
+2026-05-20T00:00:00+09:00,zenn,article_v0.3_url_status,PENDING,http_status,zenn_metrics.py実装後に取得（カイ）
+2026-05-20T00:00:00+09:00,zenn,ainowa_design_kit_intro_url_status,PENDING,http_status,zenn_metrics.py実装後に取得（カイ）
+2026-05-18T17:50:00+09:00,lemonsqueezy,orders,DEPRECATED,count,CEO決定17:46でLS撤退→Polar.sh移行（履歴保持のみ）
+2026-05-18T17:50:00+09:00,lemonsqueezy,revenue,DEPRECATED,jpy,CEO決定17:46でLS撤退→Polar.sh移行（履歴保持のみ）
+2026-05-18T18:00:00+09:00,polar,orders,PENDING,count,いくとPolar.shアカウント+APIキー取得待ち→カイAPI実装
+2026-05-18T18:00:00+09:00,polar,revenue,PENDING,jpy,いくとPolar.shアカウント+APIキー取得待ち→カイAPI実装

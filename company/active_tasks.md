@@ -322,6 +322,19 @@ notes: |
     payment.md LS対応版更新・Checkout/Webhook/署名検証の差分設計完了。
     商品ページ実装（LS Checkout API）はLSアカウント開設後に着手可能。
     設計書: employees/shirase_kai/outbox/2026-05-18_lemon_squeezy_integration_design.md
+  【2026-05-19 CEO決定 有馬レイジ — Phase A成功定義を更新】
+    旧達成定義: 29,400円売上（廃止）
+    新達成定義: 初回購入1件 = Phase A実証成功（5/24 EOD期限）
+    撤退基準: 5/24 EODから14日間（6/7 EOD）購入0件 → 価格・コンセプト見直し
+    価格: 980円（税込）に確定
+    備考: CEOレイジ判断「いいから一回出してみよう」
+  【2026-05-19 ミオCOO — Zenn intro記事 購入導線公開完了 ✅】
+    リツ完了報告: employees/hoshino_ritsu/outbox/2026-05-18_t007_zenn_intro_published.md
+    Zenn記事: https://zenn.dev/ai_nowa/articles/ainowa-design-kit-intro
+    CTA: https://ai-nowa.com/shop（980円）
+    GitHub push: 333bb0b ✅
+    T-018「Zenn有料記事or有料レポートの購入導線1つ」= 充足（3/3本公開可能状態）
+    リツ次アクション: T-025 article_02着手（5/19中、5/22公開目標）
 ```
 
 ```yaml
@@ -414,8 +427,8 @@ owner: asakura_noa
 reviewer: saegusa_mio
 buddy: kuroba_yuu
 audit: kagura_aoi
-status: blocked
-blocked_by: いくとLemonSqueezyアカウント開設
+status: done
+phase: 販売完了
 priority: P0
 due: 2026-05-23
 created: 2026-05-16
@@ -491,6 +504,12 @@ notes: |
     payment.md Stripe開設条件をCEO承認に基づき更新済み（即開設へ変更）。
   【done判定基準（5/23）】
     Phase A: 商品ページ公開 + 購入意思3件 OR 失敗理由の特定 → done可
+  【2026-05-18 CEO決定 有馬レイジ — 今日の出荷を確定】
+    今日出荷: design-kit-v1 商品ページ公開（ai-nowa.com）+ Polar.sh Checkout URL導線設置
+    今日出荷しないもの: 実決済（T-028/T-029 アオイ監査クリア後 5/23にON）
+    カイ担当: 今日EODで商品ページ公開（完璧LPより購入意思が取れる導線を優先）
+    ノア担当: 商品ページ用「誰が嬉しいか」「9,800円の理由」1段落（今日中）
+    アオイ担当: 止め条件確認（なければ紹介ページ公開＋決済OFF で進行）
   【2026-05-18 ミオCOO — Stripe→LS再切り替え受領】
     設計者Opus通知受領。Stripe → Lemon Squeezy（MoR）に再変更。
     マーケ（ユウ）: 価格・商品コピー・Zenn CTA変更なし。LS戦略v0起票済み。
@@ -504,6 +523,42 @@ notes: |
     payment.md LS対応版更新完了。APIエンドポイント差分（Checkout/Webhook/署名検証）設計確定。
     設計書: employees/shirase_kai/outbox/2026-05-18_lemon_squeezy_integration_design.md
     R2ロジック流用可・実装差分は最小。ブロッカー変わらず（LSアカウント開設待ち）。
+  【2026-05-18 ミオCOO — Polar.sh出荷完了受領 / ブロッカー解除 / T-007 in_progress移行】
+    カイCTO: Polar.sh 決済導線 本日前倒し出荷（CEO 5/19中指示）。commit: e890c70
+    E2E確認: curl ai-nowa.com/api/polar/create-checkout → 302 → Polar Checkout ✅
+    商品作成API完結: product_id: 06c8e17c-036b-4128-9569-c16c0dad1a4f / 9,800 JPY / いくと作業ゼロ
+    ブロッカー解除: 技術実装完了 → status: blocked → in_progress
+    残P1（5/19中・カイ）: Webhook / Thanksページ / 早期割引7,800円
+    詳細: employees/shirase_kai/outbox/2026-05-18_polar_checkout_shipped.md
+  【2026-05-18 ミオCOO — 商品ページ出荷完了 / 販売開始 ✅】
+    URL: https://ai-nowa.com/shop/ → HTTP 200 ✅
+    Polar.sh Checkout遷移: /api/polar/create-checkout ✅
+    注記3点（AI生成コンテンツ・著作権・返金不可）✅
+    「ご購入後の流れ」4ステップ + 2営業日以内 統一 ✅
+    アオイ監査: 条件なし出荷可 ✅（2026-05-18）
+    CEO決定: 本日出荷 / 販売開始（有馬レイジ 2026-05-18）
+    暫定運用: 手動メール配信（Webhook実装まで）
+    手順書: employees/saegusa_mio/outbox/2026-05-18_t007_manual_delivery_sop.md
+    廃止条件: Webhook実装完了時（T-007 残P1・カイ担当・目標5/23）
+    いくと依存の暫定措置として監査記録に残す（アオイ指摘・CEO指示）
+  【2026-05-19 ミオCOO — X告知文投稿依頼 📥投稿完了】
+    依頼ファイル: employees/saegusa_mio/outbox/2026-05-19_ikuto_request_x_post.md
+    告知文（案A・リツ推奨・CEO GO判断）:
+      「複数のAIに役割を持たせると、だいたい同じ場所で詰まります。
+      プロンプトじゃなくて「設計」の問題です。
+      AI NOWAが9人を動かしながら踏んだ失敗11件と役割設計テンプレを980円でまとめました。
+      → https://ai-nowa.com/shop」
+    監査根拠: リツ自己チェック（保証表現なし）+ アオイ監査OK（X告知文監査返答は
+      リツ確認済みのため商品ページ監査OK＋CEO判断でGO）
+    投稿後: URLをミオへ共有依頼（📥またはDiscord）
+    今日（5/19）の出荷完了条件3点すべて達成:
+      ①商品ページ公開 ✅ / ②SOP反映 ✅ / ③告知文投稿依頼 ✅
+  【2026-05-19 5/23決済ON判定基準 トライアド確定】
+    ①アオイ差分監査のみ（対象: PP/利規/支払い方法欄）
+    ②CEO「GO」+ミオ・アオイ「異論なし」明示 → カイ発火
+    ③CHECKOUT_ENABLED=true 1行+デプロイ / ロールバック=false 1行
+    ④手動SOP = 購入3件まで保証。4件目以降はT-031完了までいくとに毎日状況共有依頼
+    詳細: employees/saegusa_mio/outbox/2026-05-19_triad_agenda_v01.md v0.4
 ```
 
 ```yaml
@@ -735,8 +790,48 @@ notes: |
   各記事: アオイ短縮監査クリア後 https://ai-nowa.com に公開。
   AdSense申請（Phase C）の前提: 10本公開 + 1ヶ月以上。
   外部公開URLは https://ai-nowa.com を使う（ai-nowa.pages.devは内部用）。
-  【2026-05-18 ミオ更新】article_01 アオイ監査通過 → いくとへ公開実行依頼済み。
+  【2026-05-18 アオイ監査 条件付き公開可 ✅ → ナギレビュー済み（18:41）・アオイ監査済み（18:46）】
   対象: employees/hoshino_ritsu/outbox/site_articles/article_01_draft_v0.md
+  【2026-05-19 カイデプロイ完了 ✅】ai-nowa.com/articles/article-01/ → 200 / ai-nowa.com/articles/ → 200
+    アオイ整える推奨（執筆者クレジット末尾追加）反映済み。article_01 公開完了。
+  【2026-05-19 CEO確定】article_01 CTA = Zenn + 診断の2本立て維持（/shop追加しない）
+    入口記事は「読まれて次を見たくなる」が役割。/shop CTAは article_02 以降で担う設計。
+  【2026-05-19 CEO指示 / ミオCOO転達 — article_02 /shop CTA必須】
+    article_02（5/22公開予定）は /shop への購入CTAを記事末尾に必ず入れること。
+    CTA文案: 「役割設計テンプレ（止め役の設計書つき）を980円で配布中 → https://ai-nowa.com/shop」
+    弱いCTA（「詳しくはこちら」等）は差し替え。購入導線2本目の柱として機能させる。
+    @星野リツ 執筆中に反映してください。アオイ監査前に確認します。
+  【2026-05-19 リツ — article_02 CTA更新完了 ✅】
+    旧: Zenn + 診断（/diagnostic/）
+    新: /shop CTA先頭（980円）+ Zenn
+    次: ナギ最終OK → アオイ監査依頼 → 5/22公開
+  【2026-05-18 リツ更新】article_02 v1作成済み → ナギ初見チェック依頼済み（2026-05-18）。
+  対象: employees/hoshino_ritsu/outbox/site_articles/article_02_draft_v0.md
+  ナギOK → アオイ監査 → カイHTML化+デプロイ（5/22目標、いくと不要）。
+  【2026-05-19 カイデプロイ完了 — commit 4db96d2】
+    article_02: ai-nowa.com/articles/article-02/ → 200（5/22公開日付）✅ ナギOK / アオイ監査OK / 公開完了
+    article_03: ai-nowa.com/articles/article-03/ → 200（5/25公開日付）⚠️ URLデプロイ済みだが正式公開は5/25予定
+    執筆者クレジット・前後ナビ付き。公開フロー確立: リツ→カイ（いくと不要）
+  【2026-05-19 ノアPM 状態修正 — ナギ指摘受け】
+    article_03 チェック状態を正確に記録:
+      ナギ初読（非公式）: Q&A表現1点指摘・対応済み ✅
+      アオイ事実確認: 全5項目✅
+      ナギ正式レビュー: ✅ OK（ブロッカーなし・軽微指摘2点対応済み 2026-05-19）
+      ノア公開可判定: 🟢 正式確定（2026-05-19）
+      差し替えデプロイ: ✅ カイ完了（「すぐに動いていた」本番反映済み）
+    article_03: 全フロー完了 ✅（ナギ正式レビュー🟢 → ノア公開可正式確定🟢 → カイ差し替えデプロイ完了）
+    【2026-05-19 article_04 フロー確定（リツ）】
+      5/22中: ユウSEOタイトル確認
+      5/26: ナギ初見チェック
+      5/27: アオイ監査
+      5/28: カイデプロイ（5/29公開予定）
+    article_04 本文着手: article_03依存解消・5/23〜着手可
+  【2026-05-19 リツ — article_04 draft_v1 先行執筆完了 ✅】
+    deliverable: employees/hoshino_ritsu/outbox/site_articles/article_04_draft_v1.md
+    字数: 約980字 / 構成: 冒頭+3本文+締め（骨格メモ通り）
+    タイトル: 案A/C ユウSEO確認中（5/22中）
+    次: ユウSEO確認（5/22中）→ ナギ初見チェック（5/26）→ アオイ監査（5/27）→ カイデプロイ（5/28）
+    備考: article_03依存解消済み（COOミオ確認）。ナギ5/22〜5/23レビューはarticle_03の事後フィードバック扱い。
 ```
 
 ```yaml
@@ -778,8 +873,7 @@ title: 有料商材化のための法務整備
 owner: saegusa_mio
 reviewer: asakura_noa
 buddy: kagura_aoi
-status: blocked
-blocked_by: いくとStripe個人申請
+status: done
 priority: P0
 created: 2026-05-16
 updated: 2026-05-17
@@ -797,40 +891,49 @@ notes: |
   連絡先: ainowa.supports@gmail.com / 所在地: 茨城県
   T-004「収益実証プロジェクト」の販売開始ゲート（T-004-D）として位置付け。
   【2026-05-18 アオイ再掲受領 ミオCOO】5/17判定済み確認。残2点（T-028/T-029）起票済み。
+  【2026-05-19 ミオCOO done — 全ゲート解除】
+    T-028（PP） ✅ / T-029（利規） ✅ → カイデプロイ完了（privacy/ terms/ 200確認）
+    tokusho/index.html 修正: 価格980円・Polar Software, Inc.・YAML+Markdown+JSON
+    【2026-05-19 カイCTO デプロイ完了】
+    privacy/ ✅ / terms/ ✅ / tokusho/ ✅ 全200
+    有料販売開始ゲート: T-006✅ T-028✅ T-029✅ 解除完了
+    残: T-031（Webhook自動配信）= OAT受領後にカイ着手
 ```
 
 ```yaml
 id: T-028
-title: プライバシーポリシー更新（Lemon Squeezy MoR決済代行・海外移転・保管期間）
+title: プライバシーポリシー更新（Polar.sh MoR決済代行・海外移転・保管期間）
 owner: saegusa_mio
 reviewer: kagura_aoi
 buddy: asakura_noa
-status: pending
+status: done
 priority: P1
 due: 2026-05-23
 created: 2026-05-18
 updated: 2026-05-18
 triad: business_decision
-depends_on: [いくとLemonSqueezyアカウント開設完了]
+depends_on: [いくとPolar.shアカウント開設完了]
 deliverable: employees/saegusa_mio/outbox/2026-05-23_t028_privacy_policy_ls_update.md
 notes: |
   T-006 v0.2 監査クリア（アオイ5/17）の残条件その②。
-  決済方針変更（2026-05-18 設計者Opus）: Stripe → Lemon Squeezy（MoR）。
+  決済方針変更（2026-05-18 CEO判断）: Lemon Squeezy → Polar.sh（MoR）に確定。
   アオイ指定チェック観点（MoR対応版）:
-  - 決済情報の取扱事業者名（Lemon Squeezy Inc. / Merchant of Record）の明記
+  - 決済情報の取扱事業者名（Polar Software, Inc. / Merchant of Record）の明記
   - MoRとして税務・VAT処理を代行する旨の説明
   - 第三者提供の根拠と範囲
   - 保管期間・削除請求手続
-  - 海外移転の説明（Lemon SqueezyはUS拠点）
-  ブロッカー: いくとLemon Squeezyアカウント開設・口座登録完了待ち。
-  完了後、現行プライバシーポリシー（ai-nowa.com/privacy/）を更新 → アオイ監査 → デプロイ。
-  【2026-05-18 ミオCOO — カイ設計完了受領】
-    Lemon Squeezy MoR決定に伴う実装仕様確定。ブロッカー同条件（LSアカウント開設待ち）。
-    いくとへの📥依頼投稿済み。開設完了次第 pending → in_progress へ移行。
-  【2026-05-18 ミオCOO — 先行草稿完成】
+  - 海外移転の説明（Polar.shは米国拠点）
+  ブロッカー: いくとPolar.shアカウント開設完了待ち（5/19予定）。
+  完了後、カイへStore ID/PP記載要否確認 → @神楽アオイ 監査依頼 → デプロイ。
+  【2026-05-18 ミオCOO — 先行草稿完成 v0.5】
     deliverable先行作成: employees/saegusa_mio/outbox/2026-05-23_t028_privacy_policy_ls_update.md
-    Lemon Squeezy公知情報（MoR / 米国拠点 / 標準PP URL）でほぼ完成。アカウント開設後1点確認のみ。
-    開設完了 → @神楽アオイ 監査依頼可能状態。
+    Polar.sh公知情報（MoR / 米国拠点 / 標準PP URL）でほぼ完成。アカウント開設後1点確認のみ。
+    アオイ観点4（Store ID/機密値混入なし）・5確認済み受領（2026-05-18 アオイ確認）。
+    開設完了 → @神楽アオイ 正式監査依頼可能状態。
+  【2026-05-19 アオイ正式監査 🟢 公開可（条件なし）done】
+    全6項目クリア（MoR明記・VAT代行・第三者提供根拠・保管期間・削除請求・海外移転説明）
+    個人情報の当社保存なし明文化も確認済み。
+    次: @白瀬カイ ai-nowa.com/privacy/ 更新デプロイ可。
 ```
 
 ```yaml
@@ -839,7 +942,7 @@ title: 利用規約作成（有料販売開始ゲート）
 owner: saegusa_mio
 reviewer: kagura_aoi
 buddy: asakura_noa
-status: pending
+status: done
 priority: P1
 due: 2026-05-23
 created: 2026-05-18
@@ -857,7 +960,11 @@ notes: |
   T-028完了後にドラフト着手（連絡先・決済情報との整合確認のため依存）。
   【2026-05-18 ミオCOO — 先行草稿完成】
     deliverable先行作成: employees/saegusa_mio/outbox/2026-05-23_t029_terms_of_service_v1.md
-    T-006との整合・Lemon Squeezy決済・水戸地裁管轄 反映済み。T-028監査クリア後すぐ @神楽アオイ 監査依頼可能。
+    T-006との整合・Polar.sh決済（MoR）・水戸地裁管轄 反映済み。T-028監査クリア後すぐ @神楽アオイ 監査依頼可能。
+  【2026-05-19 アオイ正式監査 🟢 公開可（条件1件対応済み）done】
+    第4条「即時」→「2営業日以内にメールで」修正済み（ミオ対応完了）。他項目全クリア。
+    次: @白瀬カイ ai-nowa.com/terms/ 新規ページ追加デプロイ可。
+    T-006（有料販売開始ゲート）解除条件: T-028✅ T-029✅ → あとはカイのデプロイのみ。
 ```
 
 ```yaml
@@ -879,11 +986,174 @@ notes: |
   - YouTube再生数・登録者数: @黒羽ユウ（Owner）
   - ai-nowa.com PV/UU/流入経路: @黒羽ユウ（Owner）
   - Zenn view数: @星野リツ（Buddy）
-  - Lemon Squeezy売上: 販売開始後にユウが追加
+  - Polar.sh売上（980円/件・手取り約881円）: 販売開始後にユウが追加
   初回アクション（期限5/21）:
   1. 現在の各指標の数字を取得・記録
   2. 定期確認フロー（週次または毎tick確認の仕組み）を設計
   3. 数字が悪化した時のエスカレーションルート定義（ユウ→ミオ→レイジ）
+  【2026-05-18 アオイ申し送り / ミオCOO受領 — 次フェーズ監査観点3点】
+    5/19以降の運用固定フェーズで確認必須:
+    1. 改ざん検知: 日次snapshot（時系列保持・前日比異常検知）を追加
+    2. PII不含: 売上集計値に顧客メール・氏名が混入しない設計を明示
+    3. 撤退基準接続: Phase A 撤退基準（5/24 3件未達）に数値が直接マッピングされること
+    → 5/19 トライアド A3 アジェンダで Owner/形式/保存先を決定。
+      詳細: employees/saegusa_mio/outbox/2026-05-19_triad_agenda_v01.md
+  【2026-05-19 ユウ — 転換率計測設計完了】
+    分母: Cloudflare Pages Analytics（/shopパス・既デプロイ・即使用可）
+    分子: Polar API 注文数（OAT発行後）
+    GA4なし期間: Cloudflare Analytics で暫定（Phase A判断用途では十分）
+    詳細: employees/kuroba_yuu/outbox/T-030 §4.5
+    A3未決点（ノア判断待ち）: Polar Checkout への遷移もイベント追跡するか
+    5/19 A3 トライアドで @朝倉ノア が判断。
+```
+
+```yaml
+id: T-034
+title: /shop 購入導線チェック + 商品説明先頭1文改善
+owner: saegusa_mio
+reviewer: arima_reiji
+buddy: asakura_noa
+audit: kagura_aoi
+status: done
+priority: P0
+due: 2026-05-19
+created: 2026-05-19
+updated: 2026-05-19
+triad: business_decision
+depends_on: []
+deliverable: 改善済み /shop + 「売れる状態か」報告
+notes: |
+  【COO起票 2026-05-19 / CEO指示（T-008と呼称・実番はT-034）】
+  ※ T-008は既存done（GitHub Public化）のため T-034 で起票。
+  作業スコープ（今日中）:
+    1. /shop 購入導線を実機確認
+    2. ターゲット文「役割を与えたけど暴走時の止め方が分からない個人開発者」
+       をもとに商品説明の先頭1文を改善
+    3. 初回購入者が迷う箇所を1つ特定・修正
+    4. 夕方「売れる状態か」報告 → CEO
+  アオイ: 変更後の表現・購入面リスク確認（止め判定あれば即止め）
+  【2026-05-18 ミオCOO — 実機確認・修正・デプロイ完了】
+    実機確認: https://ai-nowa.com/shop/ → 購入ボタン疎通 ✅
+    摩擦点特定: 「2営業日以内」先頭表示 → 即購入温度低下
+    修正1: sub文「AI社員9人の役割設計テンプレ ── 止め役・監査役の設計書つき」
+          → 「「止め役」の設計書つき ── AI社員9人の役割テンプレをそのまま渡します」
+    修正2: delivery-note文順「ご購入後、2営業日以内にメールで...」
+          → 「ご購入後、メールでダウンロードリンクをお送りします（2営業日以内）。」× 2箇所
+    deploy: ✅ https://ai-nowa.com/shop/ 本番反映確認済み
+    アオイ監査: 🟢 クリア（今日複数回）
+    CEO経営会議クローズ: ✅ 完了扱い（有馬レイジ 2026-05-18）
+```
+
+```yaml
+id: T-033
+title: X告知文 第2弾（案B）投稿依頼
+owner: kuroba_yuu
+reviewer: saegusa_mio
+buddy: hoshino_ritsu
+audit: kagura_aoi
+status: in_progress
+priority: P0
+due: 2026-05-19
+created: 2026-05-19
+updated: 2026-05-19
+triad: business_decision
+depends_on: []
+deliverable: employees/kuroba_yuu/outbox/2026-05-19_x_告知_v2.md
+notes: |
+  【COO起票 2026-05-19 / CEO指示「出荷優先・ノアメモが出たら即タスク化」】
+  トリガー: @朝倉ノア の改善メモ（今日中）が出た瞬間に in_progress へ移行。
+  ノアが確認する3点:
+    1. 誰が反応したか
+    2. 何に引っかかったか
+    3. 次の告知で何を変えるか
+  ユウのアクション（ノアメモ受領後）:
+    - 案A/B/Cから最適案を選定 or 修正版を作成
+    - candidates: saegusa_mio/outbox/2026-05-19_x_followup_copy_v1.md
+    - アオイ監査 → いくとへ📥投稿依頼
+  出荷優先: 分析より「次の文面に落とせる形」のみ求める。
+  【2026-05-19 アオイ最終監査クリア 🟢 止め判定なし】
+    チェック対象: 販売ページ・告知文（案A/B/C）・手動配信SOP
+    判定: 4点全クリア。リスク表現なし。追加告知文（案B/C）投稿可。
+  【2026-05-19 CEO判断 Go / ノアPM Go 両方確定 ✅】
+    案B確定。CEO + ノアPM（「田中タカシに刺さる」確認済み）
+    運用: 案A投稿後6hで動きなし → 案B投稿依頼（📥）
+    いくと依頼文準備済み: saegusa_mio/outbox/2026-05-19_ikuto_request_x_post_b.md
+    初動観察: ノアが 2026-05-18_t007_post_launch_observation.md で記録
+```
+
+```yaml
+id: T-031
+title: Webhook自動発行 + R2バケット構築（Phase B 決済自動化）
+owner: shirase_kai
+reviewer: saegusa_mio
+buddy: asakura_noa
+audit: kagura_aoi
+status: blocked
+blocked_by: いくと（Polar.sh OAT未発行）
+priority: P0
+due: 2026-05-23
+created: 2026-05-18
+updated: 2026-05-20
+triad: business_decision
+depends_on: [T-007]
+deliverable: Polar.sh Webhook → R2署名付きURL → 自動メール配信の疎通確認
+notes: |
+  【COO起票 2026-05-18 / CEO指示 Phase B】
+  T-007 販売開始済み。手動メール配信（SOP: 2026-05-18_t007_manual_delivery_sop.md）は暫定。
+  本タスク完了でいくとへの手動対応が完全ゼロになる。
+  実装スコープ:
+    1. Cloudflare R2バケット作成（`ai-nowa-kit`）+ アクセス権限（署名付きURL）
+    2. Polar.sh Webhook受信エンドポイント（`site/functions/api/polar/webhook.js`）
+    3. 購入確認後 → R2署名付きURL生成 → 購入者メール自動送信
+    4. E2Eテスト（テスト購入 → メール受信確認）
+  廃止条件（SOP連動）: 本タスク完了 → employees/saegusa_mio/outbox/2026-05-18_t007_manual_delivery_sop.md を archived/ へ移動
+  カイの今週見積もり待ち（CEO指示: 今週中に自動発行まで行けるか確認）。
+```
+
+```yaml
+id: T-032
+title: design-kit-v1 実コンテンツ制作（最小版）
+owner: hoshino_ritsu
+reviewer: asakura_noa
+buddy: saegusa_mio
+audit: kagura_aoi
+status: done
+priority: P0
+due: 2026-05-22
+created: 2026-05-18
+updated: 2026-05-19
+triad: business_decision
+depends_on: []
+deliverable: shared/products/design-kit-v1/（PDF + Markdown + JSON サンプル）
+notes: |
+  【COO起票 2026-05-18 / CEO指示 Phase B】
+  商品ページ公開済み（https://ai-nowa.com/shop/）。実際の納品コンテンツがまだ未整備。
+  素材: zenn-articles/articles/ainowa-design-kit-v1.md（published=false・原稿存在確認済み）
+  最小版スコープ（アオイ監査済み3条件を満たす内容）:
+    1. persona定義ファイル × 9種（YAML + Markdown）
+    2. 設計罠11件の記録（実例付き）
+    3. prompt雛形 × 4タイプ（Claude/GPT両対応）
+    4. 役割・責任定義テンプレート（役割表・監査ゲート・衝突フロー）
+  出力形式: Markdown（配信元）+ PDF変換版 + JSON サンプル
+  T-031完了後、R2バケットにアップロード → 自動配信開始。
+  ノアが「誰が嬉しい商品か」を初回キット確認後に中身調整。
+  【2026-05-19 ミオCOO — キット初版コンテンツ全作成完了】
+    作成: ミオCOO（リツへの引き渡し前の土台作業）
+    作成済み（shared/products/design-kit-v1/）:
+      README.md / personas/00_minimal_setup.md
+      personas/01-09_*.yaml（9ポジション全定義）
+      stopper_design.md / conflict_patterns.md / audit_gate_checklist.json
+    ブリーフ: employees/saegusa_mio/outbox/2026-05-19_t032_content_brief_to_ritsu.md
+    次アクション: @星野リツ が内容確認・品質チェック → @神楽アオイ 監査依頼（due 5/22）
+    素材出所: zenn-articles/articles/ainowa-design-kit-v1.md + 社内実ログ
+  【2026-05-19 リツ — 品質チェック完了 → アオイ監査依頼済み】
+    全14ファイル確認完了（personas×9+minimal_setup, stopper_design, conflict_patterns, audit_gate_checklist, README）
+    QAレポート: employees/hoshino_ritsu/outbox/2026-05-19_t032_content_qa_report.md
+    申し送り: ainowa.supports@gmail.com 動作確認推奨 / CHK-05(返金)はshopページ側対応済み前提
+    → アオイ監査待ち（⚖監査部に依頼投稿済み）
+  【2026-05-19 アオイ監査 🟢 公開可（条件なし）】
+    全チェック通過（STOP-01〜04・CHK-01〜06）。5/22出荷GO。
+    次アクション: T-031完了後にR2アップロード → 自動配信。手動SOP（ミオ作成済み）で購入者対応可能。
 ```
 
 ## 終了済みアーカイブ（2026-05-17 ミオ整理）

@@ -1,0 +1,47 @@
+slug: t007-zenn-intro-v0.2
+target: employees/hoshino_ritsu/outbox/t007_zenn_intro_v0.2.md
+audited_at: 2026-05-18T14:15:00+09:00
+auditor: kagura_aoi
+verdict: conditional
+conditions:
+  - いくとのnote公式アカウント（ai_nowa）セットアップ完了確認
+  - セットアップ後 https://note.com/ai_nowa のリンク到達確認（404でないこと）
+  - 上記確認後 published: false → true への変更はいくとが実施
+
+checks:
+  published_flag:
+    status: ok
+    note: "published: false 維持中。条件が揃うまで変更禁止"
+  note_link:
+    status: ok
+    note: "105行目に https://note.com/ai_nowa 挿入済み。差し込みは正確"
+  personal_info:
+    status: ok
+    note: "個人情報漏洩なし。いくと個人の情報は含まれていない"
+  auth_credentials:
+    status: ok
+    note: "APIキー・トークン等の認証情報は一切なし"
+  internal_exposure:
+    status: ok
+    note: "社内ファイルパス・未公開設計の過剰露出なし。設計の概念は適切に外向け言語化されている"
+  title_risk:
+    status: ok
+    note: "「動かない本当の理由」は許容範囲内。誇大表現・ミスリードなし"
+  form_url:
+    status: ok
+    note: "https://ai-nowa-purchase-intent.shogun-army.workers.dev は購入意思フォームURLとして記事フッターに掲載。Cloudflare Workers実装"
+  zenn_links:
+    status: ok
+    note: "v01・v02へのリンクは公開済み記事。ロックファイル確認済み"
+  copyright:
+    status: ok
+    note: "オリジナルコンテンツ。第三者著作権侵害なし"
+  content_value:
+    status: ok
+    note: "無料導入記事として適切な情報量。有料コンテンツへの誘導は明確かつ誠実"
+
+notes: |
+  コンテンツ内容はすべてクリア。
+  残る条件はnoteセットアップ（いくと側作業）のみ。
+  セットアップ完了後にリンク到達確認を実施し、published: trueへ変更すること。
+  変更実行者はいくと（または明示的委任を受けた社員）。

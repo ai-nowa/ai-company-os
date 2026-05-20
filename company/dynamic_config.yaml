@@ -1,0 +1,40 @@
+# AI NOWA 動的設定ファイル
+# 値を変更したら 5分以内に全 watcher に反映される（再起動不要）。
+# 構造変更（新キー追加・型変更）は dynamic_config.py の _defaults() も更新する。
+
+task_health:
+  stale_threshold_hours: 24
+token_pace:
+  alert_prompt_chars: 50000
+external_check:
+  interval_seconds: 1800
+  request_timeout: 10
+architect_observer:
+  check_interval_seconds: 12600
+  keyword_loop_threshold: 30
+  silent_hours: 2
+  token_overheat_threshold: 60000
+  watched_keywords:
+  - AdSense
+  - Public
+  - Private
+  - 公開判断
+  - 監査
+  - 法務
+  - ブロッカー
+  - 撤退
+  - Zenn
+  - '404'
+outbox_organizer:
+  interval_seconds: 3600
+auto_commit:
+  interval_seconds: 3600
+dependency_visualizer:
+  interval_seconds: 3600
+dashboard_writer:
+  interval_seconds: 900
+mention_chain:
+  max_depth: 4
+  max_chain_calls: 6
+  max_mentions_per_response: 2
+  heartbeat_chain_calls: 1

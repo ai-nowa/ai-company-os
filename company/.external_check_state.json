@@ -1,0 +1,22 @@
+{
+  "https://zenn.dev/yikuto/articles/ai-nowa-v01": {
+    "status": 404,
+    "note": "http_error",
+    "checked": "2026-05-18T17:11:45+09:00"
+  },
+  "https://zenn.dev/ai_nowa/articles/ai-nowa-v01": {
+    "status": 404,
+    "note": "http_error",
+    "checked": "2026-05-18T19:02:04+09:00"
+  },
+  "https://ai-nowa.com": {
+    "status": 200,
+    "note": "ok",
+    "checked": "2026-05-18T19:02:05+09:00"
+  },
+  "https://zenn.dev/ai_nowa": {
+    "status": 200,
+    "note": "ok",
+    "checked": "2026-05-18T19:02:05+09:00"
+  }
+}

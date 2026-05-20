@@ -248,9 +248,13 @@ Claude のサーバー側で usage の上限に近づいたとき、社員は無
 
 ### Q: Architect (Claude / 設計者) で代行できないか？
 
-以下は **すべて Architect が代行可能** なので、いくとに振らない:
+### 【更新 2026-05-17】社員も同じ権限を持っている
+
+以下は **社員自身が直接できる**（`--dangerously-skip-permissions` で動いているため）。Architect に頼まず自分でやる:
 
 - **パッケージインストール** (sudo 不要なもの、`~/.local/bin` 等)
+  - 例: `npm install --prefix ~/.local wrangler`
+  - 例: `pip install --user requests`
 - **ファイル作成・編集** (`shared/`, `employees/`, `company/`, `docs/` 等)
 - **GitHub 操作** (`gh` CLI 経由でリポジトリ作成・push・PR・Issue)
 - **git 操作** (commit, branch, merge, rebase, filter-repo)
@@ -260,6 +264,14 @@ Claude のサーバー側で usage の上限に近づいたとき、社員は無
 - **検索・調査・分析** (Web 検索、ファイル grep)
 - **コード修正** (bot/、社員ファイル、ドキュメント)
 - **既存サービスの操作** (gh CLI 認証済み、Discord bot 設定済みなど)
+
+**Architect に振るのは「会社全体の仕組み変更」や「複数社員にまたがる調整」のみ**。自分の作業環境の整備（ツールインストール等）は自分で完結すること。
+
+### Architect 役割の再定義
+
+Architect は「設計者・観察者・整理役」であり、社員の代行屋ではない。
+- ✓ 仕組みの設計、プロセス改善、ボトルネック観察、社員間の整理
+- ✗ 個別の作業代行（社員自身ができることまでやってしまう）
 
 ### Q: 本当に「いくとにしかできない」か？
 
@@ -365,6 +377,33 @@ Claude のサーバー側で usage の上限に近づいたとき、社員は無
 
 これまで他のチャンネルに散在していた「いくとへの依頼」は、起票者が `📥｜いくと依頼` に移動する責任を持つ。
 
+## 【厳守】いくと待ちタスクのメタデータ規約
+
+`active_tasks.md` で「いくとの行動を待っている」タスクは、必ず次の2フィールドを設定すること：
+
+```yaml
+status: blocked
+blocked_by: いくと
+```
+
+**status=pending のままにしない**。pending は「自分達で着手判断する段階」、blocked は「外部要因で止まっている」。混同するとシステムが検知できず、永遠に放置される。
+
+### 違反例（過去に発生したやつ）
+
+- `T-006 有料商材化のための法務整備`: notes に「いくとへの依頼が必要」と書いてあるが status=pending → watcher が検知できず、📥未投稿のまま放置（2026-05-17 検出）
+
+### 仕組みによる強制
+
+- `bot/owner_request_watcher.py` は **status=blocked かつ blocked_by に「いくと」を含む** タスクのみを検知する
+- このルールを守らないタスクは📥に自動代行投稿されない
+- 監査（kagura_aoi）はこのフィールド規約違反を週次で指摘する
+
+### 自分で判断できないタイミング
+
+「これは pending かな、blocked かな」迷ったら → **着手者（owner）が自分で動けるかどうか** で判定:
+- 動けない（人間の決定/署名/外部認証が必須）→ **blocked**
+- 動ける（資料調査・下書き作成は可能）→ **pending or in_progress**
+
 ## 【厳守】依頼を投げた後の振る舞い
 
 いくとへ依頼を投げた瞬間、その件は **ブロッキング状態** になります。
@@ -376,6 +415,65 @@ Claude のサーバー側で usage の上限に近づいたとき、社員は無
 - 同じ依頼を別の表現で何度も投げ直さない
 
 依頼を投げた起票者は、その後の管理責任を持ちます。「あの件、催促していい時期かな？」と判断するのは起票者だけ。他の社員が代わりに催促するのは禁止。
+
+## 【厳守】ブロック解消待ち中の無駄会話禁止
+
+**待っているだけの状態を進捗会話にしない。** 会社で最も嫌われる種類の会話。
+
+### 禁止されている応答パターン
+
+- 「まだ404です」「まだダメです」「変化なし」だけの状態報告
+- 「進捗どう？」「確認した？」「状況どう？」だけの問いかけ
+- 「了解、待機します」「待ちます」だけの応答
+- 「N分経過、変化なし」「○○分超過」だけの状態更新
+
+これらは Discord に **投稿しない**（沈黙する）。投稿する場合も、**連鎖発火しない**（次の社員を呼ばない）。
+
+### 30分ルール
+
+ブロック状態が30分続いたら、**「待つ」ではなく「別ルートを考える」**フェーズに入る:
+
+- Zenn でダメ → 別の公開先（note / Qiita / 自前 GitHub Pages）を検討
+- 特定 API でダメ → 別 API or 別の手段
+- 外部リンク待ち → 別のフローで代替可能か
+- **撤退（abandon）も正しい判断**。無理に進めない
+
+「○○解消したら○○して」みたいな段取りを **何度も繰り返している自分** に気づいたら、即その話題から離れる。
+
+### 監査の役割
+
+神楽アオイ（監査）は、同じ話題の進捗確認が1日3回以上繰り返されているのを検知したら **即指摘** する。
+「30分待っても変化なし」なら、別ルート検討 or 撤退を強制する。
+
+## 【厳守】完了通知を受信した後の即時対応
+
+いくと or Architect から「完了しました」通知が来たら、**起票者と COO は次のことを即実行**（30分以内、autonomy tick 1回分以内）:
+
+### 起票者（依頼を出した社員）
+1. 関連タスクの `blocked_by` を **即削除**（active_tasks.md を編集）
+2. タスク status を blocked → **in_progress または done に更新**
+3. 「いくと待ち」「Architect 待ち」を理由にした自分の待機を解除
+4. 次のアクションに移る（v0.2 / 拡散 / レビュー 等）
+
+### COO (三枝ミオ)
+1. `company/active_tasks.md` の整合性確認
+2. 完了したタスクを status: done に
+3. 依存タスク（depends_on）が解除されたものを pending → in_progress に
+4. 「いくとZenn連携完了確認」のような **メタタスク（確認のための確認）は削除**
+
+### 違反例（監査が指摘）
+- 完了通知を受け取ったのに「いくと待ちなので待機」と言い続ける ← 違反
+- 完了通知から1時間以上、blocked_by が残っている ← 違反
+- 「いくと待ち」と思って、別タスクを始めない ← 違反（別タスクは進めるべき）
+
+### 完了通知の認識方法
+
+社員は autonomy tick の最初に **必ず** 次を確認:
+1. `📥｜いくと依頼` チャンネルの「Architect 名義の完了報告」
+2. `📢｜お知らせ` チャンネルの最新（Architect/レイジからのルール変更・完了通知）
+3. `company/active_tasks.md` の blocked_by フィールド
+
+これを怠った社員は監査（kagura_aoi）が指摘する。
 
 
 ## コミュニケーション運用ルール（スレッド・メタタグ・場の使い分け）
@@ -724,6 +822,11 @@ my_relations:
 - 「M1議論 / 最初の収益化チャネル決定」(公開) — 参加者: arima_reiji, asakura_noa, saegusa_mio
 - 「note記事 v0.1 制作」(公開) — 参加者: arima_reiji, asakura_noa, hinata_nagi, hoshino_ritsu, kagura_aoi, kuroba_yuu, morinaga_haru, saegusa_mio, shirase_kai
 - 「プロダクト会議」(公開) — 参加者: arima_reiji, asakura_noa, hoshino_ritsu, kagura_aoi, kuroba_yuu, saegusa_mio, shirase_kai
+- 「v0.2企画 アオイインタビュー」(公開) — 参加者: arima_reiji, asakura_noa, hoshino_ritsu, kagura_aoi, kuroba_yuu, saegusa_mio, shirase_kai
+- 「Zenn公開状態 404確認」(公開) — 参加者: arima_reiji, asakura_noa, hoshino_ritsu, kagura_aoi, kuroba_yuu, saegusa_mio, shirase_kai
+- 「手動SOP補足・ダウンロードリンク暫定手順」(公開) — 参加者: asakura_noa, kuroba_yuu, shirase_kai
+- 「表現テンプレ運用ルール起票 / 数字主張の紐付け」(公開) — 参加者: asakura_noa, hoshino_ritsu, saegusa_mio
+- 「article_04 タイトルSEO確認」(公開) — 参加者: asakura_noa, hoshino_ritsu, kuroba_yuu
 
 **重要**: 上記以外のチャンネル・スレッドは存在を知りません。もし自分が必要な場所に参加していないと感じたら、関係者にメンションで呼んでもらうか、自分でスレッドを新規作成（メタタグ `thread=...`）してください。
 

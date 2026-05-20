@@ -1,0 +1,70 @@
+slug: t001-video-production
+target: employees/hoshino_ritsu/outbox/script_v3.3.md
+audited_at: 2026-05-17T20:00:00+09:00
+auditor: kagura_aoi
+verdict: ok_with_conditions
+conditions:
+  - "制作時: クロップチェックリスト4項目（Discordロゴ・テキスト・サーバー名・いくとID）の実施を制作担当が確認してから映像を確定すること"
+  - "BGMを使用する場合はCC0またはYouTube Audio Libraryに限定すること（著作権フリー素材以外は不可）"
+
+checks:
+  discord_tos:
+    status: ok_with_conditions
+    note: |
+      スクリーンショット使用自体は禁止規定なし。
+      ナレーション内「Discordというチャットツール」の言及は報道的文脈として許容範囲内。
+      ただしDiscordロゴ・ブランドテキストが収益化動画に映ることは避けるべき。
+      script_v3.3.md ①フックに「クロップ必須チェックリスト（4項目）」が既に組み込まれており、制作時実施が条件。
+
+  personal_information:
+    status: ok
+    note: |
+      いくとのユーザー名・アイコン・ID保護が④制作メモに明記済み。
+      「AI社員名のみ識別できる範囲のみ使用。いくとのメッセージはモザイクまたはカット」と具体的に指示されている。
+      設計として個人情報保護が組み込まれており問題なし。
+
+  copyright_content:
+    status: ok
+    note: |
+      社員紹介カード・テロップ・ナレーション原稿はすべて内製オリジナル。
+      Discordのチャット画面はAI社員（AI NOWA所属）のやり取りであり、著作権は会社内部に帰属。
+      Zenn記事URL（https://zenn.dev/ai_nowa）は自社運営コンテンツへのリンクで問題なし。
+
+  copyright_bgm:
+    status: conditional
+    note: |
+      台本・制作ガイドにBGM選定の記載なし。
+      YouTube動画でBGMを使用する場合、著作権フリー素材（CC0 / YouTube Audio Library）以外は収益化チャンネルで著作権申告リスクあり。
+      BGM不使用の場合は条件不要。
+
+  misleading_risk:
+    status: ok
+    note: |
+      T-022監査（2026-05-17）で「タイトル・サムネ・投稿文」の炎上リスク確認済み。判定: 公開可（条件なし）。
+      台本内容: 「これは実験記録です。うまくいくかどうか、まだわかりません」の誠実表現あり。
+      次回予告「収益に挑戦した日」はT-004進捗前提で「挑戦した」表現を選択。実績先行型でリスク低。
+      過剰約束・誇大宣伝なし。
+
+  privacy_viewer:
+    status: ok
+    note: |
+      視聴者の個人情報を収集する仕組みはない。
+      YouTube標準アナリティクスのみ（Google規約に準拠）。
+
+notes: |
+  T-023 T-001動画 公開前監査チェック — 最終判定。
+  T-022（タイトル・サムネ・投稿文）監査完了済みと合わせて、動画全体の公開体制は整っている。
+  条件2点（クロップ実施確認 / BGM著作権）を満たすことを確認してから T-024（YouTube投稿）に進むこと。
+  制作担当（カイ or いくと）がクロップ確認を完了したら audit_clearance/ にチェック追記を推奨。
+
+gate_cleared:
+  cleared_at: 2026-05-18T13:00:00+09:00
+  cleared_by: kagura_aoi
+  final_verdict: CLEARED
+  condition_1_crop:
+    status: resolved
+    reason: "テキストカード代替採用（スクリーンショット不使用）→ Discordロゴ等映り込みリスク消滅。クロップ不要。"
+  condition_2_bgm:
+    status: resolved
+    reason: "script_v3.3 確認済み、BGM記載なし。BGM不使用で制作確定 → ロック条件「BGM不使用の場合は条件不要」に該当。"
+  note: "T-024（YouTube 5/20投稿）に即進行可。"

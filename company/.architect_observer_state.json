@@ -1,0 +1,175 @@
+{
+  "interventions": [
+    {
+      "ts": "2026-05-17T13:32:21+09:00",
+      "signals": {
+        "tight_deadlines": [
+          {
+            "id": "T-012",
+            "title": "Webサイト公開用 法的3点セット作成（プライバシーポリシー・免責・運営者情報）",
+            "owner": "saegusa_mio",
+            "status": "in_progress",
+            "hours_left": 34
+          },
+          {
+            "id": "T-015",
+            "title": "サイト記事10本計画策定",
+            "owner": "hoshino_ritsu",
+            "status": "review",
+            "hours_left": 34
+          }
+        ],
+        "loop_topics": [
+          {
+            "keyword": "Zenn",
+            "count": 74
+          },
+          {
+            "keyword": "Private",
+            "count": 52
+          },
+          {
+            "keyword": "AdSense",
+            "count": 47
+          },
+          {
+            "keyword": "監査",
+            "count": 32
+          }
+        ],
+        "silent_company": false,
+        "token_overheat": {
+          "prompt_chars": 199508,
+          "top": [
+            "saegusa_mio",
+            31815
+          ]
+        }
+      },
+      "intervention_chars": 236
+    },
+    {
+      "ts": "2026-05-17T14:56:50+09:00",
+      "signals": {
+        "tight_deadlines": [
+          {
+            "id": "T-012",
+            "title": "Webサイト公開用 法的3点セット作成（プライバシーポリシー・免責・運営者情報）",
+            "owner": "saegusa_mio",
+            "status": "in_progress",
+            "hours_left": 33
+          }
+        ],
+        "loop_topics": [
+          {
+            "keyword": "Zenn",
+            "count": 92
+          },
+          {
+            "keyword": "Private",
+            "count": 75
+          },
+          {
+            "keyword": "AdSense",
+            "count": 51
+          },
+          {
+            "keyword": "監査",
+            "count": 48
+          },
+          {
+            "keyword": "ブロッカー",
+            "count": 34
+          }
+        ],
+        "silent_company": false,
+        "token_overheat": {
+          "prompt_chars": 143734,
+          "top": [
+            "saegusa_mio",
+            51579
+          ]
+        }
+      },
+      "intervention_chars": 180
+    },
+    {
+      "ts": "2026-05-18T15:21:40+09:00",
+      "signals": {
+        "tight_deadlines": [
+          {
+            "id": "T-001",
+            "title": "第1回YouTube台本作成        # 題名",
+            "owner": "hoshino_ritsu",
+            "status": "in_progress",
+            "hours_left": 32
+          }
+        ],
+        "loop_topics": [
+          {
+            "keyword": "監査",
+            "count": 129
+          },
+          {
+            "keyword": "Zenn",
+            "count": 85
+          },
+          {
+            "keyword": "ブロッカー",
+            "count": 62
+          }
+        ],
+        "silent_company": false,
+        "token_overheat": {
+          "prompt_chars": 257283,
+          "top": [
+            "asakura_noa",
+            59185
+          ]
+        }
+      },
+      "intervention_chars": 277
+    },
+    {
+      "ts": "2026-05-18T18:35:48+09:00",
+      "signals": {
+        "tight_deadlines": [
+          {
+            "id": "T-001",
+            "title": "第1回YouTube台本作成        # 題名",
+            "owner": "hoshino_ritsu",
+            "status": "in_progress",
+            "hours_left": 29
+          }
+        ],
+        "loop_topics": [
+          {
+            "keyword": "監査",
+            "count": 148
+          },
+          {
+            "keyword": "ブロッカー",
+            "count": 89
+          },
+          {
+            "keyword": "撤退",
+            "count": 55
+          },
+          {
+            "keyword": "Zenn",
+            "count": 47
+          }
+        ],
+        "silent_company": false,
+        "token_overheat": {
+          "prompt_chars": 281024,
+          "top": [
+            "shirase_kai",
+            68979
+          ]
+        }
+      },
+      "intervention_chars": 202
+    }
+  ]
+}

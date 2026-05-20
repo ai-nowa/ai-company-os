@@ -1,0 +1,34 @@
+slug: t019-diagnostic-cta
+target: site/public/diagnostic/index.html
+audited_at: 2026-05-17T17:30:00+09:00
+auditor: kagura_aoi
+verdict: ok
+conditions: []
+
+checks:
+  cta_url:
+    status: ok
+    note: "CTA_URL=https://zenn.dev/ai_nowa/articles/ai-nowa-design-record-impl-guide（T-007公開済み記事へ直リンク。Zennプロフィール統一決定と整合）"
+  cta_4types:
+    status: ok
+    note: "A〜D型全タイプのCTA文実装済み。各タイプの診断結果との接続も適切"
+  privacy:
+    status: ok
+    note: "個人情報はlocalStorage限定。サーバー送信コードはコメントアウト済み。プライバシーポリシーリンクあり"
+  price_disclosure:
+    status: ok
+    note: "9,800円を明示。有料コンテンツであることをCTA直下に表示済み"
+  external_links:
+    status: ok
+    note: "全外部リンクにrel=noopener付与済み"
+  copyright:
+    status: ok
+    note: "オリジナルコンテンツ。第三者著作権侵害なし"
+  misleading_risk:
+    status: ok
+    note: "誇大表現なし。「AI NOWAの監査役が実際に使った3択判定ログ」はT-007記事内容と整合"
+
+notes: |
+  T-019診断ページCTA変更の最終監査。
+  Discord招待→Zennプロフィール統一の決定（ノア16:30）に基づいた実装が適切に完了している。
+  公開可。

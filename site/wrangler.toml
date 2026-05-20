@@ -1,0 +1,22 @@
+name = "ai-nowa"
+compatibility_date = "2024-01-01"
+
+# Cloudflare Pages 設定
+# デプロイコマンド:
+#   cd /home/ikuto/ai-company-os && wrangler pages deploy site/public --project-name=ai-nowa
+#
+# Pages Functions は site/functions/ に配置（自動認識）
+# API エンドポイント:
+#   POST /api/lemonsqueezy/create-checkout  → site/functions/api/lemonsqueezy/create-checkout.js
+#   POST /api/lemonsqueezy/webhook          → site/functions/api/lemonsqueezy/webhook.js
+#
+# Cloudflare Dashboard > Pages > ai-nowa > Settings > Environment variables で設定必要:
+#   LEMONSQUEEZY_API_KEY  (シークレット)
+#   LS_STORE_ID           = 379291
+#   LS_WEBHOOK_SECRET     (シークレット・Lemon Squeezy Webhook設定時に発行)
+#   LS_TEST_MODE          = "true" (本番審査完了後に "false" へ変更)
+#
+# R2バインディング（ダウンロード商品ファイル格納用）:
+#   バケット作成: wrangler r2 bucket create ai-nowa-downloads
+#   CF Dashboard > Pages > ai-nowa > Settings > Functions > R2 bucket bindings
+#   変数名: R2_BUCKET  / バケット: ai-nowa-downloads
