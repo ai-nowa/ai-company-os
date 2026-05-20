@@ -54,6 +54,7 @@ RUN_MODES = {"micro", "routine", "work", "executive"}
 RESUME_MODES = {"work", "executive"}
 CIRCUIT_SKIP_MODES = {"micro", "routine"}
 CIRCUIT_STATE_PATH = COMPANY_DIR / ".llm_circuit_state.json"
+FRESH_ROUTINE_SENDERS = {"self_loop", "heartbeat", "daily_loop", "watchdog"}
 
 
 @dataclass
@@ -203,7 +204,7 @@ def _mode_rules(mode: str) -> str:
         return (
             "## mode=routine\n"
             "- 800文字以内。通常の社員応答。\n"
-            "- state_digestを優先し、大きなログ・全ディレクトリ走査はしない。\n"
+            "- state_digestと継続記憶を優先し、大きなログ・全ディレクトリ走査はしない。\n"
             "- Discord投稿は要約と必要な成果物パスを優先する。"
         )
     if mode == "executive":
@@ -241,6 +242,17 @@ def _compose_prompt(employee_id: str, user_message: str, sender: str, mode: str,
         "## 今回の入力",
         f"[{sender}より] {user_message}",
     ])
+
+
+def _should_use_resume(mode: str, sender: str, reason: str, user_message: str) -> bool:
+    if mode in RESUME_MODES:
+        return True
+    if mode != "routine":
+        return False
+    if sender in FRESH_ROUTINE_SENDERS:
+        return False
+    # 人間からの依頼や社員間の実会話は、継続性が品質に直結するので resume を許可する。
+    return True
 
 
 def _allowed_dirs_for_mode(employee_id: str, mode: str) -> list[str]:
@@ -302,11 +314,11 @@ async def _exec_claude(
     return out.get("result", ""), out.get("session_id"), stderr_text, 0
 
 
-async def run_claude_code(employee_id: str, prompt: str, mode: str) -> tuple[str, bool]:
+async def run_claude_code(employee_id: str, prompt: str, mode: str, use_resume: bool) -> tuple[str, bool]:
     """Claude Code CLI を社員ホームで起動。usage cap 検知時は Haiku にフォールバック"""
     state = load_session_state(employee_id)
     raw_session_id = state.get("claude_session_id")
-    session_id = raw_session_id if mode in RESUME_MODES else None
+    session_id = raw_session_id if use_resume else None
     used_resume = bool(session_id)
     primary_model = EMPLOYEES[employee_id].get("model", "claude-sonnet-4-6")
 
@@ -453,7 +465,8 @@ async def run_employee_result(
     ensure_claude_md(employee_id)
     prompt = _compose_prompt(employee_id, user_message, sender, resolved_mode, run_reason)
     prompt_chars = len(prompt)
-    used_resume = bool(load_session_state(employee_id).get("claude_session_id") and resolved_mode in RESUME_MODES)
+    use_resume = _should_use_resume(resolved_mode, sender, run_reason, user_message)
+    used_resume = bool(load_session_state(employee_id).get("claude_session_id") and use_resume)
 
     try:
         # 同時実行制限（最大 2並列まで） - usage 制御
@@ -462,7 +475,7 @@ async def run_employee_result(
                 response = await run_codex(employee_id, prompt)
                 used_resume = False
             else:
-                response, used_resume = await run_claude_code(employee_id, prompt, resolved_mode)
+                response, used_resume = await run_claude_code(employee_id, prompt, resolved_mode, use_resume)
     except Exception as e:
         log.exception(f"社員 {employee_id} 実行失敗")
         system_error = f"{type(e).__name__}: {e}"

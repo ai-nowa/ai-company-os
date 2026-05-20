@@ -243,6 +243,59 @@ def _new_artifacts(employee_id: str, max_items: int = 5) -> list[str]:
     return items
 
 
+def _continuity_snippets(employee_id: str, mode: str) -> list[str]:
+    """社員の継続性を保つための短い記憶。
+
+    Claude Code の full resume を毎回使わなくても、社員が「昨日までの自分」
+    として話せる最低限だけを state_digest に入れる。
+    """
+    if mode == "micro":
+        budget = 500
+    elif mode == "routine":
+        budget = 1000
+    else:
+        budget = 1500
+
+    home = BASE_DIR / "employees" / employee_id
+    parts: list[str] = []
+
+    state_path = home / "session" / "session_state.json"
+    try:
+        state = json.loads(state_path.read_text(encoding="utf-8"))
+    except (FileNotFoundError, json.JSONDecodeError):
+        state = {}
+    last_summary = str(state.get("last_summary") or "").strip()
+    if last_summary:
+        parts.append(f"- last_summary: {_short(last_summary, 280)}")
+
+    recent_context = (home / "session" / "recent_context.md").read_text(
+        encoding="utf-8", errors="replace"
+    ) if (home / "session" / "recent_context.md").exists() else ""
+    if recent_context.strip():
+        parts.append(f"- recent_context: {_short(recent_context, 420)}")
+
+    for name in ("decisions", "learnings", "facts"):
+        path = home / "memory" / f"{name}.md"
+        if not path.exists():
+            continue
+        content = path.read_text(encoding="utf-8", errors="replace").strip()
+        if not content or "（運用開始後にここに蓄積されます）" in content:
+            continue
+        parts.append(f"- memory/{name}: {_short(content, 360)}")
+
+    result: list[str] = []
+    used = 0
+    for part in parts:
+        if used + len(part) > budget:
+            remaining = max(0, budget - used)
+            if remaining > 80:
+                result.append(_short(part, remaining))
+            break
+        result.append(part)
+        used += len(part)
+    return result
+
+
 def assemble_state_digest(employee_id: str, reason: str, mode: str = "routine") -> str:
     """Build a compact dynamic context digest for an employee call."""
     info = EMPLOYEES.get(employee_id, {})
@@ -251,6 +304,9 @@ def assemble_state_digest(employee_id: str, reason: str, mode: str = "routine") 
         f"- employee: {info.get('display', employee_id)} ({info.get('role', '')})",
         f"- mode: {mode}",
         f"- reason: {_short(reason, 500)}",
+        "",
+        "## 継続記憶（短縮）",
+        *(_continuity_snippets(employee_id, mode) or ["- なし"]),
         "",
         "## 自分宛メンション（最大5件）",
         *(_recent_mentions(employee_id) or ["- なし"]),
