@@ -56,3 +56,6 @@ bot/youtube_client_secret.json
 
 # X (Twitter) API credentials
 bot/x_credentials.json
+
+# X dry-run preview output
+shared/x_dry_run_preview/
