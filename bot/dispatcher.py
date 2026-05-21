@@ -371,14 +371,17 @@ async def dispatch_to_employee(
         log.exception(f"dispatch_to_employee failed: {target}")
         return 0
     finally:
-        _latency_ms = int((time.perf_counter() - _t0) * 1000)
-        write_usage_metric(
-            employee_id=target,
-            mode="mention_chain",
-            reason=f"latency_hook: {sender} → {target}",
-            chain_id=chain_id,
-            latency_ms=_latency_ms,
-        )
+        try:
+            _latency_ms = int((time.perf_counter() - _t0) * 1000)
+            write_usage_metric(
+                employee_id=target,
+                mode="mention_chain",
+                reason=f"latency_hook: {sender} → {target}",
+                chain_id=chain_id,
+                latency_ms=_latency_ms,
+            )
+        except Exception:
+            pass
 
     call_used = 1 if result.prompt_chars > 0 else 0
     if not result.ok or not result.text:
