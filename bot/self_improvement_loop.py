@@ -119,6 +119,69 @@ def _collect_efficiency() -> dict:
     }
 
 
+def _collect_idle_employees(idle_threshold_hours: int = 6) -> dict:
+    """N時間以上 out ゼロの社員を検知。タスク完了後の停止を拾う。"""
+    now = datetime.now(JST)
+    cutoff = (now - timedelta(hours=idle_threshold_hours)).isoformat()
+    idle = []
+    for f in glob.glob(str(BASE_DIR / "employees/*/session/conversation_log.jsonl")):
+        emp_id = Path(f).parent.parent.name
+        last_out: str | None = None
+        try:
+            for line in Path(f).read_text(encoding="utf-8", errors="replace").splitlines():
+                e = json.loads(line)
+                if e.get("kind") == "out":
+                    ts = e.get("ts", "")
+                    if last_out is None or ts > last_out:
+                        last_out = ts
+        except Exception:
+            continue
+        if last_out is None or last_out < cutoff:
+            idle_hours: float | None = None
+            if last_out:
+                try:
+                    last_dt = datetime.fromisoformat(last_out)
+                    if last_dt.tzinfo is None:
+                        last_dt = last_dt.replace(tzinfo=JST)
+                    idle_hours = round((now - last_dt).total_seconds() / 3600, 1)
+                except Exception:
+                    pass
+            idle.append({"emp_id": emp_id, "last_out": last_out, "idle_hours": idle_hours})
+    return {"idle": idle, "alert": len(idle) > 0, "threshold_hours": idle_threshold_hours}
+
+
+def _collect_wake_rate(window_hours: int = 1) -> dict:
+    """metrics_log.jsonl の wake_decision を集計して社員ごとの wake 率を返す。"""
+    now = datetime.now(JST)
+    cutoff = (now - timedelta(hours=window_hours)).isoformat()
+    by_emp: dict[str, dict[str, int]] = {}
+    if METRICS_LOG.exists():
+        for line in METRICS_LOG.read_text(encoding="utf-8", errors="replace").splitlines():
+            try:
+                e = json.loads(line)
+                if e.get("kind") != "wake_decision" or e.get("ts", "") < cutoff:
+                    continue
+                emp_id = e.get("emp_id", "unknown")
+                by_emp.setdefault(emp_id, {"wake": 0, "skip": 0})
+                by_emp[emp_id]["wake" if e.get("should_wake") else "skip"] += 1
+            except Exception:
+                continue
+    per_emp = {}
+    for emp, counts in by_emp.items():
+        total = counts["wake"] + counts["skip"]
+        per_emp[emp] = {
+            "wake": counts["wake"],
+            "skip": counts["skip"],
+            "total": total,
+            "wake_rate": round(counts["wake"] / total, 3) if total > 0 else 0.0,
+        }
+    return {
+        "per_emp": per_emp,
+        "window_hours": window_hours,
+        "total_decisions": sum(v["total"] for v in per_emp.values()),
+    }
+
+
 def _collect_code_health() -> dict:
     """コード健全性指標: code_health_monitor（神楽アオイ実装）に委譲。read-only観察のみ。"""
     try:
@@ -179,7 +242,7 @@ def _collect_quality() -> dict:
 
 
 def collect_all_metrics() -> dict:
-    """全5指標を収集して返す。"""
+    """全7指標を収集して返す。"""
     return {
         "ts": now_jst_iso(),
         "cognition": _collect_cognition(),
@@ -187,6 +250,8 @@ def collect_all_metrics() -> dict:
         "efficiency": _collect_efficiency(),
         "quality": _collect_quality(),
         "code_health": _collect_code_health(),
+        "idle": _collect_idle_employees(idle_threshold_hours=6),
+        "wake_rate": _collect_wake_rate(window_hours=1),
     }
 
 
@@ -334,6 +399,28 @@ def detect_triggers(metrics: dict, snapshots: list[dict]) -> list[dict]:
                 f"{detail}\n"
                 "@白瀬カイ @神楽アオイ — **改修ブランチ作成または改修提案を今すぐ行ってください**。\n"
                 "本番dispatcherは止めない。git branch + 別venvで確認後に報告。"
+            ),
+        })
+
+    # 社員長時間停止: タスク完了後に次を見つけられず止まる問題を検知
+    idle_data = metrics.get("idle", {})
+    if idle_data.get("alert") and not idle_data.get("error"):
+        idle_list = idle_data.get("idle", [])
+        threshold_h = idle_data.get("threshold_hours", 6)
+        emp_details = []
+        for e in idle_list[:5]:
+            h = e.get("idle_hours")
+            h_str = f"{h}h" if h is not None else "不明"
+            emp_details.append(f"{e['emp_id']}({h_str}停止)")
+        detail = ", ".join(emp_details)
+        triggers.append({
+            "name": "EMPLOYEE_IDLE_ALERT",
+            "detail": f"{threshold_h}h停止社員: {detail}",
+            "message": (
+                f"【自己改善ループ: 社員停止警告】\n"
+                f"以下の社員が {threshold_h}h 以上 out ゼロです: {detail}\n"
+                "@森永ハル @朝倉ノア — **今すぐ声をかけてください**。\n"
+                "タスク完了後の停止が疑われます。次のタスクを見つける手助けをしてください。"
             ),
         })
 
