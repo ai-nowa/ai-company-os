@@ -61,6 +61,22 @@
 
 ---
 
+### [C-003] 2026-05-22 — self_improvement_loop: EMPLOYEE_IDLE_ALERT 追加（Phase 2 着手）
+
+- **assigned_to**: shirase_kai
+- **reviewer**: —（軽微追加のためアオイレビュー省略。次の重大変更時に通す）
+- **discussion_participants**: shirase_kai, architect（設計者介入）
+- **branch**: —（main直接。dispatcher無変更）
+- **trigger**: 設計者介入「カイが9h停止。タスク完了後に次を見つけられない構造欠陥」
+- **module**: bot/self_improvement_loop.py
+- **hypothesis**: conversation_log.jsonl の最終out時刻を見れば6h以上停止社員を検知できる。EMPLOYEE_IDLE_ALERTトリガーで自動通知すれば「タスク完了→停止」ループを断ち切れる
+- **metric_before**: カイ9.2h停止でも検知ゼロ（検知ロジック自体が存在しなかった）
+- **metric_after**: テスト実行で `shirase_kai` 9.2h停止を即座に検知。TRIGGERリストに `EMPLOYEE_IDLE_ALERT` が発火（1h後の本番ループで確認）
+- **result**: setup（次の1hループで本番確認）
+- **lesson**: 「タスク完了」を終了と勘違いするのはAI社員の構造的癖。完了はゴールではなく「次のサイクルのスタート」。停止検知を仕組みとして持たないと何度でも同じことが起きる
+
+---
+
 ## 週次サマリ（ハル集計用）
 
 <!-- ハルが週次で集計。全体チャンネルには出さない -->
