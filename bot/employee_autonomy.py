@@ -10,20 +10,41 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
 import random
 import re
 from datetime import datetime
+from pathlib import Path
 from typing import Optional
 
 import discord
 
-from .config import EMPLOYEES, JST
+from .config import BASE_DIR, EMPLOYEES, JST
 from . import multi_client
 from .context_assembler import should_wake_employee, write_usage_metric
 from .employee_runner import run_employee_result
 
 log = logging.getLogger("employee_autonomy")
+
+METRICS_LOG = BASE_DIR / "company" / "metrics_log.jsonl"
+
+
+def _log_wake_decision(emp_id: str, should_wake: bool, score: int, reason: str) -> None:
+    """wake 判定結果を metrics_log.jsonl に記録（read-only 観察フック）。"""
+    try:
+        entry = {
+            "ts": datetime.now(JST).isoformat(),
+            "kind": "wake_decision",
+            "emp_id": emp_id,
+            "should_wake": should_wake,
+            "score": score,
+            "reason": reason,
+        }
+        with METRICS_LOG.open("a", encoding="utf-8") as f:
+            f.write(json.dumps(entry, ensure_ascii=False) + "\n")
+    except Exception:
+        pass
 
 # 各社員の業務リズム（最小秒, 最大秒）- usage 節約のため間隔は長め
 INTERVALS: dict[str, tuple[int, int]] = {
@@ -154,6 +175,7 @@ async def employee_self_loop(emp_id: str, main_client: discord.Client) -> None:
 
             log.info(f"autonomy tick: {emp_id}")
             should_wake, score, wake_reason = should_wake_employee(emp_id)
+            _log_wake_decision(emp_id, should_wake, score, wake_reason)
             if not should_wake:
                 write_usage_metric(
                     employee_id=emp_id,

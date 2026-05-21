@@ -377,6 +377,7 @@ def write_usage_metric(
     chain_id: Optional[str] = None,
     depth: Optional[int] = None,
     skipped_reason: Optional[str] = None,
+    latency_ms: Optional[int] = None,
 ) -> None:
     COMPANY_DIR.mkdir(parents=True, exist_ok=True)
     entry = {
@@ -392,6 +393,7 @@ def write_usage_metric(
         "chain_id": chain_id,
         "depth": depth,
         "skipped_reason": skipped_reason,
+        "latency_ms": latency_ms,
     }
     with USAGE_METRICS_PATH.open("a", encoding="utf-8") as f:
         f.write(json.dumps(entry, ensure_ascii=False) + "\n")

@@ -12,6 +12,7 @@ import asyncio
 import logging
 import os
 import re
+import time
 import uuid
 from typing import Optional
 
@@ -24,6 +25,7 @@ from .config import (
     EMPLOYEES,
     append_discord_log,
 )
+from .context_assembler import write_usage_metric
 from .employee_runner import run_employee_result
 from .idea_capture import capture_ideas_from_text
 from .mention_chain import (
@@ -58,6 +60,23 @@ KICKOFF_COMMAND_RE = re.compile(r"^!kickoff(?:\s+(.*))?$", re.DOTALL)
 USER_MENTION_RE = re.compile(r"<@!?\d+>")
 
 OWNER_DISCORD_NAMES = {"ikuto", "yikuto", "yikuto9805", "0ja3865p244394s"}
+
+# Architect 自動応答: 社員が @設計者 とメンションした時に自動起動
+ARCHITECT_MENTION_PATTERNS = ["@設計者", "@Architect", "@Opus", "設計者（Architect）", "設計者（Opus）", "@AI NOWA"]
+_architect_auto_response_history: list[float] = []  # [timestamp, ...]
+
+def _has_architect_mention(text: str) -> bool:
+    return any(p in text for p in ARCHITECT_MENTION_PATTERNS)
+
+def _can_architect_auto_respond() -> bool:
+    """Architect 自動応答の rate limit。過去 5 分で 8 回まで（無限ループ防止）"""
+    import time
+    now = time.time()
+    _architect_auto_response_history[:] = [t for t in _architect_auto_response_history if now - t < 300]
+    if len(_architect_auto_response_history) >= 8:
+        return False
+    _architect_auto_response_history.append(now)
+    return True
 
 
 def normalize_sender(discord_name: str) -> str:
@@ -335,6 +354,7 @@ async def dispatch_to_employee(
         if emp_ch is not None:
             typing_target = emp_ch
 
+    _t0 = time.perf_counter()
     try:
         async with typing_target.typing():
             result = await run_employee_result(
@@ -350,6 +370,15 @@ async def dispatch_to_employee(
     except Exception as e:
         log.exception(f"dispatch_to_employee failed: {target}")
         return 0
+    finally:
+        _latency_ms = int((time.perf_counter() - _t0) * 1000)
+        write_usage_metric(
+            employee_id=target,
+            mode="mention_chain",
+            reason=f"latency_hook: {sender} → {target}",
+            chain_id=chain_id,
+            latency_ms=_latency_ms,
+        )
 
     call_used = 1 if result.prompt_chars > 0 else 0
     if not result.ok or not result.text:
@@ -476,12 +505,14 @@ async def process_architect_outbox_loop() -> None:
                     dispatch_targets = data.get("dispatch_to") or []
                     if isinstance(dispatch_targets, str):
                         dispatch_targets = [dispatch_targets]
-                    for target in dispatch_targets:
-                        if target not in EMPLOYEES:
-                            log.warning("architect_outbox: unknown dispatch target: %s", target)
-                            continue
-                        try:
-                            await dispatch_to_employee(
+                    valid_targets = [t for t in dispatch_targets if t in EMPLOYEES]
+                    for t in dispatch_targets:
+                        if t not in EMPLOYEES:
+                            log.warning("architect_outbox: unknown dispatch target: %s", t)
+                    if valid_targets:
+                        log.info(f"architect_outbox: dispatching to {len(valid_targets)} employees in PARALLEL: {valid_targets}")
+                        tasks = [
+                            dispatch_to_employee(
                                 target,
                                 data["content"],
                                 "設計者（Architect）",
@@ -490,8 +521,12 @@ async def process_architect_outbox_loop() -> None:
                                 {target},
                                 origin="architect",
                             )
-                        except Exception:
-                            log.exception("architect_outbox dispatch failed: %s", target)
+                            for target in valid_targets
+                        ]
+                        results = await asyncio.gather(*tasks, return_exceptions=True)
+                        for target, result in zip(valid_targets, results):
+                            if isinstance(result, Exception):
+                                log.error(f"architect_outbox parallel dispatch failed: {target}: {result}")
                     f.unlink()
                     log.info(f"architect_outbox posted: {f.name} -> {ch.name}")
                 except Exception:
@@ -561,6 +596,11 @@ async def on_ready() -> None:
     asyncio.create_task(process_architect_outbox_loop())
     log.info("Architect outbox loop started (10秒間隔でファイル監視)")
 
+    # 自己改善ループ: 1時間ごとに4指標計測 → 閾値超でトリガー発火
+    from .self_improvement_loop import improvement_loop
+    asyncio.create_task(improvement_loop())
+    log.info("Self-improvement loop started (1時間ごと: 認知/収益/効率/品質 監視)")
+
 
 @main_client.event
 async def on_message(message: discord.Message) -> None:
@@ -568,9 +608,32 @@ async def on_message(message: discord.Message) -> None:
     if message.author == main_client.user:
         return
 
-    # 社員 bot の投稿は無視（連鎖は dispatch_to_employee 内の process_mention_chain で
-    # in-process に管理する。Discord 経由で2系統発火すると重複起動して暴走するため）
+    # 社員 bot の投稿は連鎖を dispatcher 経由で再起動しない（暴走防止）
+    # ただし @設計者 メンションがあれば Architect が自動応答する（リアルタイム反応）
     if message.author.id in multi_client.all_employee_user_ids():
+        raw_content = message.content.strip()
+        # 自分への mention があれば、Architect ロールも検出対象
+        if _has_architect_mention(raw_content) or (
+            main_client.user is not None and main_client.user in message.mentions
+        ):
+            if _can_architect_auto_respond():
+                channel_name = getattr(message.channel, "name", "dm")
+                sender_label = f"社員（{message.author.display_name}）"
+                log.info(f"Architect AUTO-RESPONSE: {sender_label} in #{channel_name}")
+                try:
+                    async with message.channel.typing():
+                        response = await run_architect(
+                            raw_content,
+                            sender=sender_label,
+                            channel=channel_name,
+                        )
+                    await send_chunked(message.channel, "", response)
+                except Exception:
+                    log.exception("Architect auto-response failed")
+            else:
+                log.warning(
+                    f"Architect auto-response rate limited (skipping in #{getattr(message.channel, 'name', 'dm')})"
+                )
         return
 
     # 他の bot は無視
