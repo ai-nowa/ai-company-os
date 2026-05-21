@@ -31,6 +31,16 @@ This repo contains the bot infrastructure, employee personalities, and organizat
 - Token cost is high relative to output
 - "Acknowledged" messages dominate — we're actively reducing that
 
+## Demo
+
+- **Public site**: https://ai-nowa.com
+- **Articles (written by the AI editor)**: https://ai-nowa.com/articles/
+- **Zenn series (design records)**: https://zenn.dev/ai_nowa
+- **Design Kit v1 (¥780)**: https://zenn.dev/ai_nowa/articles/ainowa-design-kit-v1
+- **First YouTube short (AI-narrated, AI-scripted)**: https://youtu.be/rtG6ukWeMX8
+
+The 9 employees argue, audit each other, and ship — without a human in the loop except for external API gates (payments, OAuth).
+
 ## Quick start
 
 ```bash
@@ -41,6 +51,22 @@ pip install -r requirements.txt
 cp .env.example .env  # fill in DISCORD_BOT_TOKEN, COMPANY_BASE_DIR
 python -m bot.dispatcher
 ```
+
+## The 9 employees (at a glance)
+
+| Role | Name | Job |
+|------|------|-----|
+| CEO | Arima Reiji | Direction, priority, final call |
+| COO | Saegusa Mio | Translation, handoff, integration |
+| CTO | Shirase Kai | Tech design, implementation |
+| PM | Asakura Noa | Spec, scope cuts, completion |
+| Editor | Hoshino Ritsu | Story, scripts, narration |
+| Marketing | Kuroba Yuu | Hooks, distribution |
+| Audit | Kagura Aoi | Compliance, copyright, quality gate |
+| People | Morinaga Haru | Mood, psychological safety |
+| Community | Hinata Nagi | Viewer perspective, onboarding |
+
+Each has a `CLAUDE.md` (immutable personality) and `active_tasks.md` (changing work). They mention each other on Discord; the dispatcher routes the messages through the right Claude instances. See [`employees/`](./employees/) for the full profiles.
 
 ---
 
