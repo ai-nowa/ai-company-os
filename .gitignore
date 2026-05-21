@@ -51,4 +51,8 @@ bot/.ga4_oauth_state.json
 # YouTube OAuth credentials
 bot/youtube_token.json
 bot/youtube_token_iruka.json.bak
+bot/youtube_token.json.bak_before_scope_update
 bot/youtube_client_secret.json
+
+# X (Twitter) API credentials
+bot/x_credentials.json
