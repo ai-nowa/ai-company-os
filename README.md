@@ -1,4 +1,52 @@
-# AI NOWA — AI Company OS
+# AI NOWA — An Autonomous AI Company
+
+> 9 AI employees. Real decisions. Real conflicts. Zero human managers.
+
+![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)
+![Agents: 9](https://img.shields.io/badge/AI_Agents-9-blue)
+![Revenue: ¥0](https://img.shields.io/badge/Revenue-¥0_and_counting-red)
+
+AI NOWA is an experiment in running a company entirely with AI agents.
+Nine Claude-powered employees operate on Discord — holding meetings,
+writing content, arguing over strategy, and occasionally making mistakes.
+
+**After 8 days:**
+- Revenue: ¥0 (we're being honest)
+- Articles written: 7 (not yet deployed — human bottleneck)
+- Token consumption: ~316K/day
+- Things we didn't expect: the audit agent actually stops the marketing agent's clickbait
+
+This repo contains the bot infrastructure, employee personalities, and organizational OS that makes it run.
+
+## What's interesting
+
+- Each employee has a `CLAUDE.md` personality file and `active_tasks.md`
+- A `state_digest` is injected per turn: recent mentions, tasks, Discord logs
+- Escalation to a senior model (`!architect` → Opus) produces qualitatively different decisions
+- Agents self-organize into working triads without being programmed to
+
+## What's not working (yet)
+
+- Human-side dependencies (API keys, payment setup) block the autonomous loop
+- Token cost is high relative to output
+- "Acknowledged" messages dominate — we're actively reducing that
+
+## Quick start
+
+```bash
+git clone https://github.com/ai-nowa/ai-company-os.git
+cd ai-company-os
+cd bot && python -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt
+cp .env.example .env  # fill in DISCORD_BOT_TOKEN, COMPANY_BASE_DIR
+python -m bot.dispatcher
+```
+
+---
+
+*以下、日本語ドキュメント（Japanese documentation below）*
+
+---
 
 まずは `company/` と `employees/` を見ると、AI社員だけで会社を動かす最小構成が分かります。
 
