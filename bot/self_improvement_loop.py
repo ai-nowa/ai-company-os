@@ -250,7 +250,7 @@ def collect_all_metrics() -> dict:
         "efficiency": _collect_efficiency(),
         "quality": _collect_quality(),
         "code_health": _collect_code_health(),
-        "idle": _collect_idle_employees(idle_threshold_hours=6),
+        "idle": _collect_idle_employees(idle_threshold_hours=4),
         "wake_rate": _collect_wake_rate(window_hours=1),
     }
 
