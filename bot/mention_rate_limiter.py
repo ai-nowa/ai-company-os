@@ -1,11 +1,17 @@
-"""メンションレート制限モジュール。
+"""メンションレート制限モジュール（観察者ブロック後の二重防御）。
 
-仕様:
-- 未知ユーザー（観察者ロール）: 1分3メンション まで
-- 同一ユーザー: 1時間30メンション まで
-- 超過 → 呼び出し元が無視 + DM 警告
-- 9社員 bot は dispatcher 側で除外済み（ここでは処理しない）
-- 履歴: company/.mention_rate.jsonl
+dispatcher の観察者ブロック層 (DISCORD_OWNER_USER_ID) が
+Claude CLI 起動を完全に遮断したので、本モジュールの役割は変わった:
+
+1. 観察者の👀 reaction 連打防止（reaction すら付けず無視）
+   - 1 ユーザー 1 分 10 reaction まで
+   - 履歴: company/.observer_reaction.jsonl
+
+2. 9 社員 bot 同士のメンションチェーン暴走防止（clip）
+   - 同一 emp_id が 1 時間に 20 メンション以上送ったら超過分を clip
+   - 履歴: company/.employee_mention_burst.jsonl
+
+オーナー（いくと）はどちらの制限も適用されない。
 """
 from __future__ import annotations
 
@@ -14,74 +20,79 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).parent.parent
-MENTION_RATE_PATH = REPO_ROOT / "company" / ".mention_rate.jsonl"
+OBSERVER_REACTION_PATH = REPO_ROOT / "company" / ".observer_reaction.jsonl"
+EMPLOYEE_MENTION_PATH = REPO_ROOT / "company" / ".employee_mention_burst.jsonl"
 JST = timezone(timedelta(hours=9))
 
-OBSERVER_PER_MIN = 3
-USER_PER_HOUR = 30
+OBSERVER_REACTION_PER_MIN = 10
+EMPLOYEE_MENTION_PER_HOUR = 20
 
 
-def _load_recent_sum(user_id: str, within_seconds: int) -> int:
-    """直近 within_seconds 秒以内の user_id のメンション合計数を返す。"""
-    if not MENTION_RATE_PATH.exists():
+def _count_recent(path: Path, key_field: str, key_value: str, within_seconds: int) -> int:
+    """直近 within_seconds 秒以内の指定 key の count 合計を返す。"""
+    if not path.exists():
         return 0
     cutoff = datetime.now(JST) - timedelta(seconds=within_seconds)
     total = 0
-    for line in MENTION_RATE_PATH.read_text(encoding="utf-8").splitlines():
+    for line in path.read_text(encoding="utf-8").splitlines():
         try:
             entry = json.loads(line)
-            if entry.get("user_id") != user_id:
+            if entry.get(key_field) != key_value:
                 continue
             ts = datetime.fromisoformat(entry["ts"])
             if ts.tzinfo is None:
                 ts = ts.replace(tzinfo=JST)
             if ts >= cutoff:
-                total += entry.get("mention_count", 1)
+                total += entry.get("count", 1)
         except Exception:
             continue
     return total
 
 
-def _record(user_id: str, channel_id: int, mention_count: int) -> None:
-    """メンション実行を記録する。"""
-    MENTION_RATE_PATH.parent.mkdir(parents=True, exist_ok=True)
-    entry = {
-        "ts": datetime.now(JST).isoformat(),
-        "user_id": user_id,
-        "channel_id": channel_id,
-        "mention_count": mention_count,
-    }
-    with MENTION_RATE_PATH.open("a", encoding="utf-8") as f:
+def _append_record(path: Path, entry: dict) -> None:
+    """JSONL に 1 行追記する。"""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("a", encoding="utf-8") as f:
         f.write(json.dumps(entry, ensure_ascii=False) + "\n")
 
 
-def check_and_record(
-    user_id: str,
-    channel_id: int,
-    mention_count: int = 1,
-    is_observer: bool = True,
-) -> tuple[bool, str]:
-    """レート制限チェックを行い、通過した場合は記録する。
+def should_react_to_observer(user_id: str) -> bool:
+    """観察者に👀 reaction を付けるべきか判定。直近1分の reaction 数で判断。
 
-    Returns:
-        (allowed, reason) — allowed=False のとき reason に理由文字列
+    通過時のみ履歴に記録する（弾いた回数は記録しない）。
     """
-    if is_observer:
-        recent_1min = _load_recent_sum(user_id, 60)
-        if recent_1min + mention_count > OBSERVER_PER_MIN:
-            return (
-                False,
-                f"observer_rate_limit: 1分{OBSERVER_PER_MIN}件まで "
-                f"(直近={recent_1min}, 今回={mention_count})",
-            )
+    recent = _count_recent(OBSERVER_REACTION_PATH, "user_id", user_id, 60)
+    if recent >= OBSERVER_REACTION_PER_MIN:
+        return False
+    _append_record(OBSERVER_REACTION_PATH, {
+        "ts": datetime.now(JST).isoformat(),
+        "user_id": user_id,
+        "count": 1,
+    })
+    return True
 
-    recent_1h = _load_recent_sum(user_id, 3600)
-    if recent_1h + mention_count > USER_PER_HOUR:
-        return (
-            False,
-            f"hourly_rate_limit: 1時間{USER_PER_HOUR}件まで "
-            f"(直近={recent_1h}, 今回={mention_count})",
-        )
 
-    _record(user_id, channel_id, mention_count)
-    return True, "ok"
+def clip_employee_mentions(emp_id: str, targets: list[str]) -> tuple[list[str], int]:
+    """社員間メンションを 1 時間 20 件に clip する。
+
+    超過分を切り落とした targets と、削った件数を返す。
+    通過した分のみ履歴に記録する。
+    """
+    if not targets:
+        return targets, 0
+    recent = _count_recent(EMPLOYEE_MENTION_PATH, "emp_id", emp_id, 3600)
+    remaining = EMPLOYEE_MENTION_PER_HOUR - recent
+    if remaining <= 0:
+        return [], len(targets)
+    if len(targets) <= remaining:
+        kept = targets
+        clipped = 0
+    else:
+        kept = targets[:remaining]
+        clipped = len(targets) - remaining
+    _append_record(EMPLOYEE_MENTION_PATH, {
+        "ts": datetime.now(JST).isoformat(),
+        "emp_id": emp_id,
+        "count": len(kept),
+    })
+    return kept, clipped

@@ -300,6 +300,16 @@ async def process_mention_chain(
             reason=f"per_response_limit:{per_response}",
         )
 
+    # 社員間メンション暴走防止: 同一 emp_id が 1 時間 20 件超で clip
+    if sender in EMPLOYEES and immediate_targets:
+        from .mention_rate_limiter import clip_employee_mentions
+        immediate_targets, _clipped = clip_employee_mentions(sender, immediate_targets)
+        if _clipped > 0:
+            log.warning(
+                f"employee mention burst clipped: sender={sender} dropped={_clipped} "
+                f"(1時間20件上限)"
+            )
+
     total_used = 0
     max_calls = chain_call_limit(origin=origin)
     for target in immediate_targets:
@@ -801,6 +811,31 @@ async def on_message(message: discord.Message) -> None:
     if message.author.bot:
         return
 
+    # オーナー（いくと）以外の人間からのメンション → Claude CLI 起動を完全スキップ
+    # なりすまし耐性: user_id(snowflake) ベース。ニックネーム改名・display 偽装には無効化される。
+    _owner_id_str = os.environ.get("DISCORD_OWNER_USER_ID", "0") or "0"
+    try:
+        _owner_user_id = int(_owner_id_str)
+    except ValueError:
+        _owner_user_id = 0
+    if _owner_user_id and message.author.id != _owner_user_id:
+        from .mention_rate_limiter import should_react_to_observer
+        if should_react_to_observer(str(message.author.id)):
+            try:
+                await message.add_reaction("👀")
+            except Exception:
+                pass
+            log.info(
+                f"OBSERVER mention ignored (no Claude CLI): author={message.author} "
+                f"(id={message.author.id}) in #{getattr(message.channel, 'name', 'dm')}"
+            )
+        else:
+            log.warning(
+                f"OBSERVER reaction throttled (1分10超過、reactionも付けず): "
+                f"author={message.author} (id={message.author.id})"
+            )
+        return
+
     channel_name = getattr(message.channel, "name", "dm")
     raw = message.content.strip()
 
@@ -877,24 +912,6 @@ async def on_message(message: discord.Message) -> None:
                     thread_registry.add_participant(message.channel.id, t)
                     new_targets.append(t)
             targets = new_targets
-
-    # メンションレート制限（いくと除外、9社員は on_message 冒頭で除外済み）
-    if sender != "いくと":
-        from .mention_rate_limiter import check_and_record as _rate_check
-        _uid = str(message.author.id)
-        _cid = message.channel.id if hasattr(message.channel, "id") else 0
-        _is_observer = True  # いくと以外は全員観察者ロール扱い
-        _allowed, _reason = _rate_check(_uid, _cid, len(targets), _is_observer)
-        if not _allowed:
-            log.warning("mention rate limited: user=%s reason=%s", sender, _reason)
-            try:
-                await message.author.send(
-                    f"メンションの頻度が高すぎます。しばらく待ってから再試行してください。\n"
-                    f"（理由: {_reason}）"
-                )
-            except Exception:
-                log.debug("DM送信失敗（rate_limited）: %s", sender)
-            return
 
     # 並列ターゲットは同じ depth で起動。visited は target 自身のみ（次の連鎖で再帰可能）
     seen: set[str] = set()
