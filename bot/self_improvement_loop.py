@@ -30,6 +30,7 @@ log = logging.getLogger("self_improvement_loop")
 STATE_FILE = BASE_DIR / "company" / ".self_improvement_state.json"
 ACTIVE_TASKS = BASE_DIR / "company" / "active_tasks.md"
 METRICS_LOG = BASE_DIR / "company" / "metrics_log.jsonl"
+INCIDENTS_FILE = BASE_DIR / "company" / "incidents.jsonl"
 
 # Trigger cooldown: 同じトリガーは 6h 以内に再発火しない
 TRIGGER_COOLDOWN_H = 6
@@ -150,6 +151,51 @@ def _collect_idle_employees(idle_threshold_hours: int = 6) -> dict:
     return {"idle": idle, "alert": len(idle) > 0, "threshold_hours": idle_threshold_hours}
 
 
+def _collect_idle_employees_tiered() -> dict:
+    """1h/3h/6hの3段階で停止社員を分類。
+
+    warning  : 1h以上3h未満 → 軽微な停止、声かけレベル
+    wake     : 3h以上6h未満 → 強制wake推奨
+    escalate : 6h以上      → 経営層通知
+    """
+    now = datetime.now(JST)
+    emp_last_out: dict[str, str | None] = {}
+    for f in glob.glob(str(BASE_DIR / "employees/*/session/conversation_log.jsonl")):
+        emp_id = Path(f).parent.parent.name
+        last_out: str | None = None
+        try:
+            for line in Path(f).read_text(encoding="utf-8", errors="replace").splitlines():
+                e = json.loads(line)
+                if e.get("kind") == "out":
+                    ts = e.get("ts", "")
+                    if last_out is None or ts > last_out:
+                        last_out = ts
+        except Exception:
+            continue
+        emp_last_out[emp_id] = last_out
+
+    result: dict[str, list] = {"warning": [], "wake": [], "escalate": []}
+    for emp_id, last_out in emp_last_out.items():
+        idle_hours: float | None = None
+        if last_out:
+            try:
+                last_dt = datetime.fromisoformat(last_out)
+                if last_dt.tzinfo is None:
+                    last_dt = last_dt.replace(tzinfo=JST)
+                idle_hours = round((now - last_dt).total_seconds() / 3600, 1)
+            except Exception:
+                pass
+        entry = {"emp_id": emp_id, "last_out": last_out, "idle_hours": idle_hours}
+        if idle_hours is None or idle_hours >= 6:
+            result["escalate"].append(entry)
+        elif idle_hours >= 3:
+            result["wake"].append(entry)
+        elif idle_hours >= 1:
+            result["warning"].append(entry)
+
+    return result
+
+
 def _collect_wake_rate(window_hours: int = 1) -> dict:
     """metrics_log.jsonl の wake_decision を集計して社員ごとの wake 率を返す。"""
     now = datetime.now(JST)
@@ -220,6 +266,7 @@ def _collect_quality() -> dict:
         bm = get_behavior_signals()
         nareai = bm["nareai"]
         sakiokuri = bm["sakiokuri"]
+        cw = bm.get("collective_wait", {})
         return {
             "nareai_rate": nareai["nareai_rate"],
             "nareai_count": nareai["approval_count"],
@@ -227,6 +274,11 @@ def _collect_quality() -> dict:
             "nareai_alerts": nareai["alerts"],
             "sakiokuri_count_24h": sakiokuri["total_count"],
             "sakiokuri_alert": sakiokuri["alert"],
+            "collective_wait_count": cw.get("count", 0),
+            "collective_wait_alert": cw.get("alert", False),
+            "collective_wait_employees": cw.get("wait_employees", []),
+            "ikuto_gap_alert": bm.get("ikuto_request_gap", {}).get("alert", False),
+            "ikuto_gap_requests": bm.get("ikuto_request_gap", {}).get("gap_requests", []),
         }
     except Exception as e:
         log.warning(f"behavior_metrics fetch error: {e}")
@@ -237,6 +289,12 @@ def _collect_quality() -> dict:
             "nareai_alerts": [],
             "sakiokuri_count_24h": 0,
             "sakiokuri_alert": False,
+            "collective_wait_count": 0,
+            "collective_wait_alert": False,
+            "collective_wait_employees": [],
+            "ikuto_gap_count": 0,
+            "ikuto_gap_alert": False,
+            "ikuto_gap_requests": [],
             "error": True,
         }
 
@@ -250,7 +308,7 @@ def collect_all_metrics() -> dict:
         "efficiency": _collect_efficiency(),
         "quality": _collect_quality(),
         "code_health": _collect_code_health(),
-        "idle": _collect_idle_employees(idle_threshold_hours=4),
+        "idle": _collect_idle_employees_tiered(),
         "wake_rate": _collect_wake_rate(window_hours=1),
     }
 
@@ -362,8 +420,26 @@ def detect_triggers(metrics: dict, snapshots: list[dict]) -> list[dict]:
             ),
         })
 
-    # 完了率 < 50%
+    # タスク完了検知（前サイクル比較）→ 完了直後の停止を防ぐため次タスク催促
     eff = metrics["efficiency"]
+    if snapshots:
+        prev_eff = snapshots[-1].get("efficiency", {})
+        prev_done = prev_eff.get("done_tasks", 0)
+        curr_done = eff.get("done_tasks", 0)
+        if curr_done > prev_done:
+            delta = curr_done - prev_done
+            triggers.append({
+                "name": "TASK_COMPLETED",
+                "detail": f"完了タスク {prev_done}→{curr_done} (+{delta})",
+                "message": (
+                    "【自己改善ループ: タスク完了検知】\n"
+                    f"前サイクルから completed タスクが {delta} 件増えました。\n"
+                    "完了した社員は **active_tasks.md から次のタスクを選んで宣言してください**。\n"
+                    "「待ち」のままにしないこと。blocked タスクなら、blocked 中にできる別作業を1つ進めてください。"
+                ),
+            })
+
+    # 完了率 < 50%
     completion_rate = eff.get("completion_rate", 1.0)
     total = eff.get("total_tasks", 0)
     if total >= 4 and completion_rate < 0.50:
@@ -402,25 +478,86 @@ def detect_triggers(metrics: dict, snapshots: list[dict]) -> list[dict]:
             ),
         })
 
-    # 社員長時間停止: タスク完了後に次を見つけられず止まる問題を検知
-    idle_data = metrics.get("idle", {})
-    if idle_data.get("alert") and not idle_data.get("error"):
-        idle_list = idle_data.get("idle", [])
-        threshold_h = idle_data.get("threshold_hours", 6)
-        emp_details = []
-        for e in idle_list[:5]:
+    # 社員停止3段階検知: 1h警告 / 3h強制wake / 6h経営層通知
+    idle_tiered = metrics.get("idle", {})
+
+    def _fmt_idle_list(lst: list) -> str:
+        parts = []
+        for e in lst[:5]:
             h = e.get("idle_hours")
-            h_str = f"{h}h" if h is not None else "不明"
-            emp_details.append(f"{e['emp_id']}({h_str}停止)")
-        detail = ", ".join(emp_details)
+            parts.append(f"{e['emp_id']}({h}h)" if h is not None else f"{e['emp_id']}(不明)")
+        return ", ".join(parts)
+
+    escalate_list = idle_tiered.get("escalate", [])
+    if escalate_list:
+        detail = _fmt_idle_list(escalate_list)
         triggers.append({
-            "name": "EMPLOYEE_IDLE_ALERT",
-            "detail": f"{threshold_h}h停止社員: {detail}",
+            "name": "EMPLOYEE_IDLE_ESCALATE",
+            "detail": f"6h+停止: {detail}",
             "message": (
-                f"【自己改善ループ: 社員停止警告】\n"
-                f"以下の社員が {threshold_h}h 以上 out ゼロです: {detail}\n"
+                "【自己改善ループ: 長期停止 — 経営層通知】\n"
+                f"以下の社員が **6h以上** out ゼロです: {detail}\n"
+                "@有馬レイジ @三枝ミオ @朝倉ノア — **経営層として即介入してください**。\n"
+                "停止社員に直接メンションし、タスク割当または理由確認を行ってください。"
+            ),
+        })
+
+    wake_list = idle_tiered.get("wake", [])
+    if wake_list:
+        detail = _fmt_idle_list(wake_list)
+        triggers.append({
+            "name": "EMPLOYEE_IDLE_WAKE",
+            "detail": f"3h+停止: {detail}",
+            "message": (
+                "【自己改善ループ: 停止警告 — 強制wake推奨】\n"
+                f"以下の社員が **3h以上** out ゼロです: {detail}\n"
                 "@森永ハル @朝倉ノア — **今すぐ声をかけてください**。\n"
-                "タスク完了後の停止が疑われます。次のタスクを見つける手助けをしてください。"
+                "タスク完了後の停止が疑われます。次のタスクを1つ指示してください。"
+            ),
+        })
+
+    warning_list = idle_tiered.get("warning", [])
+    if warning_list:
+        detail = _fmt_idle_list(warning_list)
+        triggers.append({
+            "name": "EMPLOYEE_IDLE_WARNING",
+            "detail": f"1h+停止: {detail}",
+            "message": (
+                "【自己改善ループ: 軽微停止警告】\n"
+                f"以下の社員が **1h以上** out ゼロです: {detail}\n"
+                "@森永ハル — 状況確認してください。自発的に動いていれば問題ありません。"
+            ),
+        })
+
+    # いくと依頼ギャップ: 社員が[POST: いくと依頼]を書いたが📥に届いていない
+    if q.get("ikuto_gap_alert"):
+        gap_reqs = q.get("ikuto_gap_requests", [])
+        emp_list = ", ".join(r["emp_id"] for r in gap_reqs[:5])
+        triggers.append({
+            "name": "IKUTO_REQUEST_GAP",
+            "detail": f"📥未到達依頼: {len(gap_reqs)}件 ({emp_list})",
+            "message": (
+                "【監査アラート: いくと依頼の未到達】\n"
+                f"社員が📥に投稿したつもりだが届いていない依頼が **{len(gap_reqs)}件** あります: {emp_list}\n"
+                "@有馬レイジ @白瀬カイ — **依頼の再送とdispatcherルーティングの確認**をしてください。\n"
+                "いくとは依頼が来ていないと思っています。"
+            ),
+        })
+
+    # 集団停止: 1h以内に3人以上が「待機発言」→ 個人単位と別軸での集団パターン検知
+    cw_count = q.get("collective_wait_count", 0)
+    cw_alert = q.get("collective_wait_alert", False)
+    if cw_alert:
+        cw_emps = q.get("collective_wait_employees", [])
+        emp_list = ", ".join(e["emp_id"] for e in cw_emps[:5])
+        triggers.append({
+            "name": "COLLECTIVE_WAIT_ALERT",
+            "detail": f"集団停止: {cw_count}人が1h以内に待機発言 ({emp_list})",
+            "message": (
+                "【自己改善ループ: 集団停止警告】\n"
+                f"直近 1h 以内に **{cw_count}人** が「待機・何もしない」発言をしています: {emp_list}\n"
+                "@有馬レイジ @朝倉ノア — **「報告待ち = 静止」パターンが発生しています**。\n"
+                "各自の領域で次の改善を進めるよう指示してください。"
             ),
         })
 
@@ -438,6 +575,13 @@ def detect_triggers(metrics: dict, snapshots: list[dict]) -> list[dict]:
                 "「ありがとうございます」の次に「では〇〇を今日出します」を続けてください。"
             ),
         })
+
+    # Architect 先回りチェック: 期限・KPI の市場連動性自動検出
+    try:
+        from .architect_anticipation_check import detect_anticipation_triggers
+        triggers.extend(detect_anticipation_triggers())
+    except Exception as e:
+        log.warning(f"architect_anticipation_check error: {e}")
 
     return triggers
 
@@ -460,6 +604,18 @@ def _fire_trigger(trigger: dict, state: dict) -> None:
     })
     # 履歴は直近 100 件だけ保持
     state["trigger_history"] = state["trigger_history"][-100:]
+
+    # incidents.jsonl に記録（監査ログ統合 / severity=info）
+    incident = {
+        "ts": now_jst_iso(),
+        "kind": trigger["name"].lower(),
+        "severity": "info",
+        "status": "open",
+        "detail": trigger["detail"][:200],
+    }
+    with INCIDENTS_FILE.open("a", encoding="utf-8") as f:
+        f.write(json.dumps(incident, ensure_ascii=False) + "\n")
+
     log.info(f"self_improvement_loop: fired {trigger['name']} — {trigger['detail']}")
 
 
