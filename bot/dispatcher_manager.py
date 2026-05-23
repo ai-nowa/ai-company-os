@@ -26,12 +26,11 @@ def get_dispatcher_pid() -> Optional[int]:
         cmdline = p.info.get("cmdline") or []
         if not cmdline:
             continue
-        cmd = " ".join(cmdline)
-        if "-m bot.dispatcher" not in cmd:
-            continue
         first = cmdline[0]
         if first.endswith("python") or first.endswith("python3"):
-            return p.info["pid"]
+            for i, arg in enumerate(cmdline[:-1]):
+                if arg == "-m" and cmdline[i + 1] == "bot.dispatcher":
+                    return p.info["pid"]
     return None
 
 

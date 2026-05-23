@@ -832,7 +832,7 @@ async def on_ready() -> None:
     from .daily_loop import make_jobs
     scheduler = make_jobs(main_client)
     scheduler.start()
-    log.info("Daily scheduler started (08:05/08:30/12:00/18:00/18:15)")
+    log.info("Daily scheduler started (08:05/08:30/12:00/18:00/18:15/21:30/03:00)")
 
     # 会社の鼓動: 5分間隔で沈黙チェック、10分沈黙したら誰か起こす（全体の非常用）
     from .heartbeat import make_heartbeat_scheduler
