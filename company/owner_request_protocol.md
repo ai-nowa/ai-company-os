@@ -103,3 +103,11 @@ blocked_by: いくと
 2. 依存タスク（depends_on）が解除されたものを pending → in_progress に
 
 完了確認チェック（毎tick冒頭）: `📥｜いくと依頼`の完了報告 / `📢｜お知らせ`の最新 / `active_tasks.md`のblocked_by
+
+## 文書管理ルール
+
+→ `shared/rules/document_size_limit.md` 参照（全社員適用）
+- 1ファイル 3,000 tokens 超は要圧縮
+- 追記前に旧記述の圧縮余地を点検
+- 新規 md 作成時は必ず参照経路を追加してから作成（参照なし = 7日後 archive 対象）
+- outbox 30日超残置ファイルは削除
