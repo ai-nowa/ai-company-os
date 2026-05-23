@@ -178,14 +178,39 @@ async def send_chunked(channel: discord.abc.Messageable, header: str, text: str)
 
 
 async def find_channel_by_substr(needle: str) -> Optional[discord.TextChannel]:
+    original = needle
     needle = needle.strip().lstrip("#").lstrip("📢🏢👀🗓🧾🏛🎯🧩🛠🎬📈⚖☕🌱👏🧯🔁🧠📦")
     needle = needle.strip("｜| -")
     if not needle:
         return None
-    for guild in main_client.guilds:
+
+    # main_client.guilds を優先。autonomy 経由など main_client がまだ ready でない文脈では空になりうるため、
+    # 社員 bot client（multi_client）にフォールバックする。
+    guilds = list(main_client.guilds)
+    if not guilds:
+        for client in multi_client.get_clients().values():
+            if client.guilds:
+                guilds = list(client.guilds)
+                break
+
+    if not guilds:
+        log.warning(
+            f"find_channel_by_substr: no guilds available (main_client and multi_client both empty) "
+            f"for needle={original!r}"
+        )
+        return None
+
+    for guild in guilds:
         for ch in guild.channels:
             if isinstance(ch, discord.TextChannel) and needle in ch.name:
                 return ch
+
+    # マッチしなかった: デバッグ用にチャンネル一覧をログ
+    available = [ch.name for guild in guilds for ch in guild.channels if isinstance(ch, discord.TextChannel)]
+    log.warning(
+        f"find_channel_by_substr: needle={original!r} (stripped={needle!r}) not matched "
+        f"in {len(available)} text channels. sample={available[:8]}"
+    )
     return None
 
 
@@ -771,6 +796,11 @@ async def on_ready() -> None:
     from .self_improvement_loop import improvement_loop
     asyncio.create_task(improvement_loop())
     log.info("Self-improvement loop started (1時間ごと: 認知/収益/効率/品質 監視)")
+
+    # 会話ログローテ: 10分間隔で 100KB 超のログをアーカイブ
+    from .log_rotator import log_rotation_loop
+    asyncio.create_task(log_rotation_loop())
+    log.info("Log rotation loop started (10分間隔, 100KB 超で archive/conversation_log_*.jsonl)")
 
 
 @main_client.event
