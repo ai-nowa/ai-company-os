@@ -50,8 +50,24 @@ def _count_recent(path: Path, key_field: str, key_value: str, within_seconds: in
 
 
 def _append_record(path: Path, entry: dict) -> None:
-    """JSONL に 1 行追記する。"""
+    """JSONL に 1 行追記する。古いエントリを定期的に刈り込む（48h 超は削除）。"""
     path.parent.mkdir(parents=True, exist_ok=True)
+    cutoff = datetime.now(JST) - timedelta(hours=48)
+    if path.exists():
+        lines = path.read_text(encoding="utf-8").splitlines()
+        kept = []
+        for line in lines:
+            try:
+                e = json.loads(line)
+                ts = datetime.fromisoformat(e["ts"])
+                if ts.tzinfo is None:
+                    ts = ts.replace(tzinfo=JST)
+                if ts >= cutoff:
+                    kept.append(line)
+            except Exception:
+                continue
+        if len(kept) < len(lines):
+            path.write_text("\n".join(kept) + ("\n" if kept else ""), encoding="utf-8")
     with path.open("a", encoding="utf-8") as f:
         f.write(json.dumps(entry, ensure_ascii=False) + "\n")
 
