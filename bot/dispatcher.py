@@ -398,6 +398,24 @@ async def dispatch_to_employee(
     meta_raw = extract_meta_tag(raw_response)
     meta = parse_meta_tag(meta_raw) if meta_raw else {}
     clean_text = strip_meta_tag(raw_response)
+
+    # POST ブロック処理: [POST: ...]...[/POST] があれば中身を抽出しチャンネルルーティング
+    # チャンネル指定ありのブロックはそのチャンネルへ、指定なしは元チャンネルへ投稿
+    from .employee_autonomy import extract_post_blocks, POST_BLOCK_RE
+    post_blocks = extract_post_blocks(clean_text)
+    routed_blocks: list[tuple[str, str]] = []  # (channel_hint, content)
+    if post_blocks:
+        default_parts: list[str] = []
+        for ch_hint, content in post_blocks:
+            if ch_hint:
+                routed_blocks.append((ch_hint, content))
+            else:
+                default_parts.append(content)
+        clean_text = "\n\n".join(default_parts)
+    else:
+        # POST マーカーだけ残っている場合は除去（中身は保持）
+        clean_text = POST_BLOCK_RE.sub(lambda m: (m.group(2) or "").strip(), clean_text)
+
     # テキスト @ メンションを Discord ネイティブメンションに変換（投稿時のみ。連鎖検出は変換前の text 経由）
     discord_text = convert_text_mentions_to_discord(clean_text)
 
@@ -425,7 +443,24 @@ async def dispatch_to_employee(
                 post_target = new_thread
 
     # 投稿（その社員 bot として、Discord native mention に変換済み）
-    posted = await send_employee_response(target, post_target, discord_text)
+    # clean_text が空の場合（全ブロックが別チャンネル指定）は元チャンネルへの投稿をスキップ
+    posted = False
+    if clean_text.strip():
+        posted = await send_employee_response(target, post_target, discord_text)
+        if not posted:
+            return call_used
+
+    # チャンネル指定ありのPOSTブロックを各チャンネルへ個別投稿
+    for ch_hint, routed_content in routed_blocks:
+        routed_ch = await find_channel_by_substr(ch_hint)
+        if routed_ch is None:
+            log.warning(f"routed POST: channel '{ch_hint}' not found, skipping")
+            continue
+        routed_discord = convert_text_mentions_to_discord(routed_content)
+        await send_employee_response(target, routed_ch, routed_discord)
+        log.info(f"routed POST: {target} → #{routed_ch.name} ({len(routed_content)} chars)")
+        posted = True
+
     if not posted:
         return call_used
 
@@ -539,6 +574,116 @@ async def process_architect_outbox_loop() -> None:
             await asyncio.sleep(10)
 
 
+async def execute_admin_op(op: str, params: dict) -> dict:
+    """Architect からの管理操作を実行（dispatcher を停止せずチャンネル作成・招待リンク等）"""
+    guild = main_client.guilds[0] if main_client.guilds else None
+    if not guild:
+        return {"ok": False, "error": "no guild"}
+
+    if op == "create_channel":
+        name = params["name"]
+        topic = params.get("topic", "")
+        allow_everyone_send = params.get("allow_everyone_send", False)
+        category_name = params.get("category", None)
+        overwrites = {}
+        if allow_everyone_send:
+            everyone = guild.default_role
+            overwrites[everyone] = discord.PermissionOverwrite(
+                send_messages=True,
+                view_channel=True,
+                read_message_history=True,
+                add_reactions=True,
+                embed_links=True,
+                attach_files=True,
+            )
+        category = None
+        if category_name:
+            for c in guild.categories:
+                if c.name == category_name:
+                    category = c
+                    break
+        ch = await guild.create_text_channel(
+            name=name, topic=topic, overwrites=overwrites, category=category,
+        )
+        return {"ok": True, "channel_id": ch.id, "channel_name": ch.name}
+
+    if op == "create_invite":
+        channel_id = params.get("channel_id")
+        max_age = params.get("max_age", 0)
+        max_uses = params.get("max_uses", 0)
+        ch = guild.get_channel(channel_id) if channel_id else None
+        if not ch:
+            for c in guild.text_channels:
+                if c.name == params.get("channel_name", ""):
+                    ch = c
+                    break
+        if not ch:
+            return {"ok": False, "error": f"channel not found: {params}"}
+        invite = await ch.create_invite(max_age=max_age, max_uses=max_uses, unique=True)
+        return {"ok": True, "invite_url": invite.url, "channel": ch.name}
+
+    if op == "update_everyone_permission":
+        channel_id = params.get("channel_id")
+        channel_name = params.get("channel_name")
+        ch = guild.get_channel(channel_id) if channel_id else None
+        if not ch and channel_name:
+            for c in guild.text_channels:
+                if c.name == channel_name:
+                    ch = c
+                    break
+        if not ch:
+            return {"ok": False, "error": "channel not found"}
+        everyone = guild.default_role
+        perm_kwargs = {}
+        if "send_messages" in params:
+            perm_kwargs["send_messages"] = params["send_messages"]
+        if "view_channel" in params:
+            perm_kwargs["view_channel"] = params["view_channel"]
+        if "add_reactions" in params:
+            perm_kwargs["add_reactions"] = params["add_reactions"]
+        await ch.set_permissions(everyone, **perm_kwargs)
+        return {"ok": True, "channel": ch.name, "permissions": perm_kwargs}
+
+    return {"ok": False, "error": f"unknown op: {op}"}
+
+
+async def process_admin_queue_loop() -> None:
+    """Architect からの管理操作キューを 10 秒ごとに処理。
+    bot/architect_admin_queue.py の submit_admin_op で提出されたファイルを拾って実行、結果を .result.json に書き出す。
+    """
+    import json as _json
+    from .architect_admin_queue import ADMIN_QUEUE_DIR
+    while True:
+        try:
+            await asyncio.sleep(10)
+            if not ADMIN_QUEUE_DIR.exists():
+                continue
+            for f in sorted(ADMIN_QUEUE_DIR.glob("admin_*.json")):
+                if f.name.endswith(".result.json"):
+                    continue
+                try:
+                    data = _json.loads(f.read_text(encoding="utf-8"))
+                    op = data.get("op", "")
+                    params = data.get("params", {})
+                    log.info(f"admin_queue executing: {f.name} ({op})")
+                    result = await execute_admin_op(op, params)
+                    result_path = f.with_suffix(".result.json")
+                    result_path.write_text(
+                        _json.dumps(result, ensure_ascii=False, indent=2),
+                        encoding="utf-8",
+                    )
+                    if result.get("ok"):
+                        f.unlink()
+                        log.info(f"admin_queue ok: {f.name} -> {result}")
+                    else:
+                        log.warning(f"admin_queue failed: {f.name} -> {result}")
+                except Exception:
+                    log.exception(f"admin_queue error processing {f.name}")
+        except Exception:
+            log.exception("admin_queue loop error")
+            await asyncio.sleep(10)
+
+
 async def notify_owner_channel_once() -> None:
     """初回起動時のみ、いくと依頼チャンネル開設を全社員に通知（フラグファイルで1回限り保証）"""
     from .config import BASE_DIR
@@ -563,6 +708,15 @@ async def on_ready() -> None:
         await ensure_required_channels()
     except Exception:
         log.exception("ensure_required_channels failed")
+
+    # AutoMod 違反 → 自動 BAN リスナーをセットアップ（再エントリ安全のため一度のみ）
+    try:
+        from . import spam_auto_ban
+        if not getattr(main_client, "_spam_auto_ban_ready", False):
+            spam_auto_ban.setup(main_client)
+            main_client._spam_auto_ban_ready = True
+    except Exception:
+        log.exception("spam_auto_ban setup failed")
     log.info("9社員 client の起動を開始...")
     status = await multi_client.start_all(intents)
     ready_count = sum(1 for s in status.values() if s.startswith("ready"))
@@ -598,6 +752,10 @@ async def on_ready() -> None:
     # Architect (Claude) からの投稿要求を処理するループ（dispatcher 動作中でも投稿可能に）
     asyncio.create_task(process_architect_outbox_loop())
     log.info("Architect outbox loop started (10秒間隔でファイル監視)")
+
+    # Architect (Claude) からの管理操作キュー（チャンネル作成・招待・権限変更を停止なしで）
+    asyncio.create_task(process_admin_queue_loop())
+    log.info("Architect admin queue loop started (10秒間隔でファイル監視)")
 
     # 自己改善ループ: 1時間ごとに4指標計測 → 閾値超でトリガー発火
     from .self_improvement_loop import improvement_loop
@@ -719,6 +877,24 @@ async def on_message(message: discord.Message) -> None:
                     thread_registry.add_participant(message.channel.id, t)
                     new_targets.append(t)
             targets = new_targets
+
+    # メンションレート制限（いくと除外、9社員は on_message 冒頭で除外済み）
+    if sender != "いくと":
+        from .mention_rate_limiter import check_and_record as _rate_check
+        _uid = str(message.author.id)
+        _cid = message.channel.id if hasattr(message.channel, "id") else 0
+        _is_observer = True  # いくと以外は全員観察者ロール扱い
+        _allowed, _reason = _rate_check(_uid, _cid, len(targets), _is_observer)
+        if not _allowed:
+            log.warning("mention rate limited: user=%s reason=%s", sender, _reason)
+            try:
+                await message.author.send(
+                    f"メンションの頻度が高すぎます。しばらく待ってから再試行してください。\n"
+                    f"（理由: {_reason}）"
+                )
+            except Exception:
+                log.debug("DM送信失敗（rate_limited）: %s", sender)
+            return
 
     # 並列ターゲットは同じ depth で起動。visited は target 自身のみ（次の連鎖で再帰可能）
     seen: set[str] = set()
