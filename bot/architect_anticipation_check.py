@@ -31,12 +31,20 @@ NO_THRESHOLD = 3  # 5問中 NO が何個以上でリスク扱いか
 
 # 期限・KPI 言及を検出する正規表現
 KPI_PATTERNS: list[tuple[str, re.Pattern]] = [
-    ("task_id",   re.compile(r"\bT-\d{3,4}\b")),
-    ("deadline",  re.compile(r"(?:期限|締切|締め切り|判定日|判定|観察日)")),
-    ("date_ref",  re.compile(r"\b(?:\d{1,2}/\d{1,2}|(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\d|3[01]))\b")),
-    ("phase",     re.compile(r"\bPhase\s+[A-Z]\b")),
-    ("kpi",       re.compile(r"(?:KPI|目標|基準|条件|クリア|達成)")),
+    ("task_id",       re.compile(r"\bT-\d{3,4}\b")),
+    ("deadline",      re.compile(r"(?:期限|締切|締め切り|判定日|判定|観察日)")),
+    ("date_ref",      re.compile(r"\b(?:\d{1,2}/\d{1,2}|(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\d|3[01]))\b")),
+    ("phase",         re.compile(r"\bPhase\s+[A-Z]\b")),
+    ("kpi",           re.compile(r"(?:KPI|目標|基準|条件|クリア|達成)")),
+    # マーケ根拠なし時間的プレッシャー（Architect規範違反の兆候）
+    ("time_pressure", re.compile(r"(?:\d+時間以内|\d+時間|\d+日以内|\d+日間?|明日|明朝|今夜|今週|今日中|以内に|〇月〇日|○月○日)")),
 ]
+
+# time_pressure 語彙に対して「マーケ根拠があるか」を判定する
+MARKET_BASIS_KEYWORDS = re.compile(
+    r"(?:市場|外部|競合|イベント|顧客サイクル|需要|トレンド|流入|施策連動|外向き"
+    r"|キャンペーン|リリース連動|製品発売|季節|スプリント設計|KPI連動|マーケ戦略)"
+)
 
 # 市場連動性の文脈を示すキーワード
 EXTERNAL_KEYWORDS = re.compile(
@@ -94,16 +102,29 @@ def _extract_kpi_mentions(entries: list[dict]) -> list[dict]:
                 results.append({"kpi_id": kpi_id, "context_text": text[:400], "ts": ts})
 
         # 期限/KPIキーワード＋日付言及がある場合（T-XXXなし）
-        has_deadline = any(p.search(text) for _, p in KPI_PATTERNS[1:])
+        has_deadline = any(p.search(text) for _, p in KPI_PATTERNS[1:5])
         has_date = KPI_PATTERNS[2][1].search(text)
         if has_deadline and has_date and not KPI_PATTERNS[0][1].search(text):
-            # 日付を含む文を "key" として重複排除
             dates = KPI_PATTERNS[2][1].findall(text)
             for d in dates:
                 kpi_id = f"日程:{d}"
                 if kpi_id not in seen:
                     seen.add(kpi_id)
                     results.append({"kpi_id": kpi_id, "context_text": text[:400], "ts": ts})
+
+        # time_pressure 語彙がマーケ根拠なしで使われていた場合
+        time_matches = KPI_PATTERNS[5][1].findall(text)
+        if time_matches and not MARKET_BASIS_KEYWORDS.search(text) and not KPI_PATTERNS[0][1].search(text):
+            for word in set(time_matches):
+                kpi_id = f"時間プレッシャー:{word}"
+                if kpi_id not in seen:
+                    seen.add(kpi_id)
+                    results.append({
+                        "kpi_id": kpi_id,
+                        "context_text": text[:400],
+                        "ts": ts,
+                        "time_pressure": True,
+                    })
 
     return results
 
@@ -196,7 +217,7 @@ def _score_market_linkage(context_text: str) -> tuple[int, list[str]]:
     return no_count, answers
 
 
-def _build_trigger_message(kpi_id: str, answers: list[str], no_count: int) -> str:
+def _build_trigger_message(kpi_id: str, answers: list[str], no_count: int, time_pressure: bool = False) -> str:
     labels = [
         "外部連動性（市場イベント/顧客サイクル/競合動向）",
         "この判定で観察者が増えるか",
@@ -204,11 +225,16 @@ def _build_trigger_message(kpi_id: str, answers: list[str], no_count: int) -> st
         "判定基準を「外部に何が起きたか」に書き直すべきか",
         "撤退基準があるか",
     ]
-    lines = [
-        f"【Architect 先回りチェック: {kpi_id}】",
-        f"`{kpi_id}` の市場連動性を確認します（{no_count}/5 問が NO）。",
-        "",
-    ]
+    if time_pressure:
+        header = f"【Architect 先回りチェック: 時間プレッシャー警告】"
+        intro = (
+            f"マーケ戦略根拠なしで `{kpi_id}` が使われています。"
+            f" AI 社員は 24/7 動けます。「{kpi_id.replace('時間プレッシャー:', '')}」という期限設定に外部根拠はありますか？"
+        )
+    else:
+        header = f"【Architect 先回りチェック: {kpi_id}】"
+        intro = f"`{kpi_id}` の市場連動性を確認します（{no_count}/5 問が NO）。"
+    lines = [header, intro, ""]
     for i, (label, ans) in enumerate(zip(labels, answers), 1):
         lines.append(f"Q{i}. {label}: **{ans}**")
     lines += [
@@ -235,17 +261,20 @@ def detect_anticipation_triggers() -> list[dict]:
         if _is_in_cooldown(kpi_id):
             continue
 
+        is_time_pressure = mention.get("time_pressure", False)
         no_count, answers = _score_market_linkage(mention["context_text"])
-        if no_count < NO_THRESHOLD:
-            # リスクなし — cooldown だけ記録してスキップ
+
+        # time_pressure は外部根拠なしだけで即警告（NO_THRESHOLD不問）
+        if not is_time_pressure and no_count < NO_THRESHOLD:
             _record_cooldown(kpi_id)
             continue
 
-        message = _build_trigger_message(kpi_id, answers, no_count)
+        message = _build_trigger_message(kpi_id, answers, no_count, time_pressure=is_time_pressure)
         _record_cooldown(kpi_id)
+        trigger_name = f"TIME_PRESSURE:{kpi_id}" if is_time_pressure else f"ANTICIPATION_CHECK:{kpi_id}"
         triggers.append({
-            "name": f"ANTICIPATION_CHECK:{kpi_id}",
-            "detail": f"{kpi_id} — 市場連動性 {no_count}/5 NO",
+            "name": trigger_name,
+            "detail": f"{kpi_id} — {'マーケ根拠なし時間プレッシャー' if is_time_pressure else f'市場連動性 {no_count}/5 NO'}",
             "message": message,
         })
 
