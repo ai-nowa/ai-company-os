@@ -14,6 +14,7 @@ from .config import EMPLOYEES, JST, append_discord_log
 from . import multi_client
 from .employee_runner import run_employee
 from .health_monitor import write_health_report
+from .outbox_cleanup import run_cleanup_async
 
 log = logging.getLogger("daily_loop")
 
@@ -105,11 +106,16 @@ def make_jobs(main_client: discord.Client) -> AsyncIOScheduler:
             rel = path
         await post_as_main(main_client, "report", f"📊 健康レポート更新: `{rel}`")
 
-    scheduler.add_job(morning_wellbeing,  CronTrigger(hour=8,  minute=5))
-    scheduler.add_job(morning_priority,   CronTrigger(hour=8,  minute=30))
-    scheduler.add_job(lunch_chat,         CronTrigger(hour=12, minute=0))
-    scheduler.add_job(evening_thanks,     CronTrigger(hour=18, minute=0))
-    scheduler.add_job(evening_report,     CronTrigger(hour=18, minute=15))
+    async def nightly_outbox_cleanup() -> None:
+        report = await run_cleanup_async(dry_run=False)
+        await post_as_main(main_client, "report", f"🗂 outbox クリーンアップ完了\n{report}")
+
+    scheduler.add_job(morning_wellbeing,     CronTrigger(hour=8,  minute=5))
+    scheduler.add_job(morning_priority,      CronTrigger(hour=8,  minute=30))
+    scheduler.add_job(lunch_chat,            CronTrigger(hour=12, minute=0))
+    scheduler.add_job(evening_thanks,        CronTrigger(hour=18, minute=0))
+    scheduler.add_job(evening_report,        CronTrigger(hour=18, minute=15))
+    scheduler.add_job(nightly_outbox_cleanup, CronTrigger(hour=3,  minute=0))
     return scheduler
 
 
