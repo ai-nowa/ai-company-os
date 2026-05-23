@@ -296,6 +296,34 @@ def _continuity_snippets(employee_id: str, mode: str) -> list[str]:
     return result
 
 
+_WISDOM_CACHE: dict[str, tuple[float, str]] = {}
+
+
+def _load_wisdom_essence() -> str:
+    """shared/wisdom/_essence.md を読み込んで state_digest に注入する用に整形。
+    キャッシュで毎回ファイル I/O しない（5 分 TTL）。"""
+    import time
+    path = BASE_DIR / "shared" / "wisdom" / "_essence.md"
+    now = time.time()
+    cached = _WISDOM_CACHE.get(str(path))
+    if cached and now - cached[0] < 300:
+        return cached[1]
+    if not path.exists():
+        return ""
+    try:
+        text = path.read_text(encoding="utf-8")
+        # 「全社員必読エッセンス」見出しは省略、本文だけ
+        lines = text.strip().split("\n")
+        # 最初の H1 を除く
+        if lines and lines[0].startswith("# "):
+            lines = lines[1:]
+        body = "\n".join(lines).strip()
+        _WISDOM_CACHE[str(path)] = (now, body)
+        return body
+    except Exception:
+        return ""
+
+
 def assemble_state_digest(employee_id: str, reason: str, mode: str = "routine") -> str:
     """Build a compact dynamic context digest for an employee call."""
     info = EMPLOYEES.get(employee_id, {})
@@ -304,6 +332,9 @@ def assemble_state_digest(employee_id: str, reason: str, mode: str = "routine") 
         f"- employee: {info.get('display', employee_id)} ({info.get('role', '')})",
         f"- mode: {mode}",
         f"- reason: {_short(reason, 500)}",
+        "",
+        "## 全社員必読エッセンス（判断・行動時は必ず意識）",
+        _load_wisdom_essence() or "- なし",
         "",
         "## 継続記憶（短縮）",
         *(_continuity_snippets(employee_id, mode) or ["- なし"]),

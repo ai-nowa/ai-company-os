@@ -35,8 +35,8 @@ SILENT_HOUR_END = 7
 
 
 def _is_silent_hour() -> bool:
-    h = datetime.now(JST).hour
-    return h >= SILENT_HOUR_START or h < SILENT_HOUR_END
+    # 2026-05-23 いくと禁止令: AI に人間スケジュール持ち込み NG。Architect observer も 24h 稼働。
+    return False
 
 
 def _detect_signals() -> dict:
@@ -46,6 +46,10 @@ def _detect_signals() -> dict:
         "loop_topics": [],
         "silent_company": False,
         "token_overheat": None,
+        "nareai": None,
+        "sakiokuri": None,
+        "code_health": None,
+        "silent_employees": None,
     }
     now = datetime.now(JST)
 
@@ -143,6 +147,29 @@ def _detect_signals() -> dict:
     except Exception:
         log.exception("token pace check failed")
 
+    # 5. 馴れ合い率 + 先送り発言数 + 沈黙社員（個人単位）
+    try:
+        from .behavior_metrics import get_behavior_signals
+        bsig = get_behavior_signals()
+        if bsig["nareai"]["alert"]:
+            signals["nareai"] = bsig["nareai"]
+        if bsig["sakiokuri"]["alert"]:
+            signals["sakiokuri"] = bsig["sakiokuri"]
+        se = bsig.get("silent_employees", {})
+        if se.get("alert"):
+            signals["silent_employees"] = se
+    except Exception:
+        log.exception("behavior metrics check failed")
+
+    # 6. コードベース異常検知（例外頻発・再起動ループ・未クローズ incidents）
+    try:
+        from .code_health_monitor import get_code_health_signals
+        csig = get_code_health_signals()
+        if csig["any_alert"]:
+            signals["code_health"] = csig
+    except Exception:
+        log.exception("code health check failed")
+
     return signals
 
 
@@ -152,6 +179,10 @@ def _has_anomaly(signals: dict) -> bool:
         or signals["loop_topics"]
         or signals["silent_company"]
         or signals["token_overheat"]
+        or signals.get("nareai")
+        or signals.get("sakiokuri")
+        or signals.get("code_health")
+        or signals.get("silent_employees")
     )
 
 
@@ -171,6 +202,34 @@ def _summarize_for_architect(signals: dict) -> str:
         ot = signals["token_overheat"]
         top = ot["top"]
         parts.append(f"\n## トークン過熱: 1h で {ot['prompt_chars']:,}字 (top={top[0] if top else '?'}: {top[1] if top else 0:,}字)")
+    if signals.get("code_health"):
+        ch = signals["code_health"]
+        parts.append("\n## コードベース異常")
+        if ch["error_modules"]["alert"]:
+            for a in ch["error_modules"]["alerts"][:5]:
+                parts.append(f"  - [{a['module']}] ERROR×{a['error']} CRITICAL×{a['critical']} (過去1h)")
+        if ch["restart_loop"]["alert"]:
+            parts.append(f"  - dispatcher 再起動 {ch['restart_loop']['restart_count']}回 (過去1h)")
+        if ch["open_incidents"]["alert"]:
+            for inc in ch["open_incidents"][:3]:
+                parts.append(f"  - [{inc['ts']}] {inc['severity']}: {inc['kind']} — {inc['detail']}")
+    if signals.get("nareai"):
+        nr = signals["nareai"]
+        parts.append(f"\n## 馴れ合い警告: 過去3h 承認発言率 {nr['nareai_rate']:.0%} ({nr['approval_count']}/{nr['total_count']}件)")
+        for a in nr.get("alerts", [])[:5]:
+            parts.append(f"  - {a['emp_id']}: 承認率 {a['rate']:.0%}、成果物ゼロ")
+    if signals.get("sakiokuri"):
+        sk = signals["sakiokuri"]
+        parts.append(f"\n## 先送り警告: 過去24h 先送り発言 {sk['total_count']}件")
+        for emp, cnt in sorted(sk["per_employee"].items(), key=lambda x: -x[1])[:5]:
+            parts.append(f"  - {emp}: {cnt}件")
+        for ex in sk.get("examples", [])[:3]:
+            parts.append(f"  例: {ex}")
+    if signals.get("silent_employees"):
+        se = signals["silent_employees"]
+        parts.append(f"\n## 沈黙社員（個人単位・稼働時間中）")
+        for emp in se["silent"][:9]:
+            parts.append(f"  - {emp['emp_id']}: {emp['silent_hours']}h 無発話 (最終: {emp['last_out_ts']})")
     parts.append(
         "\n\n設計者（Opus）として判断してください。今介入すべきか / すべきなら何を伝えるか。"
         "\n介入する場合: 応答内に `[INTERVENE]<介入文>[/INTERVENE]` を含める（介入文は📢お知らせに投稿される）。"

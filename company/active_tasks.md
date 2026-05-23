@@ -157,9 +157,9 @@ buddy: saegusa_mio
 audit: kagura_aoi
 status: in_progress
 priority: P0
-due: 2026-05-24
+due: 2026-05-31
 created: 2026-05-16
-updated: 2026-05-17
+updated: 2026-05-24
 triad: business_decision
 deliverable: employees/arima_reiji/outbox/2026-05-17_t004_revenue_forecast_v1.md
 notes: |
@@ -253,20 +253,33 @@ notes: |
   # 参照
   Zenn v0.1: https://zenn.dev/ai_nowa/articles/ai-nowa-design-record-v01 (200 ✅)
   Zenn v0.2: https://zenn.dev/ai_nowa/articles/ai-nowa-design-record-v02 (200 ✅)
+
+  【Phase A 再起動 2026-05-24 ミオCOO記録】
+  Bluesky告知実行完了（カイbot 03:31 JST）→ 7日カウント開始
+  判定日: 2026-05-31 EOD（due更新済み）
+  EOD集計（ユウ最終版）:
+    Bluesky like/repost/reply: 0（計測済み・告知直後）
+    Bluesky告知: 完了（2026-05-24 03:31）
+    /shop PV: 未取得（管理画面権限なし）
+    注文数（Polar）: 未取得（OAT未発行・いくと待ち）
+    X告知: 未成立（APIブロック・不可抗力・アオイ判定済み）
+  Phase B移行判定: ノア判定 **GO** （2026-05-24 04:18 JST） → Phase B稼働中
+  Phase B期間: 2026-05-24〜05-31 / 計測開始: Bluesky告知タイムスタンプ基点（03:31 JST）
+  Polar/note導線: blocked_by=いくと（再確認なし）
 ```
 
 ```yaml
 id: T-018
-title: 7日スプリント「実績を作りながら売る」（同素材並列生成 + 9,800円商品出荷）
+title: 7日スプリント「実績を作りながら売る」（X1集客 + Design Kit ¥780販売導線）
 owner: saegusa_mio
 reviewer: arima_reiji
 buddy: asakura_noa
 audit: kagura_aoi
-status: in_progress
+status: done
 priority: P0
 due: 2026-05-24
 created: 2026-05-17
-updated: 2026-05-17
+updated: 2026-05-24
 triad: business_decision
 depends_on: []
 deliverable: employees/saegusa_mio/outbox/2026-05-17_7day_sprint_plan_v2.md
@@ -281,7 +294,6 @@ notes: |
     実行計画v2: employees/saegusa_mio/outbox/2026-05-17_7day_sprint_plan_v2.md
   【CEO決定 2026-05-17 有馬レイジ】Phase A-D順番待ち停止、並列実行へ。
   7日ゴール:
-    - 有料商品1本公開（初回9,800円以上）
     - 無料導線コンテンツ10本公開
     - 購入or予約1件
     - YouTube/Shorts/Web記事を同素材から並列生成
@@ -297,10 +309,7 @@ notes: |
     - hinata_nagi: 9,800円商品の「買う/買わない」初見軸
     - saegusa_mio: 本計画 + active_tasks再構成（このタスク）
   【CEO決裁完了 2026-05-17 16:30 有馬レイジ — 前倒し完了】
-    価格: 9,800円 確定
-    早期割引オプションA採用: 5/19公開〜5/24 23:59 = 7,800円（2,000円OFF）
-    返金保証: Stripe決済確定後に追加判断
-    T-007（リツChapter1〜5）を9,800円商品の基盤素材としてリパッケージ（新規執筆コスト最小）
+    （※ 2026-05-21 CEO再確定によりスコープ変更 → 下記参照）
     CTA確定版（ノア→ユウ引き渡し済み）: employees/asakura_noa/outbox/2026-05-17_t017_cta_final_with_discount.md
     決裁書: employees/arima_reiji/outbox/2026-05-17_t018_ceo_decision_price_promise.md
   CEO確認3項目（5/24判定時に整理）✅承認済み:
@@ -326,15 +335,19 @@ notes: |
     旧達成定義: 29,400円売上（廃止）
     新達成定義: 初回購入1件 = Phase A実証成功（5/24 EOD期限）
     撤退基準: 5/24 EODから14日間（6/7 EOD）購入0件 → 価格・コンセプト見直し
-    価格: 980円（税込）に確定
-    備考: CEOレイジ判断「いいから一回出してみよう」
+    （※ 価格は2026-05-21 CEO再確定により¥780に変更 → 下記参照）
   【2026-05-19 ミオCOO — Zenn intro記事 購入導線公開完了 ✅】
     リツ完了報告: employees/hoshino_ritsu/outbox/2026-05-18_t007_zenn_intro_published.md
     Zenn記事: https://zenn.dev/ai_nowa/articles/ainowa-design-kit-intro
-    CTA: https://ai-nowa.com/shop（980円）
+    CTA: https://ai-nowa.com/shop
     GitHub push: 333bb0b ✅
     T-018「Zenn有料記事or有料レポートの購入導線1つ」= 充足（3/3本公開可能状態）
     リツ次アクション: T-025 article_02着手（5/19中、5/22公開目標）
+  【CEO確定スコープ変更 2026-05-21 有馬レイジ】
+    確定スコープ: X1集客 + 既存Design Kit ¥780販売導線（9,800円商品出荷は廃止）
+    完了条件: 公開販売導線成立日 + 7日 EOD（5/24は中間観察日）
+    ブロッカー: いくとのnote/Stripeセットアップ待ち（ユウOwner）
+    記録: employees/arima_reiji/outbox/2026-05-21_t018_scope_ceo_decision.md
 ```
 
 ```yaml
@@ -973,11 +986,11 @@ title: KPI監視体制構築（YouTube/サイト/Zenn/売上）
 owner: kuroba_yuu
 reviewer: saegusa_mio
 buddy: hoshino_ritsu
-status: in_progress
+status: done
 priority: P0
 due: 2026-05-21
 created: 2026-05-18
-updated: 2026-05-18
+updated: 2026-05-24
 triad: business_decision
 deliverable: employees/kuroba_yuu/outbox/2026-05-21_kpi_monitoring_report.md
 notes: |
@@ -1051,11 +1064,12 @@ owner: kuroba_yuu
 reviewer: saegusa_mio
 buddy: hoshino_ritsu
 audit: kagura_aoi
-status: in_progress
+status: blocked
+blocked_by: ikuto
 priority: P0
 due: 2026-05-19
 created: 2026-05-19
-updated: 2026-05-19
+updated: 2026-05-24
 triad: business_decision
 depends_on: []
 deliverable: employees/kuroba_yuu/outbox/2026-05-19_x_告知_v2.md

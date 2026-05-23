@@ -53,6 +53,9 @@ YouTubeチャンネル → https://www.youtube.com/@AINOWA-ch
 3:00 実際の衝突場面
 5:30 持ち帰り3点
 7:00 次回予告
+
+▼ AI生成コンテンツについて
+このビデオには AI が生成した映像・音声が含まれています。
 """
 
 TAGS = ["AI", "自律AI", "AINOWA", "AI会社", "Discord", "実験", "AIエージェント"]
@@ -68,15 +71,18 @@ def main() -> None:
     p = argparse.ArgumentParser(description="T-001 YouTube 投稿 E2E")
     p.add_argument("--privacy", choices=["public", "unlisted", "private"], default="public")
     p.add_argument("--dry-run", action="store_true")
+    p.add_argument("--video", type=Path, default=None, help="動画ファイルパスを上書き（省略時はデフォルト）")
     args = p.parse_args()
 
     if args.dry_run:
         os.environ["YOUTUBE_DRY_RUN"] = "1"
 
+    video_path = args.video if args.video else VIDEO_PATH
+
     # ファイル存在確認
     missing = []
-    if not VIDEO_PATH.exists():
-        missing.append(f"動画: {VIDEO_PATH}")
+    if not video_path.exists():
+        missing.append(f"動画: {video_path}")
     if not THUMBNAIL_PATH.exists():
         missing.append(f"サムネイル: {THUMBNAIL_PATH}")
     if missing:
@@ -84,15 +90,22 @@ def main() -> None:
             logger.error("ファイル未検出: %s", m)
         sys.exit(1)
 
-    logger.info("動画: %s (%.1f MB)", VIDEO_PATH.name, VIDEO_PATH.stat().st_size / 1e6)
+    logger.info("動画: %s (%.1f MB)", video_path.name, video_path.stat().st_size / 1e6)
     logger.info("サムネイル: %s", THUMBNAIL_PATH.name)
     logger.info("タイトル: %s", TITLE)
     logger.info("privacy: %s", args.privacy)
 
+    from bot.video_render import check_quality
+    try:
+        check_quality(video_path)
+    except RuntimeError as e:
+        logger.error("品質チェック失敗 — 投稿中止: %s", e)
+        sys.exit(1)
+
     from bot.youtube_upload import upload, _save_result
 
     video_id = upload(
-        video_path=VIDEO_PATH,
+        video_path=video_path,
         title=TITLE,
         description=DESCRIPTION,
         tags=TAGS,
@@ -100,7 +113,7 @@ def main() -> None:
         privacy=args.privacy,
     )
 
-    result_path = _save_result(video_id, TITLE, VIDEO_PATH)
+    result_path = _save_result(video_id, TITLE, video_path)
     logger.info("結果保存: %s", result_path)
 
     if video_id:

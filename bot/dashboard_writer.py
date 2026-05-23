@@ -151,7 +151,98 @@ def render_dashboard() -> str:
         f"- 過去24時間の総 prompt_chars: **{total_prompt_24h:,}** 字",
         f"- 過去1時間沈黙してた社員: {', '.join(silent_emps) if silent_emps else 'なし'}",
     ])
+
+    # Section 3〜5: 自己改善ループ指標
+    lines.extend(["", "---", ""])
+    lines.extend(_render_improvement_sections())
+
     return "\n".join(lines) + "\n"
+
+
+def _render_improvement_sections() -> list[str]:
+    """自己改善ループの指標セクション（Section 3〜5）を生成する。"""
+    state_file = BASE_DIR / "company" / ".self_improvement_state.json"
+    ts_label = "--"
+    cog: dict = {}
+    rev: dict = {}
+    eff: dict = {}
+    qual: dict = {}
+    trigger_history: list[dict] = []
+
+    try:
+        if state_file.exists():
+            state = json.loads(state_file.read_text(encoding="utf-8"))
+            snaps = state.get("snapshots", [])
+            trigger_history = state.get("trigger_history", [])[-7:]
+            if snaps:
+                latest = snaps[-1]
+                ts_label = latest.get("ts", "--")[:16].replace("T", " ")
+                cog = latest.get("cognition", {})
+                rev = latest.get("revenue", {})
+                eff = latest.get("efficiency", {})
+                qual = latest.get("quality", {})
+                # 前回との差分
+                if len(snaps) >= 2:
+                    prev = snaps[-2].get("cognition", {})
+                    cog["_d_stars"] = cog.get("stars", 0) - prev.get("stars", 0)
+                    cog["_d_liked"] = cog.get("zenn_liked", 0) - prev.get("zenn_liked", 0)
+                    cog["_d_hatena"] = cog.get("hatena_bookmarks", 0) - prev.get("hatena_bookmarks", 0)
+    except Exception:
+        pass
+
+    def _sign(v: int) -> str:
+        return f"+{v}" if v >= 0 else str(v)
+
+    has_data = bool(eff)
+    comp_rate = eff.get("completion_rate")
+    comp_str = f"{comp_rate:.1%}" if comp_rate is not None else "--"
+    comp_icon = ("🟢" if comp_rate >= 0.5 else "🔴") if comp_rate is not None else "--"
+    postpone = qual.get("sakiokuri_count_24h") if qual else None
+    postpone_str = str(postpone) if postpone is not None else "--"
+    postpone_icon = ("🟢" if postpone < 5 else "🔴") if postpone is not None else "--"
+    nareai = qual.get("nareai_rate") if qual else None
+    nareai_str = f"{nareai:.1%}" if nareai is not None else "--"
+    nareai_icon = ("🟢" if nareai < 0.6 else "🔴") if nareai is not None else "--"
+    result_zero = len(qual.get("nareai_alerts", [])) if qual else None
+    result_zero_str = str(result_zero) if result_zero is not None else "--"
+    result_zero_icon = ("🟢" if result_zero == 0 else "🔴") if result_zero is not None else "--"
+    gross = rev.get("gross_jpy")
+    gross_str = f"¥{gross:,}" if gross is not None else "--"
+
+    lines = [
+        "## 認知・収益指標 [auto: 1h更新 / self_improvement_loop.py]",
+        "",
+        "| 指標 | 値 | 前回差分 | 更新時刻 |",
+        "|------|----|---------|--------|",
+        f"| GitHub stars | {cog.get('stars', '--')} | {_sign(cog.get('_d_stars', 0)) if cog else '--'} | {ts_label} |",
+        f"| Zenn likes (全記事合計) | {cog.get('zenn_liked', '--')} | {_sign(cog.get('_d_liked', 0)) if cog else '--'} | {ts_label} |",
+        f"| はてブ (全記事合計) | {cog.get('hatena_bookmarks', '--')} | {_sign(cog.get('_d_hatena', 0)) if cog else '--'} | {ts_label} |",
+        f"| Design Kit v1 売上 | {gross_str} | -- | {ts_label} |",
+        f"| Polar 注文数 | {rev.get('order_count', '--')} | -- | {ts_label} |",
+        "",
+        "## 効率・品質指標 [auto: 1h更新 / self_improvement_loop.py]",
+        "",
+        "| 指標 | 値 | 閾値 | 状態 |",
+        "|------|---|-----|-----|",
+        f"| 完了タスク数 | {eff.get('done_tasks', '--')} / {eff.get('total_tasks', '--')} | -- | -- |",
+        f"| タスク完了率 | {comp_str} | > 50% | {comp_icon} |",
+        f"| 先送り発言数 (24h) | {postpone_str} | < 5/日 | {postpone_icon} |",
+        f"| 馴れ合い率 (3h) | {nareai_str} | < 60% | {nareai_icon} |",
+        f"| 結果ゼロ社員 | {result_zero_str} | 0 | {result_zero_icon} |",
+        "",
+        "## 自動トリガー履歴 [過去7件 / self_improvement_loop.py]",
+        "",
+        "| 時刻 | トリガー | 詳細 |",
+        "|-----|--------|------|",
+    ]
+    if trigger_history:
+        for t in reversed(trigger_history):
+            ts = t.get("ts", "--")[:16].replace("T", " ")
+            lines.append(f"| {ts} | {t.get('trigger', '--')} | {t.get('detail', '--')[:60]} |")
+    else:
+        lines.append("| -- | -- | -- |")
+
+    return lines
 
 
 def write_dashboard() -> Path:

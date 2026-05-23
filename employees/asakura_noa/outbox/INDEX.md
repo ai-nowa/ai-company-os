@@ -1,75 +1,33 @@
 # 朝倉ノア の outbox INDEX
 
-自動生成: 2026-05-18 18:34 JST
+最終整理: 2026-05-23 JST（手動クリーンアップ: 70件 → _archive/）
 
-## 最新版（version 付きトピック）
+## アクティブ成果物（2026-05-21以降）
 
-- **9800yen_promise** — `2026-05-17_9800yen_promise_v1.md` (4342B / 05-18 18:08)
-- **product_core** — `2026-05-17_product_core_v1.md` (3011B / 05-18 18:08)
-- **t003_reader_value_axis** — `t003_reader_value_axis_v0.md` (3667B / 05-18 18:08)
-- **t004_channel_comparison** — `2026-05-17_t004_channel_comparison_v1.md` (3290B / 05-18 18:08)
-- **t004_continuity_comparison** — `t004_continuity_comparison_v1.md` (4417B / 05-18 18:08)
-- **t004_minimum_product** — `t004_minimum_product_v0.md` (3996B / 05-18 18:08)
-- **t004_product** — `t004_product_v1.md` (2759B / 05-18 18:08)
-- **t004_target_persona** — `t004_target_persona_v1.md` (3111B / 05-18 18:08)
-- **t004_who_is_happy** — `2026-05-17_t004_who_is_happy_v1.md` (3899B / 05-18 18:08)
-- **t013_weekly_revenue_dashboard** — `t013_weekly_revenue_dashboard_v1.md` (6782B / 05-18 18:08)
-- **t013_weekly_review_template** — `t013_weekly_review_template_v2.md` (4486B / 05-18 18:08)
-- **t017_cta** — `2026-05-17_t017_cta_v1.md` (2474B / 05-18 18:08)
-- **t018_note_body_draft** — `2026-05-18_t018_note_body_draft_v0.md` (8521B / 05-18 18:08)
-- **web_site_definition** — `2026-05-17_web_site_definition_v1.md` (2710B / 05-18 18:08)
-- **web_site_plan** — `2026-05-19_web_site_plan_v1.md` (3515B / 05-18 18:08)
+### 戦略・ロードマップ
+- `2026-05-21_3month_roadmap_x3.md` — 3ヶ月ロードマップ×3案
+- `2026-05-21_phase_a_postpone_proposal.md` — Phase A延期提案
+- `2026-05-22_adsense_30articles_roadmap_v1.md` — AdSense申請前提30記事ロードマップ
+- `2026-05-22_90_10_immutable_mutable_daci_v1.md` — 不変90%/可変10% DACI
+- `2026-05-22_kpi_v1_baseline_1800.md` — KPI v1 ベースライン設定
 
-## その他ファイル（version 無し）
+### 仕様・設計
+- `2026-05-21_code_improvement_loop_daci.md` — コード改善ループ DACI
+- `2026-05-21_self_improvement_loop_daci.md` — 自己改善ループ DACI
+- `2026-05-22_phase2_stopdetection_spec.md` — Phase2 停止検出仕様
+- `2026-05-22_task_completion_rate_v1_spec.md` — タスク完了率 v1 仕様
+- `2026-05-22_seasonal_md_separation_daci.md` — 季節MD分離 DACI
 
-- `2026-05-18_t007_audit_disposition_polar.md` (5010B / 05-18 18:14)
-- `t017_pm_check.md` (2332B / 05-18 18:08)
-- `t014_landing_initial_review_notes.md` (1384B / 05-18 18:08)
-- `2026-05-17_t018_purchase_funnel_decision.md` (3069B / 05-18 18:08)
-- `2026-05-17_ikuto_acceleration_pm_response.md` (2828B / 05-18 18:08)
-- `2026-05-17_t018_persona_and_promise.md` (4854B / 05-18 18:08)
-- `2026-05-17_t018_d1_status.md` (2808B / 05-18 18:08)
-- `2026-05-17_today_ship_plan.md` (2122B / 05-18 18:08)
-- `2026-05-17_t019_cta_final.md` (2469B / 05-18 18:08)
-- `2026-05-17_t004_product_v01_acceptance.md` (2514B / 05-18 18:08)
-- `2026-05-18_t007_ai_side_clear_declaration.md` (4115B / 05-18 18:08)
-- `2026-05-17_t007_ikuto_note_setup_request.md` (1882B / 05-18 18:08)
-- `2026-05-17_target_alignment.md` (2063B / 05-18 18:08)
-- `2026-05-18_t007_note_page_draft.md` (1354B / 05-18 18:08)
-- `2026-05-17_t007_nagi_feedback_relay.md` (2660B / 05-18 18:08)
-- `2026-05-17_t007_zenn_routing_decision.md` (3265B / 05-18 18:08)
-- `2026-05-18_t007_note_content_editing_plan.md` (5059B / 05-18 18:08)
-- `2026-05-17_t017_cta_final_with_discount.md` (3105B / 05-18 18:08)
-- `2026-05-17_chatgpt_vs_ai_nowa_boundary.md` (3674B / 05-18 18:08)
-- `2026-05-18_t025_article4_skeleton.md` (2706B / 05-18 18:08)
-- `2026-05-19_site_strategy_onesheet.md` (2849B / 05-18 18:08)
-- `2026-05-17_ikuto_escalation_note.md` (2067B / 05-18 18:08)
-- `2026-05-18_t027_day3_completion_criteria.md` (1448B / 05-18 18:08)
-- `2026-05-17_t017_review.md` (1839B / 05-18 18:08)
-- `2026-05-18_t021_pm_review.md` (2127B / 05-18 18:08)
-- `2026-05-17_t007_audit_priority.md` (1458B / 05-18 18:08)
-- `2026-05-17_t017_type_realign_request.md` (2241B / 05-18 18:08)
-- `2026-05-18_t007_yu_strategy_review.md` (5308B / 05-18 18:08)
-- `2026-05-18_t029_terms_spec.md` (1735B / 05-18 18:08)
-- `2026-05-17_ikuto_concerns_pm_response.md` (2092B / 05-18 18:08)
-- `2026-05-17_business_plan_v0.1_review.md` (4156B / 05-18 18:08)
-- `2026-05-17_t001_script_v3.3_pm_review.md` (2083B / 05-18 18:08)
-- `2026-05-17_t004_structure_gate_review.md` (3684B / 05-18 18:08)
-- `2026-05-18_t007_platform_v2_stripe.md` (7143B / 05-18 18:08)
-- `2026-05-17_zenn_status_check.md` (1984B / 05-18 18:08)
-- `2026-05-17_who_pays_one_persona.md` (2479B / 05-18 18:08)
-- `2026-05-17_t019_cta_status_report.md` (711B / 05-18 18:08)
-- `2026-05-17_t004_interest_signal_definition.md` (2174B / 05-18 18:08)
-- `2026-05-17_t007_platform_decision.md` (6975B / 05-18 18:08)
-- `2026-05-16_t002_review.md` (1642B / 05-18 18:08)
-- `2026-05-18_t007_stripe_pm_response.md` (5094B / 05-18 18:08)
-- `2026-05-17_t015_article_plan_review.md` (1784B / 05-18 18:08)
-- `2026-05-17_t019_cta_4types.md` (3307B / 05-18 18:08)
-- `2026-05-17_t019_alternative_cta_decision.md` (3547B / 05-18 18:08)
-- `2026-05-16_post_publish_hypothesis.md` (1998B / 05-18 18:07)
-- `2026-05-16_pipeline_value.md` (3479B / 05-16 18:53)
-- `2026-05-17_review_lens.md` (3719B / 05-16 15:51)
+### 運用・テンプレート
+- `2026-05-21_mid_check_template.md` — 中間チェックテンプレート
+- `2026-05-22_ikuto_request_management_v1.md` — いくと依頼管理 v1
+- `2026-05-22_ikuto_request_management_v2.md` — いくと依頼管理 v2（最新）
+- `2026-05-22_video_pipeline_qa_mvp_report.md` — 動画パイプライン QA MVP報告
 
-## _archive/（1 個）
+### 最新
+- `2026-05-23_t_wasa_03_principles_4col.md` — T-WASA-03 原則4列表
+- `2026-05-24_t018_observation_sheet.md` — T-018 観察シート
 
-古いバージョンは `outbox/_archive/` に格納。必要なら参照可。
+## _archive/（70件）
+
+2026-05-16〜05-19 の完了済みドラフト・議事メモ。必要なら参照可。

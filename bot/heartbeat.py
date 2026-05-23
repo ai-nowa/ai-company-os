@@ -122,8 +122,9 @@ def pick_employee() -> str:
 
 
 def is_silent_hour(now: datetime) -> bool:
-    h = now.hour
-    return h >= SILENT_HOUR_START or h < SILENT_HOUR_END
+    # 2026-05-23 いくと禁止令: AI に人間スケジュール持ち込み NG。深夜停止しない。
+    # 例外（マーケ戦略上の待ち）は呼び出し側の戦略判断で対応。
+    return False
 
 
 async def heartbeat_tick(main_client: discord.Client) -> None:

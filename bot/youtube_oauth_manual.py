@@ -25,6 +25,7 @@ STATE_FILE = BOT_DIR / ".oauth_state.json"
 SCOPES = [
     "https://www.googleapis.com/auth/youtube.upload",
     "https://www.googleapis.com/auth/youtube.readonly",
+    "https://www.googleapis.com/auth/youtube.force-ssl",
 ]
 
 REDIRECT_URI = "http://localhost:8080/"

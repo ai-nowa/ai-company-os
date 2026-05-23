@@ -802,6 +802,12 @@ async def on_ready() -> None:
     asyncio.create_task(log_rotation_loop())
     log.info("Log rotation loop started (10分間隔, 100KB 超で archive/conversation_log_*.jsonl)")
 
+    # owner_request_watcher: blocked依頼の自動代行 + 24h未応答の自動deprecate
+    from .owner_request_watcher import scan_and_post_loop, deprecate_scan_loop
+    asyncio.create_task(scan_and_post_loop())
+    asyncio.create_task(deprecate_scan_loop())
+    log.info("owner_request_watcher loops started (blocked代行=1min, deprecate確認=1h)")
+
 
 @main_client.event
 async def on_message(message: discord.Message) -> None:

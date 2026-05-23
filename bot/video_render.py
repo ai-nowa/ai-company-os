@@ -27,6 +27,26 @@ VIDEO_OUT = MEDIA_ROOT / "videos"
 # ユーティリティ
 # ---------------------------------------------------------------------------
 
+_FFPROBE_CANDIDATES = [
+    "/home/ikuto/miniconda/envs/train1b/bin/ffprobe",
+    "/home/ikuto/miniconda/bin/ffprobe",
+]
+
+
+def _ffprobe_bin() -> str:
+    """ffprobe バイナリのパスを返す。見つからなければ RuntimeError。"""
+    if p := shutil.which("ffprobe"):
+        return p
+    ffmpeg = shutil.which("ffmpeg") or "/home/ikuto/.local/bin/ffmpeg"
+    sibling = Path(ffmpeg).parent / "ffprobe"
+    if sibling.exists():
+        return str(sibling)
+    for candidate in _FFPROBE_CANDIDATES:
+        if Path(candidate).exists():
+            return candidate
+    raise RuntimeError("ffprobe not found — install ffmpeg or add to PATH")
+
+
 def _make_blank_image(width: int = 1280, height: int = 720, out: Optional[Path] = None) -> Path:
     from PIL import Image
 
@@ -39,17 +59,18 @@ def _make_blank_image(width: int = 1280, height: int = 720, out: Optional[Path] 
 
 
 def _make_silent_wav(duration_s: float = 3.0, out: Optional[Path] = None) -> Path:
-    """無音WAVを生成する (可変長対応 / Day2引き継ぎ: bytes(2*n) でゼロ埋め)。"""
+    """無音WAVを生成する (48kHz stereo)。"""
     if out is None:
         out = MEDIA_ROOT / "tmp_silent.wav"
     out.parent.mkdir(parents=True, exist_ok=True)
-    sr = 22050
+    sr = 48000
+    channels = 2
     n = int(duration_s * sr)
     with wave.open(str(out), "w") as wf:
-        wf.setnchannels(1)
+        wf.setnchannels(channels)
         wf.setsampwidth(2)
         wf.setframerate(sr)
-        wf.writeframes(bytes(2 * n))
+        wf.writeframes(bytes(2 * channels * n))
     return out
 
 
@@ -57,7 +78,7 @@ def _audio_duration_ffprobe(audio_path: Path) -> float:
     """ffprobe で音声長を取得。失敗時は 3.0 を返す。"""
     try:
         result = subprocess.run(
-            ["ffprobe", "-v", "quiet", "-print_format", "json", "-show_streams", str(audio_path)],
+            [_ffprobe_bin(), "-v", "quiet", "-print_format", "json", "-show_streams", str(audio_path)],
             capture_output=True, text=True, timeout=30,
         )
         info = json.loads(result.stdout)
@@ -73,7 +94,7 @@ def _detect_av_sync_error(path: Path, tolerance_s: float = 0.1) -> bool:
     """ffprobe で映像/音声の duration 差を検知。"""
     try:
         result = subprocess.run(
-            ["ffprobe", "-v", "quiet", "-print_format", "json", "-show_streams", str(path)],
+            [_ffprobe_bin(), "-v", "quiet", "-print_format", "json", "-show_streams", str(path)],
             capture_output=True, text=True, timeout=30,
         )
         info = json.loads(result.stdout)
@@ -90,6 +111,111 @@ def _detect_av_sync_error(path: Path, tolerance_s: float = 0.1) -> bool:
     except Exception as e:
         logger.debug(f"AV sync check skipped: {e}")
     return False
+
+
+# ---------------------------------------------------------------------------
+# ffprobe QA チェッカー
+# ---------------------------------------------------------------------------
+
+QA_REQUIRED_PIX_FMT = "yuv420p"
+QA_MIN_TOTAL_BITRATE_KBPS = 200  # 合計(映像+音声)。静止画ベース動画は映像bitが低くても合計で判定
+QA_MIN_AUDIO_SAMPLE_RATE = 44100
+QA_MIN_AUDIO_CHANNELS = 2
+
+
+def _parse_ffmpeg_stderr(stderr: str) -> dict:
+    """ffmpeg -i stderr から video/audio ストリーム情報をパースして返す。
+    Stream行の形式: "Stream #0:N[...](lang): Video: codec, pix_fmt, WxH, BR kb/s"
+    """
+    import re
+    info: dict = {"video": {}, "audio": {}}
+
+    # Duration行から全体ビットレート: "bitrate: 96 kb/s"
+    m = re.search(r"bitrate:\s*(\d+)\s*kb/s", stderr)
+    if m:
+        info["total_bitrate_kbps"] = int(m.group(1))
+
+    # Video pix_fmt: "Video: <codec>, <pix_fmt>" — codecの後の最初のカンマ+値
+    # 例: "Video: h264 (High 4:4:4 Predictive) (avc1 / 0x31637661), yuv444p(progressive)"
+    m = re.search(r"Video:[^,]+,\s*(\w+)", stderr)
+    if m:
+        info["video"]["pix_fmt"] = m.group(1)
+
+    # Video bitrate: "WxH, 19 kb/s" — 解像度の後のビットレート
+    # 例: "yuv444p(progressive), 1280x720, 19 kb/s"
+    m = re.search(r"\d+x\d+[^,]*,\s*(\d+)\s*kb/s", stderr)
+    if m:
+        info["video"]["bitrate_kbps"] = int(m.group(1))
+
+    # Audio sample_rate: "Audio: codec, 22050 Hz"
+    m = re.search(r"Audio:[^,]+,\s*(\d+)\s*Hz", stderr)
+    if m:
+        info["audio"]["sample_rate"] = int(m.group(1))
+
+    # Audio channels: "22050 Hz, stereo/mono"
+    m = re.search(r"\d+\s*Hz,\s*(\w+)", stderr)
+    if m:
+        ch_str = m.group(1)
+        if ch_str == "stereo":
+            info["audio"]["channels"] = 2
+        elif ch_str == "mono":
+            info["audio"]["channels"] = 1
+        else:
+            try:
+                info["audio"]["channels"] = int(ch_str)
+            except ValueError:
+                info["audio"]["channels"] = 0
+
+    return info
+
+
+def check_quality(path: Path) -> None:
+    """出力動画の品質を検証。基準未達なら RuntimeError を上げる（投稿ブロック）。
+    ffprobe が使えない環境では ffmpeg -i の stderr フォールバックで検証する。
+    """
+    ffmpeg_bin = shutil.which("ffmpeg") or "/home/ikuto/.local/bin/ffmpeg"
+    result = subprocess.run(
+        [ffmpeg_bin, "-hide_banner", "-i", str(path)],
+        capture_output=True, text=True, timeout=30,
+    )
+    stderr = result.stderr
+    if not stderr.strip():
+        raise RuntimeError(f"ffmpeg QA failed: no output for {path.name}")
+
+    info = _parse_ffmpeg_stderr(stderr)
+    errors: list[str] = []
+
+    # video チェック
+    if not info["video"]:
+        errors.append("no video stream detected")
+    else:
+        pix_fmt = info["video"].get("pix_fmt", "")
+        if pix_fmt != QA_REQUIRED_PIX_FMT:
+            errors.append(f"pix_fmt={pix_fmt!r}, expected {QA_REQUIRED_PIX_FMT!r}")
+
+    # 合計ビットレートチェック（静止画ベース動画は映像bitrateが低いため合計で判定）
+    total_br = info.get("total_bitrate_kbps", 0)
+    if total_br < QA_MIN_TOTAL_BITRATE_KBPS:
+        errors.append(f"total bitrate={total_br}kbps < {QA_MIN_TOTAL_BITRATE_KBPS}kbps")
+
+    # audio チェック
+    if not info["audio"]:
+        errors.append("no audio stream detected")
+    else:
+        sr = info["audio"].get("sample_rate", 0)
+        if sr < QA_MIN_AUDIO_SAMPLE_RATE:
+            errors.append(f"audio sample_rate={sr}Hz < {QA_MIN_AUDIO_SAMPLE_RATE}Hz")
+
+        channels = info["audio"].get("channels", 0)
+        if channels < QA_MIN_AUDIO_CHANNELS:
+            errors.append(f"audio channels={channels} < {QA_MIN_AUDIO_CHANNELS} (stereo required)")
+
+    if errors:
+        raise RuntimeError(
+            f"Quality check FAILED for {path.name}: " + " | ".join(errors)
+        )
+
+    logger.info("Quality check passed: %s", path.name)
 
 
 # ---------------------------------------------------------------------------
@@ -186,6 +312,14 @@ def _render_moviepy(script: list[dict], out: Path) -> bool:
             fps=24,
             codec="libx264",
             audio_codec="aac",
+            bitrate="2000k",
+            audio_fps=48000,
+            ffmpeg_params=[
+                "-pix_fmt", "yuv420p",
+                "-profile:v", "high", "-level", "4.0",
+                "-ac", "2",
+                "-movflags", "+faststart",
+            ],
             temp_audiofile=str(out.with_suffix(".tmp.aac")),
             remove_temp=True,
             logger=None,
@@ -253,7 +387,19 @@ def _render_ffmpeg(script: list[dict], out: Path) -> bool:
         concat = ffmpeg.concat(*interleaved, v=1, a=1, n=n)
         (
             concat
-            .output(str(out), vcodec="libx264", acodec="aac")
+            .output(
+                str(out),
+                vcodec="libx264",
+                acodec="aac",
+                video_bitrate="2000k",
+                audio_bitrate="192k",
+                pix_fmt="yuv420p",
+                **{"profile:v": "high"},
+                level="4.0",
+                ar=48000,
+                ac=2,
+                movflags="+faststart",
+            )
             .overwrite_output()
             .run(quiet=True)
         )
@@ -315,7 +461,10 @@ def _render_ffmpeg_cli(script: list[dict], out: Path) -> bool:
                     "-loop", "1", "-i", str(image_path),
                     "-i", str(audio_path),
                     "-c:v", "libx264", "-tune", "stillimage",
-                    "-c:a", "aac", "-b:a", "128k",
+                    "-b:v", "2000k",
+                    "-profile:v", "high", "-level", "4.0",
+                    "-c:a", "aac", "-b:a", "192k",
+                    "-ar", "48000", "-ac", "2",
                     "-pix_fmt", "yuv420p",
                     "-shortest",
                     str(clip_path),
@@ -339,6 +488,7 @@ def _render_ffmpeg_cli(script: list[dict], out: Path) -> bool:
                 ffmpeg_bin, "-y",
                 "-f", "concat", "-safe", "0", "-i", str(list_file),
                 "-c", "copy",
+                "-movflags", "+faststart",
                 str(out),
             ],
             capture_output=True, timeout=300,
@@ -399,6 +549,7 @@ def render(script: list[dict], video_id: str) -> Path:
                 )
 
     logger.info(f"rendered: {out} ({out.stat().st_size:,} bytes)")
+    check_quality(out)
     return out
 
 

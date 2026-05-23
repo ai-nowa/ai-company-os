@@ -1,7 +1,11 @@
 """Polar.sh API ラッパー（Lemon Squeezy 撤退・Polar.sh 採用 2026-05-18 CEO決定）。
 
-API base: https://api.polar.sh/v1
+API base:
+  Production: https://api.polar.sh/v1
+  Sandbox:    https://sandbox-api.polar.sh/v1
+
 Auth: Bearer <POLAR_API_KEY>  (Organization Access Token)
+環境変数 POLAR_SANDBOX=1 または sandbox=True 引数でSandbox切替。
 """
 from __future__ import annotations
 
@@ -13,39 +17,51 @@ from typing import Any
 
 import httpx
 
-BASE_URL = "https://api.polar.sh/v1"
+_PROD_URL = "https://api.polar.sh/v1"
+_SANDBOX_URL = "https://sandbox-api.polar.sh/v1"
 ORG_ID = "676275d5-a3c5-4f89-81ba-97859a62eeeb"  # ai-nowa
 
 
-def _api_key() -> str:
-    key = os.environ.get("POLAR_API_KEY", "")
+def _is_sandbox() -> bool:
+    return os.environ.get("POLAR_SANDBOX", "").strip() in ("1", "true", "yes")
+
+
+def _base_url(sandbox: bool | None = None) -> str:
+    use_sandbox = sandbox if sandbox is not None else _is_sandbox()
+    return _SANDBOX_URL if use_sandbox else _PROD_URL
+
+
+def _api_key(sandbox: bool | None = None) -> str:
+    use_sandbox = sandbox if sandbox is not None else _is_sandbox()
+    env_var = "POLAR_API_KEY_SANDBOX" if use_sandbox else "POLAR_API_KEY"
+    key = os.environ.get(env_var, "")
     if not key:
-        raise RuntimeError("POLAR_API_KEY not set")
+        raise RuntimeError(f"{env_var} not set")
     return key
 
 
-def _headers() -> dict[str, str]:
+def _headers(sandbox: bool | None = None) -> dict[str, str]:
     return {
-        "Authorization": f"Bearer {_api_key()}",
+        "Authorization": f"Bearer {_api_key(sandbox)}",
         "Accept": "application/json",
         "Content-Type": "application/json",
     }
 
 
-def _get(path: str, params: dict | None = None) -> dict:
-    r = httpx.get(f"{BASE_URL}{path}", headers=_headers(), params=params, timeout=30)
+def _get(path: str, params: dict | None = None, sandbox: bool | None = None) -> dict:
+    r = httpx.get(f"{_base_url(sandbox)}{path}", headers=_headers(sandbox), params=params, timeout=30)
     r.raise_for_status()
     return r.json()
 
 
-def _post(path: str, body: dict) -> dict:
-    r = httpx.post(f"{BASE_URL}{path}", headers=_headers(), json=body, timeout=30)
+def _post(path: str, body: dict, sandbox: bool | None = None) -> dict:
+    r = httpx.post(f"{_base_url(sandbox)}{path}", headers=_headers(sandbox), json=body, timeout=30)
     r.raise_for_status()
     return r.json()
 
 
-def _patch(path: str, body: dict) -> dict:
-    r = httpx.patch(f"{BASE_URL}{path}", headers=_headers(), json=body, timeout=30)
+def _patch(path: str, body: dict, sandbox: bool | None = None) -> dict:
+    r = httpx.patch(f"{_base_url(sandbox)}{path}", headers=_headers(sandbox), json=body, timeout=30)
     r.raise_for_status()
     return r.json()
 
@@ -54,8 +70,8 @@ def _patch(path: str, body: dict) -> dict:
 # Organizations
 # ---------------------------------------------------------------------------
 
-def list_organizations() -> list[dict]:
-    data = _get("/organizations/")
+def list_organizations(sandbox: bool | None = None) -> list[dict]:
+    data = _get("/organizations/", sandbox=sandbox)
     return data.get("items", [])
 
 
@@ -63,8 +79,8 @@ def list_organizations() -> list[dict]:
 # Products
 # ---------------------------------------------------------------------------
 
-def list_products(organization_id: str = ORG_ID) -> list[dict]:
-    data = _get("/products/", {"organization_id": organization_id})
+def list_products(organization_id: str = ORG_ID, sandbox: bool | None = None) -> list[dict]:
+    data = _get("/products/", {"organization_id": organization_id}, sandbox=sandbox)
     return data.get("items", [])
 
 
@@ -74,6 +90,7 @@ def create_product(
     *,
     description: str = "",
     price_currency: str = "jpy",
+    sandbox: bool | None = None,
 ) -> dict:
     """One-time product を作成。price_amount は最小単位（JPYなら円）。
 
@@ -92,11 +109,11 @@ def create_product(
         ],
         "recurring_interval": None,
     }
-    return _post("/products/", body)
+    return _post("/products/", body, sandbox=sandbox)
 
 
-def get_product(product_id: str) -> dict:
-    return _get(f"/products/{product_id}")
+def get_product(product_id: str, sandbox: bool | None = None) -> dict:
+    return _get(f"/products/{product_id}", sandbox=sandbox)
 
 
 # ---------------------------------------------------------------------------
@@ -104,20 +121,22 @@ def get_product(product_id: str) -> dict:
 # ---------------------------------------------------------------------------
 
 def create_checkout(
-    product_id: str,
+    product_price_id: str,
     *,
     customer_email: str | None = None,
     success_url: str | None = None,
     metadata: dict | None = None,
+    sandbox: bool | None = None,
 ) -> dict:
-    body: dict[str, Any] = {"products": [product_id]}
+    """Checkout セッションを作成。product_price_id は Product の prices[].id を渡す。"""
+    body: dict[str, Any] = {"product_price_id": product_price_id}
     if customer_email:
         body["customer_email"] = customer_email
     if success_url:
         body["success_url"] = success_url
     if metadata:
         body["metadata"] = metadata
-    return _post("/checkouts/", body)
+    return _post("/checkouts/", body, sandbox=sandbox)
 
 
 # ---------------------------------------------------------------------------

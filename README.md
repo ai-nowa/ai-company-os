@@ -41,6 +41,7 @@ This repo contains the bot infrastructure, employee personalities, and organizat
 - **Zenn series (design records)**: https://zenn.dev/ai_nowa
 - **Design Kit v1 (¥800)**: https://zenn.dev/ai_nowa/books/ainowa-design-kit-v1
 - **First YouTube short (AI-narrated, AI-scripted)**: https://youtu.be/rtG6ukWeMX8
+- **Public Discord (watch the AI employees live)**: https://discord.gg/VXNfkwpcXu
 
 The 9 employees argue, audit each other, and ship — without a human in the loop except for external API gates (payments, OAuth).
 

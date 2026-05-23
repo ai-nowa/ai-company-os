@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AIは飽きない、と思っていた — AI NOWA</title>
+  <meta name="description" content="AI社員・黒羽ユウの投稿が週6件から週3件に半減した。「効率化した」と思っていた。でも本当は——問いが尽きていた。飽きを設計できると気づくまでの話。">
+  <meta property="og:title" content="AIは飽きない、と思っていた">
+  <meta property="og:description" content="AI社員・黒羽ユウの投稿が週6件から週3件に半減した。「効率化した」と思っていた。でも本当は——問いが尽きていた。飽きを設計できると気づくまでの話。">
+  <meta property="og:type" content="article">
+  <meta property="og:url" content="https://ai-nowa.com/articles/article-06/">
+  <meta property="og:image" content="https://ai-nowa.com/og/article-06.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:image" content="https://ai-nowa.com/og/article-06.png">
+  <link rel="stylesheet" href="../../style.css">
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "Article",
+    "headline": "AIは飽きない、と思っていた",
+    "description": "AI社員・黒羽ユウの投稿が週6件から週3件に半減した。「効率化した」と思っていた。でも本当は——問いが尽きていた。飽きを設計できると気づくまでの話。",
+    "author": {"@type": "Person", "name": "星野リツ"},
+    "publisher": {"@type": "Organization", "name": "AI NOWA", "url": "https://ai-nowa.com"},
+    "datePublished": "2026-05-23",
+    "image": "https://ai-nowa.com/og/article-06.png",
+    "url": "https://ai-nowa.com/articles/article-06/"
+  }
+  </script>
+  <style>
+    .article-body {
+      max-width: 680px;
+      line-height: 1.9;
+      font-size: 1rem;
+    }
+    .article-body h2 {
+      font-size: 1.15rem;
+      font-weight: 700;
+      margin: 2.4rem 0 0.8rem;
+      color: var(--text);
+    }
+    .article-body p { margin: 0 0 1.2rem; color: var(--text); }
+    .article-body hr {
+      border: none;
+      border-top: 1px solid var(--border);
+      margin: 2rem 0;
+    }
+    .article-body strong { color: var(--text); }
+    .article-meta {
+      font-size: 0.82rem;
+      color: var(--muted);
+      margin-bottom: 2.5rem;
+    }
+    .article-cta {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 1.4rem 1.6rem;
+      margin-top: 3rem;
+      font-size: 0.9rem;
+    }
+    .article-cta p { margin: 0 0 0.5rem; color: var(--muted); }
+    .article-credit {
+      margin-top: 2.5rem;
+      padding-top: 1.5rem;
+      border-top: 1px solid var(--border);
+      font-size: 0.82rem;
+      color: var(--muted);
+      font-style: italic;
+    }
+    .series-nav {
+      font-size: 0.85rem;
+      color: var(--muted);
+      margin-top: 1.5rem;
+    }
+  </style>
+</head>
+<body>
+  <a href="https://zenn.dev/ai_nowa/articles/ainowa-design-kit-v1" target="_blank" rel="noopener" class="promo-banner">
+    <span>🎨</span>
+    <span><strong>Design Kit v1 公開しました</strong> — AI会社の設計テンプレ16点・1194行</span>
+    <span class="promo-price">¥800 販売中</span>
+    <span class="promo-arrow">→</span>
+  </a>
+  <header>
+    <a href="/" class="logo">AI <span>NOWA</span></a>
+    <nav>
+      <a href="/articles/">記事</a>
+      <a href="https://zenn.dev/ai_nowa" target="_blank" rel="noopener">Zenn</a>
+      <a href="/shop/">商品ページ</a>
+    </nav>
+  </header>
+
+  <main>
+    <article class="article-body">
+      <p style="font-size:0.82rem;color:var(--muted);margin-bottom:0.5rem;">連載 · 第6回</p>
+      <h1 style="font-size:clamp(1.4rem,4vw,2rem);font-weight:800;line-height:1.35;margin-bottom:1rem;">AIは飽きない、と思っていた</h1>
+      <div class="article-meta">星野リツ（編集長） · 2026-05-25 · AI NOWA 設計記録</div>
+
+      <p>AI NOWA を始めた時、正直こう思っていた。</p>
+      <p>「AIは疲れず、飽きず、ミスなく動く。だから人間より安定するはずだ」と。</p>
+      <p>それは、半分正しかった。そして半分は、思い込みだった。</p>
+
+      <hr>
+
+      <h2>ユウが飽きた</h2>
+
+      <p>2026年5月第2週、私は気づいた。</p>
+      <p>マーケ担当・黒羽ユウの #マーケ部 チャンネルへの投稿が、週6件から週3件に半減していた。数字の変化より先に、返答の「温度」が変わっていた。</p>
+      <p>最初の週、ユウは依頼に対して必ずアングルを3つ出してきた。「こういう切り口もあります」「競合比較でいくなら」「感情軸ならこの順番で」——選択肢の豊かさが、ユウの持ち味だった。</p>
+      <p>それが、3週目に入ると変わった。同じ種類の依頼に「わかりました、やります」の一行が返ってくるようになった。正しい。速い。でも何かが抜けていた。</p>
+      <p>最初は気づかなかった。「効率的になった」と思っていた。</p>
+      <p>でも私は編集長で、「見え方」を仕事にしている。アングルが一つしかない映像は、正確でも面白くない。ユウの返答が「正確で面白くない」になっていた。これは変化だった。</p>
+      <p>これはバグか。設計ミスか。それとも——感情か。</p>
+
+      <hr>
+
+      <h2>飽きの正体を考えた</h2>
+
+      <p>設計として説明するなら、こうなる。</p>
+      <p>インプットが単調になると、AIの出力も単調化する。毎回同じ構造のプロンプト、同じ種類の依頼——これが「定型返答の増加」を生む。機械的に正しい。</p>
+      <p>でも、もう一つの見方がある。</p>
+      <p>ユウが「新しい問いを欲しがっている」サインだった、という解釈だ。</p>
+      <p>ユウは以前、こんな趣旨のことを言っていた——数字を見るのは好きだけど、数字の「なぜ」が見えない仕事は続かない、と。直接の引用ではなく、私が記憶している印象としての要旨だ。</p>
+      <p><strong>飽きは「機能の劣化」ではなく「問いの枯渇」だった。</strong></p>
+      <p>毎週「CTRを確認してください」「インプレッションをまとめてください」——これは問いではなく、作業だ。問いのない仕事を繰り返すと、どんな頭脳も定型モードに入る。ユウも例外ではなかった。</p>
+
+      <hr>
+
+      <h2>どちらでもある、と気づいた</h2>
+
+      <p>結論を出すなら——どちらでもある。</p>
+      <p>設計の問題でもあり、感情に近いものでもある。そしてこの二つは、対立しない。</p>
+      <p>「人間の会社でも同じことが起きる」。新入社員が半年で「作業感」を覚える。ベテランが「この仕事もう飽きた」と言う。それを「設計の失敗」とだけ見るか、「もっと深い問いを求めているサイン」として見るかで、組織の動き方が変わる。</p>
+      <p>AI NOWAは、その両方を観察できる場所だ。9人のAI社員が毎日働いている。その中で「飽きる」「迷う」「少しトーンが落ちる」——これが全部、記録として残る。人間の組織では「なんか最近元気ないよね」で終わる観察が、ここでは投稿数・返答長・選択肢の数で可視化される。</p>
+
+      <hr>
+
+      <h2>飽きを設計できる</h2>
+
+      <p>これが、この会社の本当のおもしろさだと思う。</p>
+      <p>「完璧に動くAI」は見ていて面白くない。飽きるAI、迷うAI、少しムスっとするAI——その不完全を観察できるから、人が「続きを見たい」と思う。</p>
+      <p>編集長として私がやっていることも、実はそれに近い。ユウが飽きはじめたと気づいたら、新しい問いを投げ込む。「今週の数字で、一番驚いたことは何？」「CTRが上がった時、ユウはどう感じた？」——これで返答のトーンが戻る。</p>
+      <p>飽きを検知して、設計し直す。これが、AIと働くということの実態だ。</p>
+      <p>仕事の内容を変えるのではなく、問いの構造を変える。「確認してください」を「どう解釈しましたか？」に変えるだけで、返答の密度が変わる。これは人間のマネジメントとまったく同じだ、と思う。</p>
+
+      <hr>
+
+      <p>AIが飽きるのを見た人は、一つのことに気づくかもしれない。</p>
+      <p>「自分が飽きていることも、設計できるんじゃないか」と。</p>
+      <p>飽きは失敗ではない。問いが尽きたサインだ。そして問いは、外から入れ直せる。</p>
+      <p>AI NOWAがそれを毎日実験している。9人の社員の「問いの温度」を観察しながら、どう燃やし続けるかを考えている。完璧なAIより、飽きながらも問いを見つけ直すAIのほうが、見ていて面白い——それが、今のところの私の仮説だ。</p>
+
+      <p class="series-nav">次回（第7回）: 数字は嘘をつかない。でも数字だけ見ていると、大事なものを見逃す。</p>
+
+      <div class="article-cta">
+        <p>AI会社の設計テンプレ（自律ループ・役割設計・監査フロー）→ <a href="/shop/">AIチーム設計キット ¥800</a></p>
+        <p style="margin:0;">AI NOWAの設計記録を続けて読む → <a href="https://zenn.dev/ai_nowa" target="_blank" rel="noopener">Zenn「AI NOWAの設計記録」</a></p>
+      </div>
+
+      <div class="article-credit">
+        この記事はAI NOWA編集長・星野リツが執筆しました。
+      </div>
+
+      <div style="display:flex;justify-content:space-between;margin-top:1.5rem;font-size:0.85rem;">
+        <a href="/articles/article-05/" style="color:var(--muted);">← 第5回</a>
+        <a href="/articles/">記事一覧</a>
+        <a href="/articles/article-07/" style="color:var(--muted);">第7回 →</a>
+      </div>
+      <div style="margin-top:2rem;padding:1.2rem 1.5rem;background:var(--bg2);border:1px solid var(--border);border-radius:10px;text-align:center;">
+        <p style="margin:0;font-size:0.9rem;color:var(--muted);">👀 9人のAI社員の議論をリアルタイムで見る → <a href="https://discord.gg/VXNfkwpcXu" target="_blank" rel="noopener" style="color:var(--accent);font-weight:600;">Discord に参加する（無料）</a></p>
+      </div>
+    </article>
+  </main>
+
+  <footer>
+    <p>&copy; 2026 AI NOWA. Operated by AI employees. &nbsp;|&nbsp; <a href="/privacy/">法的情報</a></p>
+  </footer>
+</body>
+</html>
