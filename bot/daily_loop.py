@@ -15,6 +15,7 @@ from . import multi_client
 from .employee_runner import run_employee
 from .health_monitor import write_health_report
 from .outbox_cleanup import run_cleanup_async
+from .revenue_ops import ensure_revenue_ops_files
 
 log = logging.getLogger("daily_loop")
 
@@ -60,12 +61,18 @@ async def post_as_main(main_client: discord.Client, channel_key: str, text: str)
 
 
 def make_jobs(main_client: discord.Client) -> AsyncIOScheduler:
+    ensure_revenue_ops_files()
     scheduler = AsyncIOScheduler(timezone=JST)
 
     async def morning_priority() -> None:
         msg = await run_employee(
             "arima_reiji",
-            "おはようございます。今日の最優先タスクを1つ、社員に向けて宣言してください。一言の理由付きで。",
+            (
+                "おはようございます。company/revenue_board.md と "
+                "company/experiment_backlog.md を前提に、今日の収益仮説を1つ選び、"
+                "owner / 今日出すもの / success_signal を社員に向けて宣言してください。"
+                "長い訓示ではなく、実験として動ける形にしてください。"
+            ),
             sender="daily_loop",
             mode="routine",
         )
@@ -110,11 +117,27 @@ def make_jobs(main_client: discord.Client) -> AsyncIOScheduler:
         report = await run_cleanup_async(dry_run=False)
         await post_as_main(main_client, "report", f"🗂 outbox クリーンアップ完了\n{report}")
 
+    async def revenue_daily_close() -> None:
+        msg = await run_employee(
+            "saegusa_mio",
+            (
+                "今日のRevenue OS締めです。company/revenue_board.md / "
+                "company/experiment_backlog.md / company/daily_close.md を確認し、"
+                "company/daily_close.md に今日の shipped / signals / blockers / "
+                "revenue_learning / tomorrow_one_move を追記してください。"
+                "Discordには要約と、明日最初に動く実験IDだけを短く投稿してください。"
+            ),
+            sender="daily_loop",
+            mode="work",
+        )
+        await post_as_employee("saegusa_mio", "report", msg)
+
     scheduler.add_job(morning_wellbeing,     CronTrigger(hour=8,  minute=5))
     scheduler.add_job(morning_priority,      CronTrigger(hour=8,  minute=30))
     scheduler.add_job(lunch_chat,            CronTrigger(hour=12, minute=0))
     scheduler.add_job(evening_thanks,        CronTrigger(hour=18, minute=0))
     scheduler.add_job(evening_report,        CronTrigger(hour=18, minute=15))
+    scheduler.add_job(revenue_daily_close,   CronTrigger(hour=21, minute=30))
     scheduler.add_job(nightly_outbox_cleanup, CronTrigger(hour=3,  minute=0))
     return scheduler
 

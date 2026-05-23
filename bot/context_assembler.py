@@ -339,6 +339,7 @@ def _load_wisdom_essence() -> str:
 
 _DIGEST_BUDGETS = {
     "micro": {
+        "revenue": 560,
         "mentions": 620,
         "tasks": 620,
         "logs": 520,
@@ -347,6 +348,7 @@ _DIGEST_BUDGETS = {
         "wisdom": 260,
     },
     "routine": {
+        "revenue": 700,
         "mentions": 700,
         "tasks": 720,
         "logs": 720,
@@ -355,6 +357,7 @@ _DIGEST_BUDGETS = {
         "wisdom": 320,
     },
     "work": {
+        "revenue": 820,
         "mentions": 760,
         "tasks": 820,
         "logs": 860,
@@ -363,6 +366,7 @@ _DIGEST_BUDGETS = {
         "wisdom": 360,
     },
     "executive": {
+        "revenue": 900,
         "mentions": 820,
         "tasks": 860,
         "logs": 820,
@@ -414,6 +418,18 @@ def _wisdom_items(limit: int) -> list[str]:
     return items
 
 
+def _revenue_ops_items(employee_id: str, mode: str, limit: int) -> list[str]:
+    try:
+        from .revenue_ops import revenue_digest
+
+        text = revenue_digest(max_chars=limit, employee_id=employee_id)
+    except Exception:
+        return []
+    if not text.strip():
+        return []
+    return [line for line in text.splitlines() if line.strip()]
+
+
 def assemble_state_digest(employee_id: str, reason: str, mode: str = "routine") -> str:
     """Build a compact dynamic context digest for an employee call."""
     info = EMPLOYEES.get(employee_id, {})
@@ -423,6 +439,8 @@ def assemble_state_digest(employee_id: str, reason: str, mode: str = "routine") 
         f"- employee: {info.get('display', employee_id)} ({info.get('role', '')})",
         f"- mode: {mode}",
         f"- reason: {_short(reason, 360)}",
+        "",
+        *_fit_section("Revenue OS（収益ループ）", _revenue_ops_items(employee_id, mode, budgets["revenue"]), budgets["revenue"], "- 未初期化"),
         "",
         *_fit_section("自分宛メンション（最大5件）", _recent_mentions(employee_id), budgets["mentions"], "- なし"),
         "",
@@ -478,6 +496,16 @@ def should_wake_employee(employee_id: str) -> tuple[bool, int, str]:
     if artifacts:
         score += 1
         reasons.append("新規成果物あり")
+
+    try:
+        from .revenue_ops import revenue_wake_items
+
+        revenue_items = revenue_wake_items(employee_id, max_items=2)
+    except Exception:
+        revenue_items = []
+    if revenue_items:
+        score += 2
+        reasons.append("自分に関係するRevenue実験あり")
 
     threshold = 3
     if employee_id in {"morinaga_haru", "saegusa_mio"}:

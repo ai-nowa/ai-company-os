@@ -9,6 +9,7 @@ from __future__ import annotations
 import re
 
 from .config import COMPANY_DIR, EMPLOYEES, now_jst_iso
+from .revenue_ops import append_idea_to_experiment_inbox
 
 IDEA_RE = re.compile(
     r"^\s*(?:\[IDEA\]|IDEA:|アイデア[:：])\s*(.+?)\s*$",
@@ -21,6 +22,7 @@ def capture_ideas_from_text(employee_id: str, channel: str, text: str) -> int:
     if not ideas:
         return 0
 
+    COMPANY_DIR.mkdir(parents=True, exist_ok=True)
     path = COMPANY_DIR / "idea_log.md"
     if not path.exists():
         path.write_text("# Idea Log\n\n", encoding="utf-8")
@@ -32,4 +34,8 @@ def capture_ideas_from_text(employee_id: str, channel: str, text: str) -> int:
                 f"## {now_jst_iso()} / {display} / #{channel}\n\n"
                 f"{idea}\n\n"
             )
+            try:
+                append_idea_to_experiment_inbox(employee_id, channel, idea)
+            except Exception:
+                pass
     return len(ideas)

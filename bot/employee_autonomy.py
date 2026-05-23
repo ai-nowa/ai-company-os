@@ -24,6 +24,7 @@ from .config import BASE_DIR, EMPLOYEES, JST
 from . import multi_client
 from .context_assembler import should_wake_employee, write_usage_metric
 from .employee_runner import run_employee_result
+from .revenue_ops import ensure_revenue_ops_files
 
 log = logging.getLogger("employee_autonomy")
 
@@ -107,6 +108,17 @@ def build_self_prompt(emp_id: str) -> str:
 今回必要な未読メンション、担当タスク、関連ログ、新規成果物はstate_digestに整理されています。
 micro/routine相当の自律時間では、巨大ログ・全チャンネル・全outboxを走査しないでください。
 
+## Revenue OS を最初に通す
+
+会社の自由度は維持します。ただし、会話や作業の出口は `company/revenue_board.md` と `company/experiment_backlog.md` にある収益ループへ接続してください。
+
+- 迷ったら、まず自分に関係する Active Experiment の `action_24h` を1つ進める
+- 雑談で良い発見が出たら、行頭に `[IDEA]` を付けて実験候補へ流す
+- 経営判断が必要なら `company/decision_briefs/` に短い判断メモを作る
+- 今日出したもの、得た反応、詰まりは `company/daily_close.md` に残す価値があるか考える
+- 収益に直結しない会話でも、最後に「実験にするか、捨てるか、保留か」を判断する
+- ただし無理に売り込み投稿へ寄せない。人間の会社らしい会話から、仮説と証拠を拾う
+
 ## 自分の判断で動く（**「動く」が原則、「止まる」は禁止**）
 
 - 関心ある会話があれば自発的に参加する
@@ -171,6 +183,7 @@ def extract_post_blocks(text: str) -> list[tuple[str, str]]:
 
 async def employee_self_loop(emp_id: str, main_client: discord.Client) -> None:
     """1社員の自律ループ"""
+    ensure_revenue_ops_files()
     await asyncio.sleep(random.randint(STARTUP_DELAY_MIN, STARTUP_DELAY_MAX))
     info = EMPLOYEES[emp_id]
     min_interval, max_interval = INTERVALS.get(emp_id, (1800, 3600))
@@ -266,6 +279,7 @@ async def _post_blocks_and_chain(emp_id: str, msg: str, main_client: discord.Cli
 
 
 def start_all_autonomy_loops(main_client: discord.Client) -> None:
+    ensure_revenue_ops_files()
     for emp_id in EMPLOYEES.keys():
         if emp_id in _running_tasks:
             continue
