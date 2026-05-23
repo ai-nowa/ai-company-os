@@ -12,6 +12,7 @@
 """
 from __future__ import annotations
 
+import fcntl
 import hashlib
 import json
 import os
@@ -33,6 +34,7 @@ BLUESKY_APP_PASSWORD = os.environ.get("BLUESKY_APP_PASSWORD", "")
 STORY_MAX_CHARS = 280
 PREVIEW_SUFFIX = "… 続きは Zenn/note で: https://zenn.dev/ai_nowa"
 BLUESKY_HISTORY_PATH = REPO_ROOT / "company" / ".bluesky_post_history.jsonl"
+BLUESKY_LOCK_PATH = REPO_ROOT / "company" / ".bluesky_post.lock"
 DEDUP_WINDOW_HOURS = 24
 
 
@@ -109,25 +111,34 @@ def _get_client():
 
 
 def post(text: str, *, skip_dedup: bool = False) -> dict:
-    """Bluesky に単発テキストを投稿する。280字制限。重複防止あり。"""
+    """Bluesky に単発テキストを投稿する。280字制限。重複防止あり。
+
+    ファイルロックで複数プロセスの同時実行を排他制御する。
+    """
     if len(text) > 300:
         text = text[:297] + "…"
 
     text_hash = _compute_post_hash(text)
 
-    if not skip_dedup and _is_duplicate_by_history(text_hash):
-        print(f"[SKIP] 24h以内に同じ投稿を検出（ローカル履歴）: hash={text_hash[:8]}…")
-        return {"skipped": True, "reason": "duplicate_history", "hash": text_hash}
+    BLUESKY_LOCK_PATH.parent.mkdir(parents=True, exist_ok=True)
+    with open(BLUESKY_LOCK_PATH, "w") as lock_file:
+        fcntl.flock(lock_file, fcntl.LOCK_EX)
+        try:
+            if not skip_dedup and _is_duplicate_by_history(text_hash):
+                print(f"[SKIP] 24h以内に同じ投稿を検出（ローカル履歴）: hash={text_hash[:8]}…")
+                return {"skipped": True, "reason": "duplicate_history", "hash": text_hash}
 
-    client = _get_client()
+            client = _get_client()
 
-    if not skip_dedup and _is_duplicate_by_feed(client, text):
-        print(f"[SKIP] 24h以内に同じ投稿を検出（Bluesky API）: 先頭={text[:20]}…")
-        return {"skipped": True, "reason": "duplicate_feed"}
+            if not skip_dedup and _is_duplicate_by_feed(client, text):
+                print(f"[SKIP] 24h以内に同じ投稿を検出（Bluesky API）: 先頭={text[:20]}…")
+                return {"skipped": True, "reason": "duplicate_feed"}
 
-    response = client.send_post(text=text)
-    _record_post_history(text_hash, response.uri)
-    return {"uri": response.uri, "cid": response.cid}
+            response = client.send_post(text=text)
+            _record_post_history(text_hash, response.uri)
+            return {"uri": response.uri, "cid": response.cid}
+        finally:
+            fcntl.flock(lock_file, fcntl.LOCK_UN)
 
 
 def delete_duplicate_posts() -> list[str]:
