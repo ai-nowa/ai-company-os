@@ -14,6 +14,7 @@ from pathlib import Path
 import pytest
 import yaml
 
+import bot.zenn_publisher as zp
 from bot.zenn_publisher import (
     AuditConditionsPendingError,
     AuditNotClearedError,
@@ -31,17 +32,23 @@ from bot.zenn_publisher import (
 class TestValidateSlug:
     """slug バリデーション: 仕様を全てテストで表現する。"""
 
-    def test_valid_slug_minimum(self):
+    def test_valid_slug_minimum(self, tmp_path: Path, monkeypatch):
         """12文字の最小 slug は通る。"""
-        _validate_slug("ai-nowa-test01")  # 14 chars, OK
+        slug = "ai-nowa-test01"  # 14 chars, OK
+        (tmp_path / f"{slug}.md").write_text("x", encoding="utf-8")
+        monkeypatch.setattr(zp, "ARTICLES_DIR", tmp_path)
+        _validate_slug(slug)
 
     def test_valid_slug_with_hyphens(self):
         """ハイフン混在は許容。"""
         _validate_slug("ai-nowa-design-record-v01")
 
-    def test_valid_slug_maximum(self):
+    def test_valid_slug_maximum(self, tmp_path: Path, monkeypatch):
         """50文字の最大 slug は通る。"""
-        _validate_slug("a" + "b" * 48 + "z")  # 50 chars
+        slug = "a" + "b" * 48 + "z"  # 50 chars
+        (tmp_path / f"{slug}.md").write_text("x", encoding="utf-8")
+        monkeypatch.setattr(zp, "ARTICLES_DIR", tmp_path)
+        _validate_slug(slug)
 
     def test_invalid_slug_too_short(self):
         """11文字以下は拒否。"""
