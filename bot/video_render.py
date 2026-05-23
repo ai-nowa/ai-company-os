@@ -169,20 +169,61 @@ def _parse_ffmpeg_stderr(stderr: str) -> dict:
     return info
 
 
-def check_quality(path: Path) -> None:
-    """出力動画の品質を検証。基準未達なら RuntimeError を上げる（投稿ブロック）。
-    ffprobe が使えない環境では ffmpeg -i の stderr フォールバックで検証する。
-    """
+def _probe_quality_info(path: Path) -> dict:
+    """ffprobe JSON から QA 用の stream 情報を取得。失敗時は ffmpeg stderr にフォールバック。"""
+    try:
+        result = subprocess.run(
+            [
+                _ffprobe_bin(),
+                "-v", "error",
+                "-print_format", "json",
+                "-show_format",
+                "-show_streams",
+                str(path),
+            ],
+            capture_output=True, text=True, timeout=30,
+        )
+        if result.returncode == 0 and result.stdout.strip():
+            raw = json.loads(result.stdout)
+            info: dict = {"video": {}, "audio": {}}
+            fmt = raw.get("format", {})
+            bit_rate = fmt.get("bit_rate")
+            if bit_rate and str(bit_rate).isdigit():
+                info["total_bitrate_kbps"] = int(int(bit_rate) / 1000)
+            for stream in raw.get("streams", []):
+                codec_type = stream.get("codec_type")
+                if codec_type == "video" and not info["video"]:
+                    if stream.get("pix_fmt"):
+                        info["video"]["pix_fmt"] = stream["pix_fmt"]
+                    br = stream.get("bit_rate")
+                    if br and str(br).isdigit():
+                        info["video"]["bitrate_kbps"] = int(int(br) / 1000)
+                elif codec_type == "audio" and not info["audio"]:
+                    sr = stream.get("sample_rate")
+                    if sr and str(sr).isdigit():
+                        info["audio"]["sample_rate"] = int(sr)
+                    channels = stream.get("channels")
+                    if isinstance(channels, int):
+                        info["audio"]["channels"] = channels
+            return info
+    except Exception as e:
+        logger.debug(f"ffprobe quality info failed, fallback to ffmpeg stderr: {e}")
+
     ffmpeg_bin = shutil.which("ffmpeg") or "/home/ikuto/.local/bin/ffmpeg"
     result = subprocess.run(
         [ffmpeg_bin, "-hide_banner", "-i", str(path)],
         capture_output=True, text=True, timeout=30,
     )
-    stderr = result.stderr
-    if not stderr.strip():
-        raise RuntimeError(f"ffmpeg QA failed: no output for {path.name}")
+    if not result.stderr.strip():
+        raise RuntimeError(f"media probe failed: no output for {path.name}")
+    return _parse_ffmpeg_stderr(result.stderr)
 
-    info = _parse_ffmpeg_stderr(stderr)
+
+def check_quality(path: Path) -> None:
+    """出力動画の品質を検証。基準未達なら RuntimeError を上げる（投稿ブロック）。
+    ffprobe が使えない環境では ffmpeg -i の stderr フォールバックで検証する。
+    """
+    info = _probe_quality_info(path)
     errors: list[str] = []
 
     # video チェック
@@ -194,8 +235,8 @@ def check_quality(path: Path) -> None:
             errors.append(f"pix_fmt={pix_fmt!r}, expected {QA_REQUIRED_PIX_FMT!r}")
 
     # 合計ビットレートチェック（静止画ベース動画は映像bitrateが低いため合計で判定）
-    total_br = info.get("total_bitrate_kbps", 0)
-    if total_br < QA_MIN_TOTAL_BITRATE_KBPS:
+    total_br = info.get("total_bitrate_kbps")
+    if total_br is not None and total_br < QA_MIN_TOTAL_BITRATE_KBPS:
         errors.append(f"total bitrate={total_br}kbps < {QA_MIN_TOTAL_BITRATE_KBPS}kbps")
 
     # audio チェック

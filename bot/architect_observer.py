@@ -197,7 +197,8 @@ def _summarize_for_architect(signals: dict) -> str:
         for x in signals["loop_topics"]:
             parts.append(f"- {x['keyword']}: {x['count']}回")
     if signals["silent_company"]:
-        parts.append(f"\n## 沈黙: 過去 {SILENT_HOURS}h で全社員 out=0 件")
+        silent_hours = dynamic_config.get("architect_observer.silent_hours", 2)
+        parts.append(f"\n## 沈黙: 過去 {silent_hours}h で全社員 out=0 件")
     if signals["token_overheat"]:
         ot = signals["token_overheat"]
         top = ot["top"]
@@ -205,13 +206,16 @@ def _summarize_for_architect(signals: dict) -> str:
     if signals.get("code_health"):
         ch = signals["code_health"]
         parts.append("\n## コードベース異常")
-        if ch["error_modules"]["alert"]:
-            for a in ch["error_modules"]["alerts"][:5]:
+        error_modules = ch.get("error_modules", {})
+        restart_loop = ch.get("restart_loop", {})
+        open_incidents = ch.get("open_incidents", {})
+        if error_modules.get("alert"):
+            for a in error_modules.get("alerts", [])[:5]:
                 parts.append(f"  - [{a['module']}] ERROR×{a['error']} CRITICAL×{a['critical']} (過去1h)")
-        if ch["restart_loop"]["alert"]:
-            parts.append(f"  - dispatcher 再起動 {ch['restart_loop']['restart_count']}回 (過去1h)")
-        if ch["open_incidents"]["alert"]:
-            for inc in ch["open_incidents"][:3]:
+        if restart_loop.get("alert"):
+            parts.append(f"  - dispatcher 再起動 {restart_loop.get('restart_count', 0)}回 (過去1h)")
+        if open_incidents.get("alert"):
+            for inc in open_incidents.get("open_incidents", [])[:3]:
                 parts.append(f"  - [{inc['ts']}] {inc['severity']}: {inc['kind']} — {inc['detail']}")
     if signals.get("nareai"):
         nr = signals["nareai"]

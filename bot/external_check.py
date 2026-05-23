@@ -104,7 +104,7 @@ async def scan_loop() -> None:
             return
         except Exception:
             log.exception("external_check loop error")
-            await asyncio.sleep(CHECK_INTERVAL)
+            await asyncio.sleep(interval)
 
 
 if __name__ == "__main__":

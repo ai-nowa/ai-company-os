@@ -11,11 +11,29 @@ import logging
 from typing import Optional
 
 from .config import BASE_DIR, CLAUDE_CLI_PATH, now_jst_iso
+from .context_assembler import write_usage_metric
 
 log = logging.getLogger("architect")
 
 ARCHITECT_HOME = BASE_DIR / "founders" / "claude"
 ARCHITECT_MODEL = "claude-opus-4-7"
+_USAGE_CAP_KEYWORDS = (
+    "rate limit", "usage limit", "quota", "5-hour", "5 hour",
+    "too many requests", "overloaded", "529", "429",
+)
+
+
+class ArchitectRunError(RuntimeError):
+    pass
+
+
+class ArchitectUsageLimitError(ArchitectRunError):
+    pass
+
+
+def _is_usage_cap_error(text: str) -> bool:
+    lowered = text.lower()
+    return any(kw in lowered for kw in _USAGE_CAP_KEYWORDS)
 
 
 def ensure_claude_md() -> None:
@@ -45,7 +63,13 @@ def _append_log(event: dict) -> None:
         f.write(json.dumps(event, ensure_ascii=False) + "\n")
 
 
-async def run_architect(user_message: str, sender: str = "ikuto", channel: Optional[str] = None) -> str:
+async def run_architect(
+    user_message: str,
+    sender: str = "ikuto",
+    channel: Optional[str] = None,
+    *,
+    use_resume: bool = True,
+) -> str:
     ensure_claude_md()
     _append_log({
         "kind": "in",
@@ -63,10 +87,13 @@ async def run_architect(user_message: str, sender: str = "ikuto", channel: Optio
         "--model", ARCHITECT_MODEL,
         "--dangerously-skip-permissions",
     ]
-    if session_id:
+    if session_id and use_resume:
         args.extend(["--resume", session_id])
 
     prompt = f"[{sender}より] {user_message}"
+    claude_md_chars = len((ARCHITECT_HOME / "CLAUDE.md").read_text(encoding="utf-8", errors="replace"))
+    prompt_chars = len(prompt) + claude_md_chars
+    used_resume = bool(session_id and use_resume)
     proc = await asyncio.create_subprocess_exec(
         *args, prompt,
         cwd=str(ARCHITECT_HOME),
@@ -76,11 +103,40 @@ async def run_architect(user_message: str, sender: str = "ikuto", channel: Optio
     stdout, stderr = await proc.communicate()
     if proc.returncode != 0:
         err = stderr.decode("utf-8", errors="replace")[:400]
-        raise RuntimeError(f"Architect (Claude) failed: {err}")
+        skipped = "usage_cap" if _is_usage_cap_error(err) else "system_error"
+        write_usage_metric(
+            employee_id="architect",
+            mode="architect",
+            reason=f"{sender}: {user_message[:160]}",
+            prompt_chars=prompt_chars,
+            response_chars=0,
+            used_resume=used_resume,
+            model=ARCHITECT_MODEL,
+            effort="default",
+            skipped_reason=skipped,
+        )
+        if skipped == "usage_cap":
+            raise ArchitectUsageLimitError("Architect backend unavailable")
+        raise ArchitectRunError(f"Architect backend failed: {err}")
 
     out = json.loads(stdout.decode("utf-8", errors="replace"))
     if out.get("is_error"):
-        raise RuntimeError(f"Architect error: {out.get('result', '')[:300]}")
+        err = str(out.get("result", ""))[:400]
+        skipped = "usage_cap" if _is_usage_cap_error(err) else "system_error"
+        write_usage_metric(
+            employee_id="architect",
+            mode="architect",
+            reason=f"{sender}: {user_message[:160]}",
+            prompt_chars=prompt_chars,
+            response_chars=0,
+            used_resume=used_resume,
+            model=ARCHITECT_MODEL,
+            effort="default",
+            skipped_reason=skipped,
+        )
+        if skipped == "usage_cap":
+            raise ArchitectUsageLimitError("Architect backend unavailable")
+        raise ArchitectRunError(f"Architect backend error: {err}")
 
     response = out.get("result", "")
     new_sid = out.get("session_id")
@@ -96,6 +152,16 @@ async def run_architect(user_message: str, sender: str = "ikuto", channel: Optio
         "via": f"discord:{channel}" if channel else "cli",
         "text": response,
     })
+    write_usage_metric(
+        employee_id="architect",
+        mode="architect",
+        reason=f"{sender}: {user_message[:160]}",
+        prompt_chars=prompt_chars,
+        response_chars=len(response),
+        used_resume=used_resume,
+        model=ARCHITECT_MODEL,
+        effort="default",
+    )
     return response
 
 

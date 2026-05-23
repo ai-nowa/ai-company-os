@@ -136,6 +136,14 @@ def ensure_claude_md(employee_id: str) -> None:
     path.write_text(content, encoding="utf-8")
 
 
+def _claude_md_chars(employee_id: str) -> int:
+    path = employee_home(employee_id) / "CLAUDE.md"
+    try:
+        return len(path.read_text(encoding="utf-8", errors="replace"))
+    except OSError:
+        return 0
+
+
 _USAGE_CAP_KEYWORDS = ("rate limit", "usage limit", "quota", "5-hour", "5 hour",
                        "too many requests", "overloaded", "529", "429")
 FALLBACK_MODEL = "claude-haiku-4-5-20251001"
@@ -542,7 +550,7 @@ async def run_employee_result(
 
     ensure_claude_md(employee_id)
     prompt = _compose_prompt(employee_id, user_message, sender, resolved_mode, run_reason)
-    prompt_chars = len(prompt)
+    prompt_chars = len(prompt) + _claude_md_chars(employee_id)
     use_resume = _should_use_resume(resolved_mode, sender, run_reason, user_message)
     used_resume = bool(load_session_state(employee_id).get("claude_session_id") and use_resume)
 

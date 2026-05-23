@@ -121,15 +121,26 @@ def get_product(product_id: str, sandbox: bool | None = None) -> dict:
 # ---------------------------------------------------------------------------
 
 def create_checkout(
-    product_price_id: str,
+    product_id: str | None = None,
     *,
+    products: list[str] | None = None,
+    product_price_id: str | None = None,
     customer_email: str | None = None,
     success_url: str | None = None,
     metadata: dict | None = None,
     sandbox: bool | None = None,
 ) -> dict:
-    """Checkout セッションを作成。product_price_id は Product の prices[].id を渡す。"""
-    body: dict[str, Any] = {"product_price_id": product_price_id}
+    """Checkout セッションを作成。
+
+    Polar の現行 API は `products: [product_id, ...]` が必須。
+    旧 `product_price_id` は deprecated かつ Product ID と別物なので、誤用を避ける。
+    """
+    if product_price_id:
+        raise ValueError("product_price_id is deprecated; pass product_id or products instead")
+    checkout_products = products or ([product_id] if product_id else [])
+    if not checkout_products:
+        raise ValueError("product_id or products is required")
+    body: dict[str, Any] = {"products": checkout_products}
     if customer_email:
         body["customer_email"] = customer_email
     if success_url:

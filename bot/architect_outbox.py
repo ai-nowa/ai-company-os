@@ -6,6 +6,7 @@ dispatcher の main_client が定期的に監視して、投稿後にファイ�
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 from typing import Optional
 
@@ -33,7 +34,8 @@ def submit_post(
     safe_label = ("_" + label) if label else ""
     fname = f"post_{stamp}{safe_label}.json"
     path = OUTBOX_DIR / fname
-    path.write_text(
+    tmp_path = OUTBOX_DIR / f".{fname}.tmp"
+    tmp_path.write_text(
         json.dumps(
             {
                 "channel": channel,
@@ -46,6 +48,7 @@ def submit_post(
         ),
         encoding="utf-8",
     )
+    os.replace(tmp_path, path)
     return path
 
 

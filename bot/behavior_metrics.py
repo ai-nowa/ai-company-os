@@ -19,6 +19,17 @@ from pathlib import Path
 JST = timezone(timedelta(hours=9))
 
 BASE_DIR = Path(__file__).parent.parent
+EMPLOYEE_IDS = [
+    "arima_reiji",
+    "asakura_noa",
+    "hinata_nagi",
+    "hoshino_ritsu",
+    "kagura_aoi",
+    "kuroba_yuu",
+    "morinaga_haru",
+    "saegusa_mio",
+    "shirase_kai",
+]
 
 NAREAI_KEYWORDS: list[str] = [
     "了解", "ありがとう", "感謝", "確認しました", "承知",
@@ -103,6 +114,8 @@ def detect_nareai(hours: int = 3) -> dict:
     per_emp: dict[str, dict] = defaultdict(lambda: {"approval": 0, "total": 0})
 
     for e in entries:
+        if e.get("kind") != "out":
+            continue
         emp = e.get("_emp", "unknown")
         text = e.get("text", "")
         per_emp[emp]["total"] += 1
@@ -149,6 +162,8 @@ def detect_sakiokuri(hours: int = 24) -> dict:
     examples: list[str] = []
 
     for e in entries:
+        if e.get("kind") != "out":
+            continue
         emp = e.get("_emp", "unknown")
         text = e.get("text", "")
         matched = any(pat.search(text) for pat in compiled)
@@ -184,10 +199,6 @@ COLLECTIVE_WAIT_THRESHOLD = 3   # 3人以上で集団停止警告
 COLLECTIVE_WAIT_WINDOW_HOURS = 1  # 直近1h以内の発言を対象
 
 SILENT_EMPLOYEE_HOURS = 4        # 稼働時間中にこれ以上無発話 → alert
-SILENT_EMPLOYEE_WORK_START = 9   # 稼働時間開始（JST hour）
-SILENT_EMPLOYEE_WORK_END = 21    # 稼働時間終了（JST hour）
-
-
 def detect_collective_wait(hours: int = COLLECTIVE_WAIT_WINDOW_HOURS) -> dict:
     """直近 hours 時間以内に「待機発言」をした社員が COLLECTIVE_WAIT_THRESHOLD 人以上 → 集団停止警告。
 
@@ -229,17 +240,13 @@ def detect_collective_wait(hours: int = COLLECTIVE_WAIT_WINDOW_HOURS) -> dict:
 
 
 def detect_silent_employees(hours: int = SILENT_EMPLOYEE_HOURS) -> dict:
-    """稼働時間内に hours 時間以上 out=0 の社員を個人単位で検知。
+    """hours 時間以上 out=0 の社員を個人単位で検知。
 
     Returns:
         silent: [{emp_id, last_out_ts, silent_hours}]  無発話社員一覧
         alert: bool
-        note: str  稼働時間外の場合は "outside_working_hours"
     """
     now = datetime.now(JST)
-    h = now.hour
-    if h < SILENT_EMPLOYEE_WORK_START or h >= SILENT_EMPLOYEE_WORK_END:
-        return {"silent": [], "alert": False, "note": "outside_working_hours"}
 
     # 全社員の最終 out タイムスタンプを収集
     last_out: dict[str, str] = {}
@@ -260,7 +267,15 @@ def detect_silent_employees(hours: int = SILENT_EMPLOYEE_HOURS) -> dict:
 
     cutoff_iso = (now - timedelta(hours=hours)).isoformat()
     silent = []
-    for emp_id, last_ts in last_out.items():
+    for emp_id in EMPLOYEE_IDS:
+        last_ts = last_out.get(emp_id, "")
+        if not last_ts:
+            silent.append({
+                "emp_id": emp_id,
+                "last_out_ts": "none",
+                "silent_hours": float(hours),
+            })
+            continue
         if last_ts < cutoff_iso:
             try:
                 last_dt = datetime.fromisoformat(last_ts)

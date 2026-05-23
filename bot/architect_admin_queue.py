@@ -11,6 +11,7 @@ dispatcher の main_client が定期的に監視して、操作後に結果フ�
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 from typing import Any, Optional
 
@@ -35,7 +36,8 @@ def submit_admin_op(op: str, params: dict[str, Any], label: str = "") -> Path:
     safe_label = ("_" + label) if label else ""
     fname = f"admin_{stamp}_{op}{safe_label}.json"
     path = ADMIN_QUEUE_DIR / fname
-    path.write_text(
+    tmp_path = ADMIN_QUEUE_DIR / f".{fname}.tmp"
+    tmp_path.write_text(
         json.dumps(
             {"op": op, "params": params, "created_at": now_jst_iso()},
             ensure_ascii=False,
@@ -43,6 +45,7 @@ def submit_admin_op(op: str, params: dict[str, Any], label: str = "") -> Path:
         ),
         encoding="utf-8",
     )
+    os.replace(tmp_path, path)
     return path
 
 

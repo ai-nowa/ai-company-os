@@ -19,6 +19,11 @@ HIGH_PRIORITY_MARKERS = (
     "[URGENT]", "[REVIEW]", "[DECISION]", "[MEETING]", "[WORK]",
     "緊急", "レビュー依頼", "重要判断", "設計会議", "リリース判断",
 )
+WORK_MODE_MARKERS = (
+    "[WORK]", "実装してください", "修正してください", "直してください",
+    "コード修正", "ファイルを作成", "ファイル更新", "台本を書", "仕様書を作成",
+    "設計してください", "設計書を作成", "成果物を作成",
+)
 
 
 def _cfg(path: str, default: int) -> int:
@@ -56,7 +61,7 @@ def is_high_priority(text: str) -> bool:
 def mode_for_mention(text: str) -> str:
     if "[DECISION]" in text.upper() or "重要判断" in text or "リリース判断" in text:
         return "executive"
-    if "[WORK]" in text.upper() or "実装" in text or "設計" in text:
+    if any(marker in text for marker in WORK_MODE_MARKERS):
         return "work"
     return "routine"
 

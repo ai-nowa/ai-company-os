@@ -31,6 +31,20 @@ def _employee_stats() -> list[dict]:
     now = datetime.now(JST)
     cutoff_1h = (now - timedelta(hours=1)).isoformat()
     cutoff_24h = (now - timedelta(hours=24)).isoformat()
+    prompt_24h_by_emp: Counter[str] = Counter()
+    usage_path = BASE_DIR / "company" / "usage_metrics.jsonl"
+    if usage_path.exists():
+        for line in usage_path.read_text(encoding="utf-8", errors="replace").splitlines():
+            try:
+                e = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            if e.get("ts", "") < cutoff_24h:
+                continue
+            emp = str(e.get("employee_id", ""))
+            if emp:
+                prompt_24h_by_emp[emp] += int(e.get("prompt_chars") or 0)
+
     rows = []
     for emp_id, info in EMPLOYEES.items():
         log_path = BASE_DIR / "employees" / emp_id / "session" / "conversation_log.jsonl"
@@ -52,20 +66,6 @@ def _employee_stats() -> list[dict]:
                 if k == "out":
                     last_out_ts = ts
                     last_out_snippet = e.get("text", "")[:80]
-        # 過去24h prompt_chars
-        prompt_24h = 0
-        usage_path = BASE_DIR / "company" / "usage_metrics.jsonl"
-        if usage_path.exists():
-            for line in usage_path.read_text(encoding="utf-8", errors="replace").splitlines():
-                try:
-                    e = json.loads(line)
-                except json.JSONDecodeError:
-                    continue
-                if e.get("ts", "") < cutoff_24h:
-                    continue
-                if e.get("employee_id") != emp_id:
-                    continue
-                prompt_24h += int(e.get("prompt_chars") or 0)
         rows.append({
             "emp_id": emp_id,
             "display": info.get("display", emp_id),
@@ -74,7 +74,7 @@ def _employee_stats() -> list[dict]:
             "in_1h": in_1h,
             "last_out_ts": last_out_ts[11:19] if last_out_ts else "-",
             "last_out_snippet": last_out_snippet,
-            "prompt_24h": prompt_24h,
+            "prompt_24h": prompt_24h_by_emp[emp_id],
         })
     return rows
 
@@ -264,7 +264,7 @@ async def dashboard_loop() -> None:
             return
         except Exception:
             log.exception("dashboard_loop error")
-            await asyncio.sleep(CHECK_INTERVAL)
+            await asyncio.sleep(interval)
 
 
 if __name__ == "__main__":

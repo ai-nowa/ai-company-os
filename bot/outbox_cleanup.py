@@ -1,7 +1,7 @@
 """outbox_cleanup.py — 9社員 outbox の自動アーカイブ + 月次統計レポート。
 
 各社員の outbox/ 配下で最終更新が ARCHIVE_DAYS 日を超えたファイルを
-outbox/archive/ に移動する。
+outbox/_archive/ に移動する。
 
 使い方:
   python -m bot.outbox_cleanup          # dry-run（移動しない、件数だけ表示）
@@ -42,7 +42,7 @@ _SKIP_NAMES = {".keep", ".gitkeep", ".gitignore"}
 
 
 def collect_stale(emp_id: str) -> list[Path]:
-    """指定社員の outbox から ARCHIVE_DAYS 超のファイルを収集（archive/ と管理ファイル除く）"""
+    """指定社員の outbox から ARCHIVE_DAYS 超のファイルを収集（archive系と管理ファイル除く）"""
     outbox = EMPLOYEES_DIR / emp_id / "outbox"
     if not outbox.exists():
         return []
@@ -63,7 +63,7 @@ def run_cleanup(dry_run: bool = True) -> dict[str, dict]:
     for emp_id in EMPLOYEE_IDS:
         stale = collect_stale(emp_id)
         moved = skipped = errors = 0
-        archive_dir = EMPLOYEES_DIR / emp_id / "outbox" / "archive"
+        archive_dir = EMPLOYEES_DIR / emp_id / "outbox" / "_archive"
 
         for src in stale:
             dest = archive_dir / src.name
@@ -89,7 +89,7 @@ def run_cleanup(dry_run: bool = True) -> dict[str, dict]:
 
 
 def current_stats() -> dict[str, int]:
-    """社員別の現在の outbox ファイル数（archive/ と管理ファイル除く）"""
+    """社員別の現在の outbox ファイル数（archive系と管理ファイル除く）"""
     stats: dict[str, int] = {}
     for emp_id in EMPLOYEE_IDS:
         outbox = EMPLOYEES_DIR / emp_id / "outbox"

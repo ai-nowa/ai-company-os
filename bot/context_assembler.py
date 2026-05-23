@@ -18,6 +18,10 @@ from .config import BASE_DIR, COMPANY_DIR, EMPLOYEES, JST, now_jst_iso
 MAX_DIGEST_CHARS = 4000
 USAGE_METRICS_PATH = COMPANY_DIR / "usage_metrics.jsonl"
 USAGE_REPORT_PATH = COMPANY_DIR / "usage_report.md"
+COORDINATOR_EMPLOYEES = {"arima_reiji", "saegusa_mio", "asakura_noa"}
+USAGE_METRICS_MAX_BYTES = 2_000_000
+USAGE_METRICS_RETENTION_HOURS = 72
+USAGE_METRICS_MAX_LINES = 20_000
 
 
 def _read_jsonl(path: Path, limit: int = 200) -> list[dict[str, Any]]:
@@ -192,11 +196,15 @@ def _active_task_items(employee_id: str, max_items: int = 5) -> list[str]:
     return items
 
 
-def _related_recent_logs(employee_id: str, max_items: int = 10) -> list[str]:
+def _related_recent_logs(employee_id: str, max_items: int = 10, *, after_last_out: bool = False) -> list[str]:
     defaults = set(EMPLOYEES.get(employee_id, {}).get("default_channels", []))
     all_visible = "all" in defaults
+    last_out = _last_own_out_ts(employee_id) if after_last_out else ""
     items: list[str] = []
     for event in reversed(_recent_discord_events()):
+        ts = str(event.get("ts", ""))
+        if last_out and ts <= last_out:
+            continue
         channel = str(event.get("_channel", ""))
         text = str(event.get("text", ""))
         channel_match = all_visible or any(needle and needle in channel for needle in defaults)
@@ -215,8 +223,11 @@ def _new_artifacts(employee_id: str, max_items: int = 5) -> list[str]:
         BASE_DIR / "shared" / "articles",
         BASE_DIR / "articles",
     ]
-    for emp_id in EMPLOYEES:
-        roots.append(BASE_DIR / "employees" / emp_id / "outbox")
+    if employee_id in COORDINATOR_EMPLOYEES:
+        for emp_id in EMPLOYEES:
+            roots.append(BASE_DIR / "employees" / emp_id / "outbox")
+    else:
+        roots.append(BASE_DIR / "employees" / employee_id / "outbox")
 
     files: list[Path] = []
     cutoff = datetime.now(JST) - timedelta(days=2)
@@ -225,6 +236,8 @@ def _new_artifacts(employee_id: str, max_items: int = 5) -> list[str]:
             continue
         for path in root.rglob("*"):
             if not path.is_file():
+                continue
+            if any(part in {"_archive", "archive"} for part in path.parts):
                 continue
             try:
                 mtime = datetime.fromtimestamp(path.stat().st_mtime, JST)
@@ -324,32 +337,102 @@ def _load_wisdom_essence() -> str:
         return ""
 
 
+_DIGEST_BUDGETS = {
+    "micro": {
+        "mentions": 620,
+        "tasks": 620,
+        "logs": 520,
+        "artifacts": 220,
+        "continuity": 360,
+        "wisdom": 260,
+    },
+    "routine": {
+        "mentions": 700,
+        "tasks": 720,
+        "logs": 720,
+        "artifacts": 260,
+        "continuity": 500,
+        "wisdom": 320,
+    },
+    "work": {
+        "mentions": 760,
+        "tasks": 820,
+        "logs": 860,
+        "artifacts": 320,
+        "continuity": 640,
+        "wisdom": 360,
+    },
+    "executive": {
+        "mentions": 820,
+        "tasks": 860,
+        "logs": 820,
+        "artifacts": 340,
+        "continuity": 620,
+        "wisdom": 380,
+    },
+}
+
+
+def _fit_section(title: str, items: list[str], budget: int, fallback: str) -> list[str]:
+    """Make a section that never steals budget from later high-value sections."""
+    lines = [f"## {title}"]
+    raw_items = items or [fallback]
+    used = 0
+    for raw in raw_items:
+        for part in str(raw).splitlines():
+            part = part.strip()
+            if not part:
+                continue
+            remaining = budget - used
+            if remaining <= 0:
+                return lines + ["- ..."]
+            clipped = _short(part, min(remaining, 240))
+            lines.append(clipped)
+            used += len(clipped) + 1
+    return lines
+
+
+def _wisdom_items(limit: int) -> list[str]:
+    text = _load_wisdom_essence()
+    if not text:
+        return []
+    items: list[str] = []
+    used = 0
+    for line in text.splitlines():
+        line = line.strip()
+        if not line or line.startswith("#"):
+            continue
+        if not line.startswith("-"):
+            line = f"- {line}"
+        if used + len(line) > limit:
+            remaining = limit - used
+            if remaining > 80:
+                items.append(_short(line, remaining))
+            break
+        items.append(line)
+        used += len(line) + 1
+    return items
+
+
 def assemble_state_digest(employee_id: str, reason: str, mode: str = "routine") -> str:
     """Build a compact dynamic context digest for an employee call."""
     info = EMPLOYEES.get(employee_id, {})
+    budgets = _DIGEST_BUDGETS.get(mode, _DIGEST_BUDGETS["routine"])
     sections = [
         "# state_digest",
         f"- employee: {info.get('display', employee_id)} ({info.get('role', '')})",
         f"- mode: {mode}",
-        f"- reason: {_short(reason, 500)}",
+        f"- reason: {_short(reason, 360)}",
         "",
-        "## 全社員必読エッセンス（判断・行動時は必ず意識）",
-        _load_wisdom_essence() or "- なし",
+        *_fit_section("自分宛メンション（最大5件）", _recent_mentions(employee_id), budgets["mentions"], "- なし"),
         "",
-        "## 継続記憶（短縮）",
-        *(_continuity_snippets(employee_id, mode) or ["- なし"]),
+        *_fit_section("自分のactive task（最大5件）", _active_task_items(employee_id), budgets["tasks"], "- 明示タスクなし"),
         "",
-        "## 自分宛メンション（最大5件）",
-        *(_recent_mentions(employee_id) or ["- なし"]),
+        *_fit_section("関連する直近Discordログ（最大10件）", _related_recent_logs(employee_id), budgets["logs"], "- 関連ログなし"),
         "",
-        "## 自分のactive task（最大5件）",
-        *(_active_task_items(employee_id) or ["- 明示タスクなし"]),
+        *_fit_section("新規成果物（最大5件）", _new_artifacts(employee_id), budgets["artifacts"], "- 新規成果物なし"),
         "",
-        "## 関連する直近Discordログ（最大10件）",
-        *(_related_recent_logs(employee_id) or ["- 関連ログなし"]),
-        "",
-        "## 新規成果物（最大5件）",
-        *(_new_artifacts(employee_id) or ["- 新規成果物なし"]),
+        *_fit_section("継続記憶（短縮）", _continuity_snippets(employee_id, mode), budgets["continuity"], "- なし"),
         "",
         "## 許可された行動",
         "- 自分の人格・役割で判断し、必要ならDiscordに短く投稿する",
@@ -357,10 +440,17 @@ def assemble_state_digest(employee_id: str, reason: str, mode: str = "routine") 
         "- 必要なら成果物ファイルを作成・更新する",
         "- 他社員を呼ぶ時は @表示名 を使う。ただし1応答で呼ぶ相手は原則2人まで",
         "- 長文説明より、要約と成果物ファイルパスを優先する",
+        "",
+        *_fit_section(
+            "全社員必読エッセンス（短縮）",
+            _wisdom_items(budgets["wisdom"]),
+            budgets["wisdom"],
+            "- なし",
+        ),
     ]
     digest = "\n".join(sections).strip()
     if len(digest) > MAX_DIGEST_CHARS:
-        digest = digest[: MAX_DIGEST_CHARS - 20].rstrip() + "\n...(truncated)"
+        digest = digest[: MAX_DIGEST_CHARS - 42].rstrip() + "\n...(truncated: low priority tail omitted)"
     return digest
 
 
@@ -379,7 +469,7 @@ def should_wake_employee(employee_id: str) -> tuple[bool, int, str]:
         score += 2
         reasons.append("active taskあり")
 
-    logs = _related_recent_logs(employee_id, max_items=4)
+    logs = _related_recent_logs(employee_id, max_items=4, after_last_out=True)
     if logs:
         score += 1
         reasons.append("関連ログあり")
@@ -428,6 +518,29 @@ def write_usage_metric(
     }
     with USAGE_METRICS_PATH.open("a", encoding="utf-8") as f:
         f.write(json.dumps(entry, ensure_ascii=False) + "\n")
+    _trim_usage_metrics_if_needed()
+
+
+def _trim_usage_metrics_if_needed() -> None:
+    try:
+        if not USAGE_METRICS_PATH.exists() or USAGE_METRICS_PATH.stat().st_size < USAGE_METRICS_MAX_BYTES:
+            return
+        cutoff = datetime.now(JST) - timedelta(hours=USAGE_METRICS_RETENTION_HOURS)
+        kept: list[str] = []
+        for line in USAGE_METRICS_PATH.read_text(encoding="utf-8", errors="replace").splitlines():
+            try:
+                event = json.loads(line)
+                ts = datetime.fromisoformat(event.get("ts", ""))
+                if ts.tzinfo is None:
+                    ts = ts.replace(tzinfo=JST)
+                if ts >= cutoff:
+                    kept.append(line)
+            except Exception:
+                continue
+        kept = kept[-USAGE_METRICS_MAX_LINES:]
+        USAGE_METRICS_PATH.write_text("\n".join(kept) + ("\n" if kept else ""), encoding="utf-8")
+    except Exception:
+        pass
 
 
 def check_recent_token_pace(window_minutes: int = 60) -> dict:

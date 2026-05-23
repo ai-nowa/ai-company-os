@@ -39,7 +39,7 @@ from .mention_chain import (
     parse_meta_tag,
     strip_meta_tag,
 )
-from . import multi_client, thread_registry
+from . import dynamic_config, multi_client, thread_registry
 
 logging.basicConfig(
     level=os.environ.get("LOG_LEVEL", "INFO"),
@@ -77,6 +77,25 @@ def _can_architect_auto_respond() -> bool:
         return False
     _architect_auto_response_history.append(now)
     return True
+
+
+def _cfg_bool(path: str, default: bool = True) -> bool:
+    value = dynamic_config.get(path, default)
+    if isinstance(value, str):
+        return value.strip().lower() in {"1", "true", "yes", "on"}
+    return bool(value)
+
+
+def _admin_queue_enabled() -> bool:
+    env_enabled = os.environ.get("AI_NOWA_ADMIN_QUEUE_ENABLED", "").strip().lower()
+    if env_enabled in {"1", "true", "yes", "on"}:
+        return True
+    return _cfg_bool("admin_queue.enabled", False)
+
+
+def _safe_architect_failure_text(exc: Exception) -> str:
+    """Discord に CLI の生エラーや usage limit 文言を出さない。"""
+    return "設計者の実行が一時的に失敗しました。詳細はサーバーログに記録しました。"
 
 
 def normalize_sender(discord_name: str) -> str:
@@ -564,17 +583,41 @@ async def process_architect_outbox_loop() -> None:
             await asyncio.sleep(10)
             if not OUTBOX_DIR.exists():
                 continue
-            for f in sorted(OUTBOX_DIR.glob("post_*.json")):
+            files = sorted(OUTBOX_DIR.glob("post_*.json")) + sorted(OUTBOX_DIR.glob("processing_post_*.json"))
+            for f in files:
                 try:
+                    if f.name.startswith("post_"):
+                        processing = OUTBOX_DIR / f"processing_{f.name}"
+                        try:
+                            f.rename(processing)
+                        except FileNotFoundError:
+                            continue
+                        except OSError:
+                            log.exception("architect_outbox: failed to acquire %s", f.name)
+                            continue
+                        f = processing
+
                     data = json.loads(f.read_text(encoding="utf-8"))
                     ch = await find_channel_by_substr(data["channel"])
                     if ch is None:
                         log.warning(f"architect_outbox: channel '{data['channel']}' not found, keeping file")
+                        if f.name.startswith("processing_") and not data.get("posted_at"):
+                            original = OUTBOX_DIR / f.name.removeprefix("processing_")
+                            if not original.exists():
+                                f.rename(original)
                         continue
-                    text = convert_text_mentions_to_discord(data["content"])
-                    chunks = [text[i:i + 1900] for i in range(0, len(text), 1900)] or ["(空)"]
-                    for c in chunks:
-                        await ch.send(c)
+
+                    if not data.get("posted_at"):
+                        text = convert_text_mentions_to_discord(data["content"])
+                        chunks = [text[i:i + 1900] for i in range(0, len(text), 1900)] or ["(空)"]
+                        for c in chunks:
+                            await ch.send(c)
+                        from .config import now_jst_iso
+                        data["posted_at"] = now_jst_iso()
+                        data["posted_channel"] = getattr(ch, "name", "")
+                        data["posted_chunks"] = len(chunks)
+                        f.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+
                     dispatch_targets = data.get("dispatch_to") or []
                     if isinstance(dispatch_targets, str):
                         dispatch_targets = [dispatch_targets]
@@ -596,12 +639,18 @@ async def process_architect_outbox_loop() -> None:
                             )
                             for target in valid_targets
                         ]
-                        results = await asyncio.gather(*tasks, return_exceptions=True)
+                        timeout_s = int(dynamic_config.get("architect_outbox.dispatch_timeout_seconds", 900))
+                        results = await asyncio.wait_for(
+                            asyncio.gather(*tasks, return_exceptions=True),
+                            timeout=timeout_s,
+                        )
                         for target, result in zip(valid_targets, results):
                             if isinstance(result, Exception):
                                 log.error(f"architect_outbox parallel dispatch failed: {target}: {result}")
                     f.unlink()
                     log.info(f"architect_outbox posted: {f.name} -> {ch.name}")
+                except asyncio.TimeoutError:
+                    log.exception(f"architect_outbox dispatch timeout: {f.name}")
                 except Exception:
                     log.exception(f"architect_outbox error processing {f.name}")
         except Exception:
@@ -611,6 +660,17 @@ async def process_architect_outbox_loop() -> None:
 
 async def execute_admin_op(op: str, params: dict) -> dict:
     """Architect からの管理操作を実行（dispatcher を停止せずチャンネル作成・招待リンク等）"""
+    if not _admin_queue_enabled():
+        return {"ok": False, "error": "admin_queue_disabled"}
+
+    allowed_ops = set(dynamic_config.get("admin_queue.allowed_ops", [
+        "create_channel",
+        "create_invite",
+        "update_everyone_permission",
+    ]))
+    if op not in allowed_ops:
+        return {"ok": False, "error": f"op_not_allowed: {op}"}
+
     guild = main_client.guilds[0] if main_client.guilds else None
     if not guild:
         return {"ok": False, "error": "no guild"}
@@ -644,8 +704,10 @@ async def execute_admin_op(op: str, params: dict) -> dict:
 
     if op == "create_invite":
         channel_id = params.get("channel_id")
-        max_age = params.get("max_age", 0)
-        max_uses = params.get("max_uses", 0)
+        max_age = int(params.get("max_age", dynamic_config.get("admin_queue.default_invite_max_age", 86400)))
+        max_uses = int(params.get("max_uses", dynamic_config.get("admin_queue.default_invite_max_uses", 1)))
+        if max_age <= 0 or max_uses <= 0:
+            return {"ok": False, "error": "unlimited_invite_rejected"}
         ch = guild.get_channel(channel_id) if channel_id else None
         if not ch:
             for c in guild.text_channels:
@@ -691,6 +753,8 @@ async def process_admin_queue_loop() -> None:
     while True:
         try:
             await asyncio.sleep(10)
+            if not _admin_queue_enabled():
+                continue
             if not ADMIN_QUEUE_DIR.exists():
                 continue
             for f in sorted(ADMIN_QUEUE_DIR.glob("admin_*.json")):
@@ -774,12 +838,12 @@ async def on_ready() -> None:
     from .heartbeat import make_heartbeat_scheduler
     hb_scheduler = make_heartbeat_scheduler(main_client)
     hb_scheduler.start()
-    log.info("Heartbeat scheduler started (check=30min, idle_threshold=90min, daily_limit=4, silent=23-7時)")
+    log.info("Heartbeat scheduler started (check=30min, idle_threshold=90min, daily_limit=4, 24h operation)")
 
     # 各社員の自律ループ: 起動前に should_wake_employee で安く判定し、必要時だけLLM実行
     from .employee_autonomy import start_all_autonomy_loops
     start_all_autonomy_loops(main_client)
-    log.info("Employee autonomy loops started (9社員、wake判定付き、silent=23-7時)")
+    log.info("Employee autonomy loops started (9社員、wake判定付き、24h operation)")
 
     # 初回限定: いくと依頼チャンネル開設の通知（フラグファイルで1回保証）
     asyncio.create_task(notify_owner_channel_once())
@@ -790,7 +854,10 @@ async def on_ready() -> None:
 
     # Architect (Claude) からの管理操作キュー（チャンネル作成・招待・権限変更を停止なしで）
     asyncio.create_task(process_admin_queue_loop())
-    log.info("Architect admin queue loop started (10秒間隔でファイル監視)")
+    if _admin_queue_enabled():
+        log.info("Architect admin queue loop started (10秒間隔でファイル監視)")
+    else:
+        log.info("Architect admin queue loop started but disabled (AI_NOWA_ADMIN_QUEUE_ENABLED=1 or dynamic_config admin_queue.enabled=true required)")
 
     # 自己改善ループ: 1時間ごとに4指標計測 → 閾値超でトリガー発火
     from .self_improvement_loop import improvement_loop
@@ -801,6 +868,42 @@ async def on_ready() -> None:
     from .log_rotator import log_rotation_loop
     asyncio.create_task(log_rotation_loop())
     log.info("Log rotation loop started (10分間隔, 100KB 超で archive/conversation_log_*.jsonl)")
+
+    # 軽量 watcher 群（基本は Python のみ、LLMを呼ばない。Architect observer は異常時だけ呼ぶ）
+    if _cfg_bool("dashboard_writer.enabled", True):
+        from .dashboard_writer import dashboard_loop
+        asyncio.create_task(dashboard_loop())
+        log.info("Dashboard writer loop started")
+
+    if _cfg_bool("architect_observer.enabled", True):
+        from .architect_observer import observer_loop
+        asyncio.create_task(observer_loop())
+        log.info("Architect observer loop started")
+
+    if _cfg_bool("task_health.enabled", True):
+        from .task_health_watcher import daily_scan_loop
+        asyncio.create_task(daily_scan_loop())
+        log.info("Task health watcher loop started")
+
+    if _cfg_bool("external_check.enabled", True):
+        from .external_check import scan_loop as external_scan_loop
+        asyncio.create_task(external_scan_loop())
+        log.info("External URL checker loop started")
+
+    if _cfg_bool("dependency_visualizer.enabled", True):
+        from .dependency_visualizer import visualizer_loop
+        asyncio.create_task(visualizer_loop())
+        log.info("Dependency visualizer loop started")
+
+    if _cfg_bool("outbox_organizer.enabled", False):
+        from .outbox_organizer import organizer_loop
+        asyncio.create_task(organizer_loop())
+        log.info("Outbox organizer loop started")
+
+    if _cfg_bool("auto_commit.enabled", False):
+        from .auto_commit import commit_loop
+        asyncio.create_task(commit_loop())
+        log.info("Auto commit loop started")
 
     # owner_request_watcher: blocked依頼の自動代行 + 24h未応答の自動deprecate
     from .owner_request_watcher import scan_and_post_loop, deprecate_scan_loop
@@ -896,7 +999,7 @@ async def on_message(message: discord.Message) -> None:
             await message.channel.send("✓ キックオフ完了。")
         except Exception as e:
             log.exception("kickoff failed")
-            await message.channel.send(f"(キックオフ失敗: {type(e).__name__}: {e})")
+            await message.channel.send(_safe_architect_failure_text(e))
         return
 
     # !architect
@@ -908,7 +1011,7 @@ async def on_message(message: discord.Message) -> None:
                 response = await run_architect(msg, sender=sender, channel=channel_name)
         except Exception as e:
             log.exception("run_architect failed")
-            response = f"(Architect 起動失敗: {type(e).__name__}: {e})"
+            response = _safe_architect_failure_text(e)
         # bot 名「設計者（Opus）」が表示されるので、プレフィックスは不要
         await send_chunked(message.channel, "", response)
         return
@@ -950,6 +1053,22 @@ async def on_message(message: discord.Message) -> None:
             targets = new_targets
 
     # 並列ターゲットは同じ depth で起動。visited は target 自身のみ（次の連鎖で再帰可能）
+    initial_cap = int(dynamic_config.get("mention_chain.max_initial_targets", 6))
+    if len(targets) > initial_cap:
+        deferred_count = len(targets) - initial_cap
+        for deferred in targets[initial_cap:]:
+            enqueue_deferred_mention(
+                deferred,
+                text=raw,
+                sender=sender,
+                channel=channel_name,
+                chain_id=None,
+                depth=0,
+                reason=f"initial_target_limit:{initial_cap}",
+            )
+        targets = targets[:initial_cap]
+        log.warning("initial targets clipped to %d; deferred=%d", initial_cap, deferred_count)
+
     seen: set[str] = set()
     for target in targets:
         if target in seen:

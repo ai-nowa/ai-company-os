@@ -31,6 +31,7 @@ STATE_FILE = BASE_DIR / "company" / ".self_improvement_state.json"
 ACTIVE_TASKS = BASE_DIR / "company" / "active_tasks.md"
 METRICS_LOG = BASE_DIR / "company" / "metrics_log.jsonl"
 INCIDENTS_FILE = BASE_DIR / "company" / "incidents.jsonl"
+METRICS_LOG_MAX_LINES = 2000
 
 # Trigger cooldown: 同じトリガーは 6h 以内に再発火しない
 TRIGGER_COOLDOWN_H = 6
@@ -267,10 +268,23 @@ def _collect_quality() -> dict:
         nareai = bm["nareai"]
         sakiokuri = bm["sakiokuri"]
         cw = bm.get("collective_wait", {})
+        cutoff_3h = datetime.now(JST) - timedelta(hours=3)
+        discussion_3h = int(nareai.get("total_count", 0))
+        artifact_3h = 0
+        for path in (BASE_DIR / "employees").glob("*/outbox/**/*.md"):
+            if any(part in {"_archive", "archive"} for part in path.parts):
+                continue
+            try:
+                if datetime.fromtimestamp(path.stat().st_mtime, JST) >= cutoff_3h:
+                    artifact_3h += 1
+            except OSError:
+                continue
         return {
             "nareai_rate": nareai["nareai_rate"],
             "nareai_count": nareai["approval_count"],
             "total_out_3h": nareai["total_count"],
+            "discussion_3h": discussion_3h,
+            "artifact_3h": artifact_3h,
             "nareai_alerts": nareai["alerts"],
             "sakiokuri_count_24h": sakiokuri["total_count"],
             "sakiokuri_alert": sakiokuri["alert"],
@@ -286,6 +300,8 @@ def _collect_quality() -> dict:
             "nareai_rate": 0.0,
             "nareai_count": 0,
             "total_out_3h": 0,
+            "discussion_3h": 0,
+            "artifact_3h": 0,
             "nareai_alerts": [],
             "sakiokuri_count_24h": 0,
             "sakiokuri_alert": False,
@@ -333,6 +349,12 @@ def _save_state(state: dict) -> None:
 def _log_metrics(metrics: dict) -> None:
     with METRICS_LOG.open("a", encoding="utf-8") as f:
         f.write(json.dumps(metrics, ensure_ascii=False) + "\n")
+    try:
+        lines = METRICS_LOG.read_text(encoding="utf-8", errors="replace").splitlines()
+        if len(lines) > METRICS_LOG_MAX_LINES:
+            METRICS_LOG.write_text("\n".join(lines[-METRICS_LOG_MAX_LINES:]) + "\n", encoding="utf-8")
+    except Exception:
+        pass
 
 
 # ---------------------------------------------------------------------------
@@ -638,6 +660,8 @@ async def improvement_loop() -> None:
             log.info(f"self_improvement_loop: cycle #{state['cycle_count']} start")
             metrics = collect_all_metrics()
 
+            previous_snapshots = list(state.get("snapshots", []))
+
             # スナップショット追加・直近 50 件のみ保持
             state.setdefault("snapshots", []).append(metrics)
             state["snapshots"] = state["snapshots"][-50:]
@@ -646,10 +670,16 @@ async def improvement_loop() -> None:
             _log_metrics(metrics)
 
             # トリガー判定
-            triggers = detect_triggers(metrics, state["snapshots"])
+            triggers = detect_triggers(metrics, previous_snapshots)
+            fired_names: list[str] = []
+            max_triggers = int(dynamic_config.get("self_improvement_loop.max_triggers_per_cycle", 2))
             for trigger in triggers:
-                if not _recently_fired(state, trigger["name"]):
-                    _fire_trigger(trigger, state)
+                if len(fired_names) >= max_triggers:
+                    break
+                if _recently_fired(state, trigger["name"]):
+                    continue
+                _fire_trigger(trigger, state)
+                fired_names.append(trigger["name"])
 
             _save_state(state)
             log.info(
@@ -657,7 +687,7 @@ async def improvement_loop() -> None:
                 f"stars={metrics['cognition'].get('stars')}, "
                 f"liked={metrics['cognition'].get('zenn_liked')}, "
                 f"completion={metrics['efficiency'].get('completion_rate')}, "
-                f"triggers_fired={sum(1 for t in triggers if not _recently_fired(state, t['name']))}"
+                f"triggers_fired={len(fired_names)}"
             )
 
         except asyncio.CancelledError:

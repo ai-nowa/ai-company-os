@@ -32,6 +32,20 @@ company/dispatcher.pid
 company/dispatcher.log
 bot/cookie_refresh_history.log
 company/.llm_circuit_state.json
+company/.architect_anticipation_cooldown.jsonl
+company/.architect_admin_queue/
+company/.architect_outbox/
+company/.bluesky_post.lock
+company/.bluesky_post_history.jsonl
+company/.employee_mention_burst.jsonl
+company/.external_check_state.json
+company/.self_improvement_state.json
+company/.task_health_state.json
+company/.qiita_post_history.jsonl
+company/.architect_observer_state.json
+company/metrics_log.jsonl
+company/usage_metrics.jsonl
+company/usage_report.md
 
 # Runtime caches / generated binary artifacts
 .wrangler/
@@ -53,6 +67,7 @@ bot/youtube_token.json
 bot/youtube_token_iruka.json.bak
 bot/youtube_token.json.bak_before_scope_update
 bot/youtube_client_secret.json
+bot/.oauth_state.json
 
 # X (Twitter) API credentials
 bot/x_credentials.json

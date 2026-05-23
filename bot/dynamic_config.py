@@ -42,16 +42,19 @@ _cache_loaded_at: float = 0.0
 def _defaults() -> dict:
     return {
         "task_health": {
+            "enabled": True,
             "stale_threshold_hours": 24,
         },
         "token_pace": {
             "alert_prompt_chars": 50000,
         },
         "external_check": {
+            "enabled": True,
             "interval_seconds": 1800,
             "request_timeout": 10,
         },
         "architect_observer": {
+            "enabled": True,
             "check_interval_seconds": 12600,
             "keyword_loop_threshold": 30,
             "silent_hours": 2,
@@ -61,21 +64,39 @@ def _defaults() -> dict:
                 "法務", "ブロッカー", "撤退", "Zenn", "404",
             ],
         },
+        "architect_outbox": {
+            "dispatch_timeout_seconds": 900,
+        },
+        "admin_queue": {
+            "enabled": False,
+            "allowed_ops": ["create_channel", "create_invite", "update_everyone_permission"],
+            "default_invite_max_age": 86400,
+            "default_invite_max_uses": 1,
+        },
         "outbox_organizer": {
+            "enabled": False,
             "interval_seconds": 3600,
         },
         "auto_commit": {
+            "enabled": False,
             "interval_seconds": 3600,
         },
         "dependency_visualizer": {
+            "enabled": True,
             "interval_seconds": 3600,
         },
         "dashboard_writer": {
+            "enabled": True,
             "interval_seconds": 900,
+        },
+        "self_improvement_loop": {
+            "check_interval_seconds": 3600,
+            "max_triggers_per_cycle": 2,
         },
         "mention_chain": {
             "max_depth": 4,
             "max_chain_calls": 6,
+            "max_initial_targets": 6,
             "max_mentions_per_response": 2,
             "heartbeat_chain_calls": 1,
         },
