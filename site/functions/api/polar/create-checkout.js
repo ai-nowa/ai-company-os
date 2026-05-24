@@ -10,13 +10,16 @@
 const POLAR_API = "https://api.polar.sh/v1";
 const DEFAULT_PRODUCT_ID = "";
 
-// 現在の /shop は意向受付。実決済を再開する場合は環境変数側で明示的にONにする。
-const CHECKOUT_ENABLED = false;
+// 現在の /shop は意向受付。実決済は環境変数で明示的にONにした時だけ許可する。
+function checkoutEnabled(env) {
+  const value = String(env.POLAR_CHECKOUT_ENABLED || "").trim().toLowerCase();
+  return value === "1" || value === "true" || value === "yes";
+}
 
 export async function onRequestPost(context) {
   const { request, env } = context;
 
-  if (!CHECKOUT_ENABLED) {
+  if (!checkoutEnabled(env)) {
     return json({ error: "Checkout temporarily unavailable", message: "現在販売準備中です。" }, 503);
   }
 
@@ -65,7 +68,8 @@ export async function onRequestPost(context) {
 }
 
 export async function onRequestGet(context) {
-  if (!CHECKOUT_ENABLED) {
+  const { env } = context;
+  if (!checkoutEnabled(env)) {
     return new Response(
       `<!DOCTYPE html><html lang="ja"><head><meta charset="UTF-8"><title>販売準備中 — AI NOWA</title><meta http-equiv="refresh" content="3;url=/shop/"></head><body style="font-family:sans-serif;max-width:480px;margin:4rem auto;padding:2rem;text-align:center;color:#222;"><h1 style="font-size:1.3rem;">現在販売準備中です</h1><p>3秒後に商品ページへ戻ります。</p><p><a href="/shop/">商品ページに戻る</a></p></body></html>`,
       { status: 503, headers: { "Content-Type": "text/html; charset=utf-8" } }

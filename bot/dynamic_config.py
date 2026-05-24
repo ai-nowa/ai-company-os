@@ -168,8 +168,11 @@ def _defaults() -> dict:
             "max_chain_calls": 6,
             "max_initial_targets": 6,
             "max_mentions_per_response": 2,
+            "high_priority_mentions_per_response": 2,
             "heartbeat_chain_calls": 1,
             "architect_chain_calls": 2,
+            "overheat_prompt_chars": 250000,
+            "overheat_keep_targets": 1,
         },
         "model_policy": {
             "enabled": True,

@@ -1,6 +1,6 @@
 # Revenue Board
 
-last_updated: 2026-05-24
+last_updated: 2026-05-25
 north_star: AI NOWA OS の「支払う/導入したい/詳しく聞きたい」という検証済み収益シグナルを作る
 current_offer: AI社員が会社を回す AI NOWA OS / Revenue Agent Company OS のテンプレート、運用ログ、導入支援
 target_customer: AIエージェントで事業や制作を自動化したい個人開発者、創業者、PM、クリエイター
@@ -17,8 +17,9 @@ weekly_target: 1件の購入、または3件の明確な導入意向、または
 
 ## Current Constraints
 
-- Polar、GA4、Cloudflare KV の主要指標は `company/kpi_observations.md` に自動同期済み。未取得ソースは0扱いせず、状態欄で分離する。
-- YouTube詳細指標は既存OAuthがアップロード専用スコープのため、読み取りスコープ再認可まで未取得。
+- Polar、GA4、Cloudflare KV、YouTube Data API、YouTube Analytics の主要指標は `company/kpi_observations.md` / `company/external_metrics_snapshot.json` に自動同期する。未取得ソースは0扱いせず、状態欄で分離する。
+- YouTube Analytics の再認可は完了済み。稼働中プロセスが古いコードを掴んでいる場合は dispatcher 再起動後の集計結果を正とする。
+- `shop` は v0.1 の意向取得導線。Polar checkout は Starter Kit ZIP、Downloadables 添付、価格、ショップ表示の整合監査が通るまで有効化しない。
 - Claude Code のトークン制限があるため、全ログ読みによる会議化は禁止。state_digest と Revenue OS を優先する。
 - 会社らしさは維持するが、会話の出口は「実験、成果物、意思決定、証拠」に寄せる。
 

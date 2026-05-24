@@ -55,7 +55,7 @@ def mentions_per_response_limit(text: str, origin: str = "mention") -> int:
     if origin == "architect":
         return min(base, _cfg("mention_chain.architect_chain_calls", 2))
     if is_high_priority(text):
-        return max(base, 4)
+        return max(1, _cfg("mention_chain.high_priority_mentions_per_response", base))
     return base
 
 

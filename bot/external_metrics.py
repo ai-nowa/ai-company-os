@@ -437,7 +437,11 @@ def _fetch_text(url: str) -> str:
 
 def _extract_price(text: str) -> str | None:
     match = re.search(r"¥\s*([0-9,]+)", text)
-    return f"¥{match.group(1)}" if match else None
+    if match:
+        return f"¥{match.group(1)}"
+    if "価格調整中" in text:
+        return "価格調整中"
+    return None
 
 
 def _extract_title(text: str) -> str | None:

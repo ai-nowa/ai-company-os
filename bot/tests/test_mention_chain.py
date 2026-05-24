@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from bot import mention_chain
 from bot.mention_chain import extract_mentions
 
 
@@ -19,3 +20,16 @@ def test_plain_name_without_at_or_role_tag_is_not_a_mention():
     text = "カイに任せるのがよさそうです。ミオも確認したほうがいい。"
 
     assert extract_mentions(text) == []
+
+
+def test_high_priority_mentions_do_not_expand_default_parallelism(monkeypatch):
+    monkeypatch.setattr(
+        mention_chain,
+        "_cfg",
+        lambda path, default: {
+            "mention_chain.max_mentions_per_response": 2,
+            "mention_chain.high_priority_mentions_per_response": 2,
+        }.get(path, default),
+    )
+
+    assert mention_chain.mentions_per_response_limit("[DECISION] 重要判断です") == 2

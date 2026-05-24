@@ -82,6 +82,10 @@ def test_youtube_analytics_row_to_metrics_maps_headers():
     }
 
 
+def test_extract_price_reports_adjusting_state():
+    assert em._extract_price('<div class="price-sale">価格調整中</div>') == "価格調整中"
+
+
 def test_architect_outbox_label_is_filename_safe(monkeypatch, tmp_path):
     monkeypatch.setattr(architect_outbox, "OUTBOX_DIR", tmp_path)
 

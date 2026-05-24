@@ -499,10 +499,16 @@ async def run_claude_code(
         return result, used_resume
 
     err_or_result = err or result or ""
-    usage_like = _is_usage_cap_error(err_or_result) or (rc == 1 and not err_or_result.strip())
+    empty_success = rc == 0 and not result.strip() and not err_or_result.strip()
+    usage_like = (
+        _is_usage_cap_error(err_or_result)
+        or (rc == 1 and not err_or_result.strip())
+        or empty_success
+    )
     if usage_like:
+        failure_desc = "empty result" if empty_success else (err_or_result[:120] or "rc=1/no stderr")
         _record_claude_failure_and_maybe_open(
-            f"Claude Code unavailable ({err_or_result[:120] or 'rc=1/no stderr'})"
+            f"Claude Code unavailable ({failure_desc})"
         )
 
     # usage cap っぽい時の再試行は deep work だけ。routine/micro では二重消費を避ける。

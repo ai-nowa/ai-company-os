@@ -31,7 +31,7 @@ from .config import (
     append_discord_log,
     now_jst_iso,
 )
-from .context_assembler import write_usage_metric
+from .context_assembler import check_recent_token_pace, write_usage_metric
 from .employee_runner import run_employee_result
 from .idea_capture import capture_ideas_from_text
 from .mention_chain import (
@@ -432,6 +432,43 @@ async def process_mention_chain(
                 f"employee mention burst clipped: sender={sender} dropped={_clipped} "
                 f"(1時間20件上限)"
             )
+
+    if immediate_targets:
+        try:
+            overheat_threshold = int(dynamic_config.get("mention_chain.overheat_prompt_chars", 250000))
+            keep_targets = max(1, int(dynamic_config.get("mention_chain.overheat_keep_targets", 1)))
+            pace = check_recent_token_pace(window_minutes=60)
+            if pace.get("prompt_chars", 0) >= overheat_threshold and len(immediate_targets) > keep_targets:
+                kept = immediate_targets[:keep_targets]
+                deferred_targets = immediate_targets[keep_targets:]
+                for deferred in deferred_targets:
+                    enqueue_deferred_mention(
+                        deferred,
+                        text=text,
+                        sender=sender,
+                        channel=channel_name,
+                        chain_id=chain_id,
+                        depth=depth,
+                        reason=f"token_overheat:{pace.get('prompt_chars', 0)}",
+                    )
+                write_usage_metric(
+                    employee_id="dispatcher",
+                    mode="mention_chain",
+                    reason=f"token overheat defer in #{channel_name}",
+                    chain_id=chain_id,
+                    depth=depth,
+                    skipped_reason=f"token_overheat:{pace.get('prompt_chars', 0)}",
+                )
+                log.warning(
+                    "mention chain overheat: prompt_chars_1h=%s kept=%s deferred=%s chain_id=%s",
+                    pace.get("prompt_chars", 0),
+                    [t for t in kept],
+                    [t for t in deferred_targets],
+                    chain_id,
+                )
+                immediate_targets = kept
+        except Exception:
+            log.exception("mention chain overheat guard failed")
 
     total_used = 0
     max_calls = chain_call_limit(origin=origin)
