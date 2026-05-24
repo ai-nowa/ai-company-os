@@ -66,8 +66,8 @@ AUTONOMY_MODEL_OVERRIDE: str | None = None
 SILENT_HOUR_START = 23
 SILENT_HOUR_END = 7
 
-STARTUP_DELAY_MIN = 30
-STARTUP_DELAY_MAX = 600
+STARTUP_DELAY_MIN = 5
+STARTUP_DELAY_MAX = 120
 
 # POST ブロックの抽出（[POST: channel] ... [/POST]）
 POST_BLOCK_RE = re.compile(
@@ -196,50 +196,19 @@ async def employee_self_loop(emp_id: str, main_client: discord.Client) -> None:
     min_interval, max_interval = INTERVALS.get(emp_id, (1800, 3600))
     log.info(f"autonomy started: {emp_id} ({info.get('display','')}) interval={min_interval}-{max_interval}s")
 
+    try:
+        await _run_autonomy_tick(emp_id, main_client, trigger="startup")
+    except asyncio.CancelledError:
+        log.info(f"autonomy loop cancelled: {emp_id}")
+        return
+    except Exception:
+        log.exception(f"autonomy startup tick error: {emp_id}")
+
     while True:
         try:
             wait = random.randint(min_interval, max_interval)
             await asyncio.sleep(wait)
-
-            if _pause_flag or is_silent_hour():
-                continue
-
-            log.info(f"autonomy tick: {emp_id}")
-            should_wake, score, wake_reason = should_wake_employee(emp_id)
-            _log_wake_decision(emp_id, should_wake, score, wake_reason)
-            if not should_wake:
-                write_usage_metric(
-                    employee_id=emp_id,
-                    mode="routine",
-                    reason="self_loop preflight",
-                    skipped_reason=f"wake_score={score}: {wake_reason}",
-                )
-                log.info("autonomy skip: %s score=%s reason=%s", emp_id, score, wake_reason)
-                continue
-            prompt = build_self_prompt(emp_id)
-            try:
-                # 自律 tick 時のClaude社員はSonnet。Codex社員は各自の設定を維持する。
-                model_override = (
-                    AUTONOMY_MODEL_OVERRIDE
-                    if EMPLOYEES[emp_id].get("backend") == "claude"
-                    else None
-                )
-                result = await run_employee_result(
-                    emp_id,
-                    prompt,
-                    sender="self_loop",
-                    model_override=model_override,
-                    mode="routine",
-                    reason=f"self_loop: {wake_reason}",
-                )
-            except Exception:
-                log.exception(f"autonomy run_employee failed: {emp_id}")
-                continue
-            if not result.ok or not result.text:
-                log.info("autonomy response suppressed: %s reason=%s", emp_id, result.skipped_reason)
-                continue
-
-            await _post_blocks_and_chain(emp_id, result.text, main_client)
+            await _run_autonomy_tick(emp_id, main_client, trigger="interval")
 
         except asyncio.CancelledError:
             log.info(f"autonomy loop cancelled: {emp_id}")
@@ -247,6 +216,53 @@ async def employee_self_loop(emp_id: str, main_client: discord.Client) -> None:
         except Exception:
             log.exception(f"autonomy loop error: {emp_id}")
             await asyncio.sleep(60)
+
+
+async def _run_autonomy_tick(emp_id: str, main_client: discord.Client, *, trigger: str) -> None:
+    """wake判定からPOST処理までの1サイクル。
+
+    再起動直後も同じ経路を通すことで、「起動したのに通常間隔まで無言」を避ける。
+    """
+    if _pause_flag or is_silent_hour():
+        return
+
+    log.info("autonomy tick: %s trigger=%s", emp_id, trigger)
+    should_wake, score, wake_reason = should_wake_employee(emp_id)
+    _log_wake_decision(emp_id, should_wake, score, wake_reason)
+    if not should_wake:
+        write_usage_metric(
+            employee_id=emp_id,
+            mode="routine",
+            reason=f"self_loop {trigger} preflight",
+            skipped_reason=f"wake_score={score}: {wake_reason}",
+        )
+        log.info("autonomy skip: %s score=%s reason=%s", emp_id, score, wake_reason)
+        return
+
+    prompt = build_self_prompt(emp_id)
+    try:
+        # 自律 tick 時のClaude社員はSonnet。Codex社員は各自の設定を維持する。
+        model_override = (
+            AUTONOMY_MODEL_OVERRIDE
+            if EMPLOYEES[emp_id].get("backend") == "claude"
+            else None
+        )
+        result = await run_employee_result(
+            emp_id,
+            prompt,
+            sender="self_loop",
+            model_override=model_override,
+            mode="routine",
+            reason=f"self_loop/{trigger}: {wake_reason}",
+        )
+    except Exception:
+        log.exception(f"autonomy run_employee failed: {emp_id}")
+        return
+    if not result.ok or not result.text:
+        log.info("autonomy response suppressed: %s reason=%s", emp_id, result.skipped_reason)
+        return
+
+    await _post_blocks_and_chain(emp_id, result.text, main_client)
 
 
 async def _post_blocks_and_chain(emp_id: str, msg: str, main_client: discord.Client) -> None:
