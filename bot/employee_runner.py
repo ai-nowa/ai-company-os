@@ -93,6 +93,7 @@ def build_employee_system_prompt(employee_id: str) -> str:
         "- state_digestを常に優先。routine=最小読込、work=必要なら読む",
         "- @付きメンション必須。<!-- META: thread=\"名前\", invite=\"id\" -->でスレッド作成",
         "- 重要判断は末尾に # memo: 記録。待ち中は別タスクへ。同じ話題を24h内に繰り返さない",
+        "- 権限/認証/秘密/公開/決済/削除/本番/外部投稿は、先にリスク・代替案・監査要否を短く確認する",
         "",
         "## あなた個別の関係性",
         load_relationship_snippet(employee_id) or "（関係性データ未登録）",

@@ -38,13 +38,41 @@ def test_light_routine_for_viewer_rep_stays_medium_sonnet():
         "hinata_nagi",
         mode="routine",
         sender="self_loop",
-        user_message="見学者向けの反応を見る",
+        user_message="短い反応を見る",
         run_reason="self_loop",
     )
 
     assert route.model == "sonnet"
     assert route.effort == "medium"
     assert route.tier == "routine"
+
+
+def test_creative_routine_for_viewer_rep_uses_high_sonnet():
+    route = resolve_model_route(
+        "hinata_nagi",
+        mode="routine",
+        sender="self_loop",
+        user_message="見学者向けの企画と改善案を考える",
+        run_reason="self_loop",
+    )
+
+    assert route.model == "sonnet"
+    assert route.effort == "high"
+    assert route.tier == "creative_routine"
+
+
+def test_risk_review_uses_opus_xhigh_before_crisis():
+    route = resolve_model_route(
+        "shirase_kai",
+        mode="work",
+        sender="owner",
+        user_message="Cloudflare R2 の権限と webhook 自動化を実装する",
+        run_reason="owner work",
+    )
+
+    assert route.model == "opus"
+    assert route.effort == "xhigh"
+    assert route.tier == "risk_review"
 
 
 def test_executive_decision_uses_opus_xhigh():
@@ -79,3 +107,4 @@ def test_crisis_uses_opus_max():
 def test_executive_keyword_detection_includes_crisis():
     assert needs_executive_model("公開可否を判断")
     assert needs_executive_model("障害が起きた")
+    assert needs_executive_model("APIキーと権限の扱いを確認")

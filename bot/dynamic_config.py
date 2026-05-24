@@ -106,6 +106,7 @@ def _defaults() -> dict:
             "high_judgment_employees": [
                 "saegusa_mio", "shirase_kai", "asakura_noa", "kuroba_yuu", "kagura_aoi",
             ],
+            "creative_high_employees": ["hoshino_ritsu", "morinaga_haru", "hinata_nagi"],
             "models": {
                 "codex": {
                     "ceo": "gpt-5.5",
@@ -130,8 +131,10 @@ def _defaults() -> dict:
                     "routine": "medium",
                     "judgment_routine": "high",
                     "business_routine": "high",
+                    "creative_routine": "high",
                     "conversation": "high",
                     "deep_work": "high",
+                    "risk_review": "xhigh",
                     "executive": "xhigh",
                     "crisis": "xhigh",
                 },
@@ -140,8 +143,10 @@ def _defaults() -> dict:
                     "routine": "medium",
                     "judgment_routine": "high",
                     "business_routine": "high",
+                    "creative_routine": "high",
                     "conversation": "high",
                     "deep_work": "high",
+                    "risk_review": "xhigh",
                     "executive": "xhigh",
                     "crisis": "max",
                 },
@@ -162,9 +167,23 @@ def _defaults() -> dict:
                     "障害", "停止", "流出", "炎上", "返金", "法務", "契約解除", "重大",
                     "critical", "[critical]", "p0", "security", "incident",
                 ],
+                "risk": [
+                    "権限", "認証", "OAuth", "APIキー", "api key", "token", "secret", "secrets",
+                    "password", "パスワード", ".env", "credential", "credentials", "秘密",
+                    "個人情報", "PII", "プライバシー", "公開範囲", "public", "private",
+                    "決済", "支払い", "請求", "課金", "返金", "webhook", "署名検証",
+                    "Cloudflare", "R2", "DNS", "admin", "管理者", "invite", "招待",
+                    "削除", "delete", "archive", "自動化", "外部投稿", "本番", "deploy",
+                    "production", "公開", "セキュリティ", "運用リスク", "監査",
+                ],
                 "revenue": [
                     "収益", "売上", "販売", "購入", "導入意向", "価格", "CVR",
                     "Revenue", "experiment", "success_signal", "north_star",
+                ],
+                "creative": [
+                    "[IDEA]", "アイデア", "企画", "台本", "コンセプト", "仮説", "新規事業",
+                    "戦略", "ブランド", "視聴者", "見学者", "雑談", "発見", "改善案",
+                    "ストーリー", "動画", "記事", "コピー", "サムネ", "導線",
                 ],
             },
         },
