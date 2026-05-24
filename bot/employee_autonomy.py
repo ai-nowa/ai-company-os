@@ -21,7 +21,7 @@ from typing import Optional
 import discord
 
 from .config import BASE_DIR, EMPLOYEES, JST
-from . import multi_client
+from . import dynamic_config, multi_client
 from .context_assembler import should_wake_employee, write_usage_metric
 from .employee_runner import run_employee_result
 from .revenue_ops import ensure_revenue_ops_files
@@ -77,6 +77,8 @@ POST_BLOCK_RE = re.compile(
 
 _running_tasks: dict[str, asyncio.Task] = {}
 _pause_flag = False
+_startup_llm_calls = 0
+_startup_gate_lock = asyncio.Lock()
 
 
 def pause_all() -> None:
@@ -199,6 +201,17 @@ async def _run_autonomy_tick(emp_id: str, main_client: discord.Client, *, trigge
         log.info("autonomy skip: %s score=%s reason=%s", emp_id, score, wake_reason)
         return
 
+    startup_skip = await _startup_skip_reason(emp_id, score, trigger)
+    if startup_skip:
+        write_usage_metric(
+            employee_id=emp_id,
+            mode="routine",
+            reason=f"self_loop {trigger} startup gate",
+            skipped_reason=startup_skip,
+        )
+        log.info("autonomy startup gated: %s score=%s reason=%s", emp_id, score, startup_skip)
+        return
+
     prompt = build_self_prompt(emp_id)
     try:
         # 自律 tick 時のClaude社員はSonnet。Codex社員は各自の設定を維持する。
@@ -223,6 +236,42 @@ async def _run_autonomy_tick(emp_id: str, main_client: discord.Client, *, trigge
         return
 
     await _post_blocks_and_chain(emp_id, result.text, main_client)
+
+
+async def _startup_skip_reason(emp_id: str, score: int, trigger: str) -> str | None:
+    """再起動直後の全員同時LLM起動を抑える。
+
+    常時稼働は通常intervalで維持しつつ、restart直後だけ高優先/高スコアに絞る。
+    """
+    if trigger != "startup":
+        return None
+
+    try:
+        priority = set(dynamic_config.get(
+            "employee_autonomy.startup_priority_employee_ids",
+            ["saegusa_mio", "arima_reiji", "shirase_kai"],
+        ) or [])
+    except Exception:
+        priority = {"saegusa_mio", "arima_reiji", "shirase_kai"}
+    try:
+        nonpriority_min_score = int(dynamic_config.get("employee_autonomy.startup_nonpriority_min_score", 7))
+    except (TypeError, ValueError):
+        nonpriority_min_score = 7
+    if emp_id not in priority and score < nonpriority_min_score:
+        return f"startup_nonpriority_score={score}<min={nonpriority_min_score}"
+
+    try:
+        max_calls = int(dynamic_config.get("employee_autonomy.startup_max_llm_calls", 3))
+    except (TypeError, ValueError):
+        max_calls = 3
+    max_calls = max(1, max_calls)
+
+    global _startup_llm_calls
+    async with _startup_gate_lock:
+        if _startup_llm_calls >= max_calls:
+            return f"startup_budget_exhausted:{max_calls}"
+        _startup_llm_calls += 1
+    return None
 
 
 async def _post_blocks_and_chain(emp_id: str, msg: str, main_client: discord.Client) -> None:

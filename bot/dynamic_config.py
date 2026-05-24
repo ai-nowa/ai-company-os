@@ -157,6 +157,11 @@ def _defaults() -> dict:
             "check_interval_seconds": 3600,
             "max_triggers_per_cycle": 2,
         },
+        "employee_autonomy": {
+            "startup_max_llm_calls": 3,
+            "startup_nonpriority_min_score": 7,
+            "startup_priority_employee_ids": ["saegusa_mio", "arima_reiji", "shirase_kai"],
+        },
         "release_pressure": {
             "enabled": True,
             "interval_seconds": 1800,
