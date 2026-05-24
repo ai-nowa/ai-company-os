@@ -100,7 +100,84 @@ def _defaults() -> dict:
             "max_mentions_per_response": 2,
             "heartbeat_chain_calls": 1,
         },
+        "model_policy": {
+            "enabled": True,
+            "ceo_always_xhigh": True,
+            "high_judgment_employees": [
+                "saegusa_mio", "shirase_kai", "asakura_noa", "kuroba_yuu", "kagura_aoi",
+            ],
+            "models": {
+                "codex": {
+                    "ceo": "gpt-5.5",
+                    "default": "gpt-5.5",
+                },
+                "claude": {
+                    "default": "sonnet",
+                    "micro": "sonnet",
+                    "executive": "opus",
+                },
+            },
+            "fallbacks": {
+                "claude": {
+                    "opus": "sonnet",
+                    "sonnet": "haiku",
+                    "haiku": None,
+                },
+            },
+            "efforts": {
+                "codex": {
+                    "micro": "low",
+                    "routine": "medium",
+                    "judgment_routine": "high",
+                    "business_routine": "high",
+                    "conversation": "high",
+                    "deep_work": "high",
+                    "executive": "xhigh",
+                    "crisis": "xhigh",
+                },
+                "claude": {
+                    "micro": "low",
+                    "routine": "medium",
+                    "judgment_routine": "high",
+                    "business_routine": "high",
+                    "conversation": "high",
+                    "deep_work": "high",
+                    "executive": "xhigh",
+                    "crisis": "max",
+                },
+            },
+            "max_output_tokens": {
+                "micro": 700,
+                "routine": 1600,
+                "work": 6000,
+                "executive": 6000,
+            },
+            "keywords": {
+                "decision": [
+                    "公開可否", "公開する", "リリース", "投資判断", "最終承認",
+                    "炎上", "監査判定", "重要判断", "P0", "[important]", "[critical]",
+                    "本番投入", "契約", "支出", "違反", "価格", "撤退", "採用",
+                ],
+                "crisis": [
+                    "障害", "停止", "流出", "炎上", "返金", "法務", "契約解除", "重大",
+                    "critical", "[critical]", "p0", "security", "incident",
+                ],
+                "revenue": [
+                    "収益", "売上", "販売", "購入", "導入意向", "価格", "CVR",
+                    "Revenue", "experiment", "success_signal", "north_star",
+                ],
+            },
+        },
     }
+
+
+def _deep_merge(base: dict, override: dict) -> dict:
+    for key, value in override.items():
+        if isinstance(value, dict) and isinstance(base.get(key), dict):
+            _deep_merge(base[key], value)
+        else:
+            base[key] = value
+    return base
 
 
 def _ensure_file() -> None:
@@ -125,14 +202,8 @@ def _load_config() -> dict:
     except Exception:
         log.exception(f"failed to parse {CONFIG_PATH}, falling back to defaults")
         return _defaults()
-    # default をマージ（ユーザーが未定義キーは default 値で補完）
-    merged = _defaults()
-    for k, v in loaded.items():
-        if isinstance(v, dict) and isinstance(merged.get(k), dict):
-            merged[k].update(v)
-        else:
-            merged[k] = v
-    return merged
+    # default を再帰マージ（ユーザーが未定義キーは default 値で補完）
+    return _deep_merge(_defaults(), loaded)
 
 
 def _maybe_reload() -> None:

@@ -60,8 +60,8 @@ INTERVALS: dict[str, tuple[int, int]] = {
     "hinata_nagi":   (3600, 7200),   # 視聴者代表 1-2時間
 }
 
-# 自律 tick 時のClaudeモデル。Codex社員には渡さない。
-AUTONOMY_MODEL_OVERRIDE = "claude-sonnet-4-6"
+# 自律 tick 時も employee_runner の model_policy に任せる。
+AUTONOMY_MODEL_OVERRIDE: str | None = None
 
 SILENT_HOUR_START = 23
 SILENT_HOUR_END = 7

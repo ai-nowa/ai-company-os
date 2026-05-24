@@ -523,6 +523,10 @@ def write_usage_metric(
     used_resume: bool = False,
     model: Optional[str] = None,
     effort: Optional[str] = None,
+    route_tier: Optional[str] = None,
+    route_reason: Optional[str] = None,
+    route_escalated: Optional[bool] = None,
+    fallback_model: Optional[str] = None,
     chain_id: Optional[str] = None,
     depth: Optional[int] = None,
     skipped_reason: Optional[str] = None,
@@ -539,6 +543,10 @@ def write_usage_metric(
         "used_resume": used_resume,
         "model": model,
         "effort": effort,
+        "route_tier": route_tier,
+        "route_reason": _short(route_reason or "", 300) if route_reason else None,
+        "route_escalated": route_escalated,
+        "fallback_model": fallback_model,
         "chain_id": chain_id,
         "depth": depth,
         "skipped_reason": skipped_reason,
@@ -640,6 +648,7 @@ def write_usage_report(days: int = 1) -> Path:
     by_emp = Counter(str(r.get("employee_id", "?")) for r in rows)
     by_model = Counter(str(r.get("model", "?")) for r in rows if r.get("model"))
     by_effort = Counter(str(r.get("effort", "?")) for r in rows if r.get("effort"))
+    by_route_tier = Counter(str(r.get("route_tier", "?")) for r in rows if r.get("route_tier"))
     skipped = sum(1 for r in rows if r.get("skipped_reason"))
     prompt_chars = sum(int(r.get("prompt_chars") or 0) for r in rows)
     response_chars = sum(int(r.get("response_chars") or 0) for r in rows)
@@ -663,6 +672,9 @@ def write_usage_report(days: int = 1) -> Path:
         "",
         "## By effort",
         *[f"- {effort}: {count}" for effort, count in by_effort.most_common()],
+        "",
+        "## By route tier",
+        *[f"- {tier}: {count}" for tier, count in by_route_tier.most_common()],
         "",
         "## By employee",
         *[f"- {emp}: {count}" for emp, count in by_emp.most_common()],

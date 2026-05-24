@@ -15,6 +15,7 @@ import argparse
 import asyncio
 import json
 import logging
+import os
 import tempfile
 from dataclasses import dataclass
 from datetime import datetime, timedelta
@@ -26,7 +27,6 @@ from .config import (
     EMPLOYEES,
     LOG_COMPRESSION_BATCH,
     LOG_COMPRESSION_THRESHOLD,
-    RECENT_LOG_TAIL,
     append_conversation_log,
     employee_home,
     COMPANY_DIR,
@@ -37,29 +37,22 @@ from .config import (
     save_session_state,
 )
 from .context_assembler import assemble_state_digest, write_usage_metric
+from .model_policy import (
+    FRESH_ROUTINE_SENDERS,
+    ModelRoute,
+    RUN_MODES,
+    needs_executive_model,
+    resolve_model_route,
+)
 
 log = logging.getLogger("employee_runner")
 
 # 同時実行制限（Claude/Codex 子プロセスの並列度上限） - usage 節約
 _concurrency_semaphore = asyncio.Semaphore(2)
 
-# 重要判断時に opus に切り替えるキーワード
-OPUS_TRIGGER_KEYWORDS = [
-    "公開可否", "公開する", "リリース", "投資判断", "最終承認",
-    "炎上", "監査判定", "重要判断", "P0", "[important]", "[critical]",
-    "本番投入", "契約", "支出", "違反",
-]
-CRISIS_TRIGGER_KEYWORDS = [
-    "障害", "停止", "流出", "炎上", "返金", "法務", "契約解除", "重大",
-    "critical", "[critical]", "p0", "security", "incident",
-]
-OPUS_MODEL = "claude-opus-4-7"
-RUN_MODES = {"micro", "routine", "work", "executive"}
 RESUME_MODES = {"work", "executive"}
 CIRCUIT_SKIP_MODES = {"micro", "routine"}
 CIRCUIT_STATE_PATH = COMPANY_DIR / ".llm_circuit_state.json"
-FRESH_ROUTINE_SENDERS = {"self_loop", "heartbeat", "daily_loop", "watchdog"}
-HIGH_STAKES_EMPLOYEES = {"saegusa_mio", "shirase_kai", "kagura_aoi"}
 
 
 @dataclass
@@ -74,28 +67,14 @@ class EmployeeRunResult:
     used_resume: bool = False
     model: Optional[str] = None
     effort: Optional[str] = None
+    route_tier: Optional[str] = None
+    route_reason: Optional[str] = None
+    route_escalated: Optional[bool] = None
+    fallback_model: Optional[str] = None
     chain_id: Optional[str] = None
     depth: Optional[int] = None
     skipped_reason: Optional[str] = None
     system_error: Optional[str] = None
-
-
-@dataclass(frozen=True)
-class ModelRoute:
-    backend: str
-    model: str
-    effort: str
-
-
-def needs_opus(text: str) -> bool:
-    """メッセージに重要判断系のキーワードが含まれていれば opus に切り替える"""
-    lower = text.lower()
-    return any(kw.lower() in lower for kw in OPUS_TRIGGER_KEYWORDS)
-
-
-def needs_crisis_effort(text: str) -> bool:
-    lower = text.lower()
-    return any(kw.lower() in lower for kw in CRISIS_TRIGGER_KEYWORDS)
 
 
 def build_employee_system_prompt(employee_id: str) -> str:
@@ -232,7 +211,7 @@ def _infer_mode(sender: str, user_message: str, mode: Optional[str]) -> str:
         resolved = "routine"
     else:
         resolved = "routine"
-    if resolved != "micro" and needs_opus(user_message):
+    if resolved != "micro" and needs_executive_model(user_message):
         return "executive"
     return resolved
 
@@ -256,77 +235,6 @@ def _should_use_resume(mode: str, sender: str, reason: str, user_message: str) -
         return False
     # 人間からの依頼や社員間の実会話は、継続性が品質に直結するので resume を許可する。
     return True
-
-
-def _is_real_conversation(sender: str) -> bool:
-    return sender not in FRESH_ROUTINE_SENDERS
-
-
-def _claude_effort_for(employee_id: str, mode: str, sender: str, text: str) -> str:
-    if mode == "executive":
-        return "max" if needs_crisis_effort(text) else "xhigh"
-    if mode == "work":
-        return "high"
-    if mode == "micro":
-        return "low"
-    if mode == "routine":
-        if _is_real_conversation(sender):
-            return "high"
-        if employee_id in HIGH_STAKES_EMPLOYEES:
-            return "high"
-        return "medium"
-    return "medium"
-
-
-def _codex_effort_for(employee_id: str, mode: str, sender: str, text: str) -> str:
-    # CEOの判断品質は会社全体の手戻りコストに直結する。
-    # レイジは低頻度で呼び、呼ぶ時は常に最上位の推論を使う。
-    if employee_id == "arima_reiji":
-        return "xhigh"
-    if mode == "executive":
-        return "xhigh"
-    if mode == "work":
-        return "high"
-    if mode == "micro":
-        return "low"
-    if mode == "routine":
-        return "high" if _is_real_conversation(sender) else "medium"
-    return "medium"
-
-
-def _resolve_model_route(
-    employee_id: str,
-    mode: str,
-    sender: str,
-    user_message: str,
-    run_reason: str,
-    model_override: Optional[str],
-) -> ModelRoute:
-    """会社全体の品質/usageバランスを決める単一のルータ。
-
-    低すぎる reasoning は手戻りを増やすので、実会話・実作業は high 以上にする。
-    heartbeat/self_loop だけ medium/low に落とし、重要判断だけ最上位へ寄せる。
-    """
-    backend = EMPLOYEES[employee_id]["backend"]
-    text = f"{run_reason}\n{user_message}"
-    base_model = EMPLOYEES[employee_id].get("model", "")
-
-    if backend == "codex":
-        return ModelRoute(
-            backend=backend,
-            model=base_model or "gpt-5.5",
-            effort=_codex_effort_for(employee_id, mode, sender, text),
-        )
-
-    model = model_override or base_model or "claude-sonnet-4-6"
-    if mode == "executive":
-        model = OPUS_MODEL
-        log.info("opus triggered for %s: executive mode", employee_id)
-    return ModelRoute(
-        backend=backend,
-        model=model,
-        effort=_claude_effort_for(employee_id, mode, sender, text),
-    )
 
 
 def _allowed_dirs_for_mode(employee_id: str, mode: str) -> list[str]:
@@ -354,6 +262,8 @@ async def _exec_claude(
     effort: str,
     session_id: Optional[str],
     mode: str,
+    fallback_model: Optional[str] = None,
+    max_output_tokens: Optional[int] = None,
 ) -> tuple[str, Optional[str], str, int]:
     """Claude Code CLI を一度だけ起動して (result, new_session_id, raw_err, returncode) を返す"""
     home = employee_home(employee_id)
@@ -365,14 +275,24 @@ async def _exec_claude(
         "--effort", effort,
         "--dangerously-skip-permissions",
     ]
+    if fallback_model:
+        args.extend(["--fallback-model", fallback_model])
     for d in _allowed_dirs_for_mode(employee_id, mode):
         args.extend(["--add-dir", d])
     if session_id:
         args.extend(["--resume", session_id])
     # prompt は stdin 経由で渡す（--add-dir が貪欲に positional 引数を吸収する問題を回避）
+    env = os.environ.copy()
+    env.setdefault("DISABLE_NON_ESSENTIAL_MODEL_CALLS", "1")
+    env.setdefault("CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC", "1")
+    env.setdefault("BASH_MAX_OUTPUT_LENGTH", "12000")
+    if max_output_tokens:
+        env["CLAUDE_CODE_MAX_OUTPUT_TOKENS"] = str(max_output_tokens)
+
     proc = await asyncio.create_subprocess_exec(
         *args,
         cwd=str(home),
+        env=env,
         stdin=asyncio.subprocess.PIPE,
         stdout=asyncio.subprocess.PIPE,
         stderr=asyncio.subprocess.PIPE,
@@ -406,7 +326,14 @@ async def run_claude_code(
 
     # 1st: 通常モデルで実行
     result, new_sid, err, rc = await _exec_claude(
-        employee_id, prompt, primary_model, route.effort, session_id, mode
+        employee_id,
+        prompt,
+        primary_model,
+        route.effort,
+        session_id,
+        mode,
+        fallback_model=route.fallback_model,
+        max_output_tokens=route.max_output_tokens,
     )
     if rc == 0 and result:
         if new_sid and new_sid != session_id:
@@ -421,14 +348,22 @@ async def run_claude_code(
 
     # usage cap っぽい時の再試行は deep work だけ。routine/micro では二重消費を避ける。
     if usage_like and mode in RESUME_MODES:
-        log.warning(f"{employee_id}: usage cap suspected, falling back to {FALLBACK_MODEL}")
+        fallback_model = route.fallback_model or FALLBACK_MODEL
+        log.warning(f"{employee_id}: usage cap suspected, falling back to {fallback_model}")
         fallback_prompt = (
             "（注: 直前の通常モデルが usage cap で応答できなかった。"
             "あなたは『今ちょっと頭が回らないので、短く簡潔に』というニュアンスを自然に出しつつ、"
             "本来の人格と口癖は維持してください）\n\n" + prompt
         )
         result, new_sid, err2, rc2 = await _exec_claude(
-            employee_id, fallback_prompt, FALLBACK_MODEL, "low", session_id, mode
+            employee_id,
+            fallback_prompt,
+            fallback_model,
+            "low",
+            session_id,
+            mode,
+            fallback_model=None,
+            max_output_tokens=route.max_output_tokens,
         )
         if rc2 == 0 and result:
             if new_sid and new_sid != session_id:
@@ -539,7 +474,7 @@ async def run_employee_result(
             skipped_reason=circuit_reason,
         )
 
-    route = _resolve_model_route(
+    route = resolve_model_route(
         employee_id,
         resolved_mode,
         sender,
@@ -582,6 +517,10 @@ async def run_employee_result(
             used_resume=used_resume,
             model=route.model,
             effort=route.effort,
+            route_tier=route.tier,
+            route_reason=route.reason,
+            route_escalated=route.escalated,
+            fallback_model=route.fallback_model,
             chain_id=chain_id,
             depth=depth,
             skipped_reason="system_error",
@@ -597,6 +536,10 @@ async def run_employee_result(
             used_resume=used_resume,
             model=route.model,
             effort=route.effort,
+            route_tier=route.tier,
+            route_reason=route.reason,
+            route_escalated=route.escalated,
+            fallback_model=route.fallback_model,
             chain_id=chain_id,
             depth=depth,
             skipped_reason="system_error",
@@ -619,6 +562,9 @@ async def run_employee_result(
     state["last_response_chars"] = len(response)
     state["last_model"] = route.model
     state["last_effort"] = route.effort
+    state["last_route_tier"] = route.tier
+    state["last_route_reason"] = route.reason
+    state["last_route_escalated"] = route.escalated
     state["total_messages"] = state.get("total_messages", 0) + 2
     save_session_state(employee_id, state)
 
@@ -631,6 +577,10 @@ async def run_employee_result(
         used_resume=used_resume,
         model=route.model,
         effort=route.effort,
+        route_tier=route.tier,
+        route_reason=route.reason,
+        route_escalated=route.escalated,
+        fallback_model=route.fallback_model,
         chain_id=chain_id,
         depth=depth,
     )
@@ -647,6 +597,10 @@ async def run_employee_result(
         used_resume=used_resume,
         model=route.model,
         effort=route.effort,
+        route_tier=route.tier,
+        route_reason=route.reason,
+        route_escalated=route.escalated,
+        fallback_model=route.fallback_model,
         chain_id=chain_id,
         depth=depth,
     )

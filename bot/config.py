@@ -22,35 +22,36 @@ DOCS_DIR = BASE_DIR / "docs"
 
 JST = timezone(timedelta(hours=9))
 
-# model: 判断が重い役(CTO/PM/監査) = opus、軽い役 = sonnet、社長は Codex CLI
+# model: 社員別の基準モデル。Claude は alias を使い、具体バージョンは Claude Code 側に追従させる。
+#        実際の model/effort は bot/model_policy.py と company/dynamic_config.yaml で最終決定する。
 # default_channels: その社員がデフォルトで「見える」チャンネル名の部分一致パターン。
 #                   "all" のみハル特例（People担当として全チャンネル閲覧可）
 EMPLOYEES: dict[str, dict] = {
     "arima_reiji":   {"display": "有馬レイジ",   "role": "CEO",           "backend": "codex",  "model": "gpt-5.5",
                       "app_id": "1505056923546812548",
                       "default_channels": ["お知らせ", "経営会議", "全社会議", "今日の業務", "議事録", "給湯室", "いくと依頼"]},
-    "saegusa_mio":   {"display": "三枝ミオ",     "role": "COO",           "backend": "claude", "model": "claude-sonnet-4-6",
+    "saegusa_mio":   {"display": "三枝ミオ",     "role": "COO",           "backend": "claude", "model": "sonnet",
                       "app_id": "1505059351386390560",
                       "default_channels": ["お知らせ", "経営会議", "プロダクト会議", "今日の業務", "議事録", "ふりかえり", "給湯室", "モヤモヤ", "いくと依頼"]},
-    "shirase_kai":   {"display": "白瀬カイ",     "role": "CTO",           "backend": "claude", "model": "claude-sonnet-4-6",
+    "shirase_kai":   {"display": "白瀬カイ",     "role": "CTO",           "backend": "claude", "model": "sonnet",
                       "app_id": "1505059548350906528",
                       "default_channels": ["開発部", "プロダクト会議", "ひらめきメモ", "給湯室", "いくと依頼"]},
-    "asakura_noa":   {"display": "朝倉ノア",     "role": "PM",            "backend": "claude", "model": "claude-sonnet-4-6",
+    "asakura_noa":   {"display": "朝倉ノア",     "role": "PM",            "backend": "claude", "model": "sonnet",
                       "app_id": "1505059712188682354",
                       "default_channels": ["経営会議", "プロダクト会議", "開発部", "youtube編集部", "成果物報告", "いくと依頼"]},
-    "hoshino_ritsu": {"display": "星野リツ",     "role": "YouTube編集長", "backend": "claude", "model": "claude-sonnet-4-6",
+    "hoshino_ritsu": {"display": "星野リツ",     "role": "YouTube編集長", "backend": "claude", "model": "sonnet",
                       "app_id": "1505059860448804924",
                       "default_channels": ["youtube編集部", "マーケ部", "ひらめきメモ", "給湯室", "いくと依頼"]},
-    "kuroba_yuu":    {"display": "黒羽ユウ",     "role": "マーケター",    "backend": "claude", "model": "claude-sonnet-4-6",
+    "kuroba_yuu":    {"display": "黒羽ユウ",     "role": "マーケター",    "backend": "claude", "model": "sonnet",
                       "app_id": "1505060016296820818",
                       "default_channels": ["マーケ部", "youtube編集部", "成果物報告", "給湯室", "いくと依頼"]},
-    "kagura_aoi":    {"display": "神楽アオイ",   "role": "監査",          "backend": "claude", "model": "claude-sonnet-4-6",
+    "kagura_aoi":    {"display": "神楽アオイ",   "role": "監査",          "backend": "claude", "model": "sonnet",
                       "app_id": "1505060175323725854",
                       "default_channels": ["監査部", "プロダクト会議", "お知らせ", "成果物報告", "いくと依頼"]},
-    "morinaga_haru": {"display": "森永ハル",     "role": "People",        "backend": "claude", "model": "claude-sonnet-4-6",
+    "morinaga_haru": {"display": "森永ハル",     "role": "People",        "backend": "claude", "model": "sonnet",
                       "app_id": "1505060357008523284",
                       "default_channels": ["all"]},  # ハル特例: 全チャンネル閲覧可
-    "hinata_nagi":   {"display": "日向ナギ",     "role": "視聴者代表",    "backend": "claude", "model": "claude-sonnet-4-6",
+    "hinata_nagi":   {"display": "日向ナギ",     "role": "視聴者代表",    "backend": "claude", "model": "sonnet",
                       "app_id": "1505060520695169035",
                       "default_channels": ["youtube編集部", "マーケ部", "見学者向け", "給湯室", "会社案内", "いくと依頼"]},
 }
