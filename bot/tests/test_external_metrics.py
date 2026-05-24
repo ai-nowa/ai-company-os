@@ -47,6 +47,41 @@ def test_external_digest_uses_snapshot_without_network(monkeypatch, tmp_path):
     assert "missing scope" in digest
 
 
+def test_youtube_analytics_row_to_metrics_handles_empty_rows():
+    metrics = ["views", "estimatedMinutesWatched", "averageViewDuration"]
+
+    result = em._youtube_analytics_row_to_metrics({"rows": []}, metrics)
+
+    assert result == {
+        "views": 0,
+        "estimatedMinutesWatched": 0,
+        "averageViewDuration": 0,
+    }
+
+
+def test_youtube_analytics_row_to_metrics_maps_headers():
+    response = {
+        "columnHeaders": [
+            {"name": "views"},
+            {"name": "averageViewDuration"},
+            {"name": "estimatedMinutesWatched"},
+        ],
+        "rows": [[12, 34, 56]],
+    }
+
+    result = em._youtube_analytics_row_to_metrics(
+        response,
+        ["views", "estimatedMinutesWatched", "averageViewDuration", "likes"],
+    )
+
+    assert result == {
+        "views": 12,
+        "estimatedMinutesWatched": 56,
+        "averageViewDuration": 34,
+        "likes": 0,
+    }
+
+
 def test_architect_outbox_label_is_filename_safe(monkeypatch, tmp_path):
     monkeypatch.setattr(architect_outbox, "OUTBOX_DIR", tmp_path)
 

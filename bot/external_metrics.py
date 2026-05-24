@@ -260,15 +260,80 @@ def collect_youtube() -> dict[str, Any]:
         channel = items[0]
         stats = channel.get("statistics", {})
         snippet = channel.get("snippet", {})
+        analytics = collect_youtube_analytics(creds, scopes)
         return _ok(
             "youtube_data_api",
             channel_title=snippet.get("title", ""),
             subscriber_count=_safe_int(stats.get("subscriberCount")),
             view_count=_safe_int(stats.get("viewCount")),
             video_count=_safe_int(stats.get("videoCount")),
+            analytics=analytics,
         )
     except Exception as exc:
         return _unavailable("youtube_data_api", _short_error(exc))
+
+
+def collect_youtube_analytics(creds: Any, scopes: set[str]) -> dict[str, Any]:
+    accepted_scopes = {
+        "https://www.googleapis.com/auth/yt-analytics.readonly",
+        "https://www.googleapis.com/auth/yt-analytics-monetary.readonly",
+        "https://www.googleapis.com/auth/youtube.readonly",
+        "https://www.googleapis.com/auth/youtube",
+        "https://www.googleapis.com/auth/youtube.force-ssl",
+    }
+    if not scopes.intersection(accepted_scopes):
+        return _unavailable(
+            "youtube_analytics_api",
+            "youtube_token.json lacks YouTube Analytics/read scope",
+        )
+    try:
+        from googleapiclient.discovery import build
+
+        service = build("youtubeAnalytics", "v2", credentials=creds, cache_discovery=False)
+        today = datetime.now(JST).date()
+        week_start = today - timedelta(days=6)
+        today_metrics = _youtube_analytics_report(service, today.isoformat(), today.isoformat())
+        week_metrics = _youtube_analytics_report(service, week_start.isoformat(), today.isoformat())
+        return _ok(
+            "youtube_analytics_api",
+            today=today_metrics,
+            last_7d=week_metrics,
+        )
+    except Exception as exc:
+        return _unavailable("youtube_analytics_api", _short_error(exc))
+
+
+def _youtube_analytics_report(service: Any, start_date: str, end_date: str) -> dict[str, int]:
+    metrics = [
+        "views",
+        "estimatedMinutesWatched",
+        "averageViewDuration",
+        "subscribersGained",
+        "subscribersLost",
+        "likes",
+        "comments",
+        "shares",
+    ]
+    response = service.reports().query(
+        ids="channel==MINE",
+        startDate=start_date,
+        endDate=end_date,
+        metrics=",".join(metrics),
+    ).execute()
+    return _youtube_analytics_row_to_metrics(response, metrics)
+
+
+def _youtube_analytics_row_to_metrics(response: dict[str, Any], metrics: list[str]) -> dict[str, int]:
+    headers = [h.get("name") for h in response.get("columnHeaders", [])]
+    rows = response.get("rows") or []
+    if not rows:
+        return {name: 0 for name in metrics}
+    first = rows[0]
+    data = {name: 0 for name in metrics}
+    for idx, name in enumerate(headers):
+        if name in data and idx < len(first):
+            data[name] = _safe_int(first[idx]) or 0
+    return data
 
 
 def _safe_int(value: Any) -> int | None:
@@ -456,6 +521,7 @@ def _source_health(metrics: dict[str, Any]) -> dict[str, Any]:
         "revenue": metrics.get("revenue", {}),
         "ga4": metrics.get("traffic", {}).get("ga4", {}),
         "youtube": metrics.get("youtube", {}),
+        "youtube_analytics": metrics.get("youtube", {}).get("analytics", {}),
         "intent_form": metrics.get("intent", {}).get("purchase_form", {}),
         "shop_live": metrics.get("site", {}).get("shop_live", {}),
     }
@@ -515,6 +581,9 @@ def external_digest_items(max_items: int = 8) -> list[str]:
     rev = metrics.get("revenue", {})
     intent = metrics.get("intent", {}).get("purchase_form", {})
     yt = metrics.get("youtube", {})
+    yt_analytics = yt.get("analytics", {})
+    yt_today = yt_analytics.get("today", {}) if yt_analytics.get("available") else {}
+    yt_7d = yt_analytics.get("last_7d", {}) if yt_analytics.get("available") else {}
     site = metrics.get("site", {})
     health = metrics.get("health", {})
     items = [
@@ -523,6 +592,7 @@ def external_digest_items(max_items: int = 8) -> list[str]:
         f"- GA4 today: PV={_value(ga4.get('pageviews_today'))}, /shop={_value(ga4.get('shop_pageviews_today'))}, /about={_value(ga4.get('about_pageviews_today'))}, source={'ok' if ga4.get('available') else ga4.get('unavailable_reason', 'unavailable')}",
         f"- intent form: total={_value(intent.get('total'))}, yes={_value(intent.get('yes'))}, maybe={_value(intent.get('maybe'))}, 24h={_value(intent.get('recent_24h'))}, source={'ok' if intent.get('available') else intent.get('unavailable_reason', 'unavailable')}",
         f"- YouTube: subscribers={_value(yt.get('subscriber_count'))}, views={_value(yt.get('view_count'))}, source={'ok' if yt.get('available') else yt.get('unavailable_reason', 'unavailable')}",
+        f"- YouTube Analytics: today_views={_value(yt_today.get('views'))}, 7d_views={_value(yt_7d.get('views'))}, avg_view_sec={_value(yt_7d.get('averageViewDuration'))}, source={'ok' if yt_analytics.get('available') else yt_analytics.get('unavailable_reason', 'unavailable')}",
         f"- shop live: title={_value(site.get('shop_live', {}).get('title'))}, price={_value(site.get('shop_live', {}).get('price'))}",
         f"- shop local/live mismatch: {health.get('shop_local_live_mismatch', False)}",
     ]
@@ -541,6 +611,9 @@ def write_kpi_observations(metrics: dict[str, Any] | None = None) -> Path:
     cog = metrics.get("cognition", {})
     intent = metrics.get("intent", {}).get("purchase_form", {})
     yt = metrics.get("youtube", {})
+    yt_analytics = yt.get("analytics", {})
+    yt_today = yt_analytics.get("today", {}) if yt_analytics.get("available") else {}
+    yt_7d = yt_analytics.get("last_7d", {}) if yt_analytics.get("available") else {}
     site = metrics.get("site", {})
     health = metrics.get("health", {})
 
@@ -578,6 +651,10 @@ def write_kpi_observations(metrics: dict[str, Any] | None = None) -> Path:
         f"| Hatena bookmarks | {_value(cog.get('hatena_bookmarks'))} | {src(cog)} |",
         f"| YouTube subscribers | {_value(yt.get('subscriber_count'))} | {src(yt)} |",
         f"| YouTube views | {_value(yt.get('view_count'))} | {src(yt)} |",
+        f"| YouTube Analytics views today | {_value(yt_today.get('views'))} | {src(yt_analytics)} |",
+        f"| YouTube Analytics views 7d | {_value(yt_7d.get('views'))} | {src(yt_analytics)} |",
+        f"| YouTube Analytics avg view sec 7d | {_value(yt_7d.get('averageViewDuration'))} | {src(yt_analytics)} |",
+        f"| YouTube Analytics watch min 7d | {_value(yt_7d.get('estimatedMinutesWatched'))} | {src(yt_analytics)} |",
         "",
         "## 導線状態",
         "",
