@@ -1,0 +1,34 @@
+from __future__ import annotations
+
+from bot.owner_request_policy import (
+    OWNER_REQUEST_MARKER,
+    build_redirect_notice,
+    should_allow_owner_request,
+    should_redirect_owner_request,
+)
+
+
+def test_routine_publish_request_to_owner_is_redirected():
+    text = "article-10を公開してください。パス: employees/hoshino_ritsu/outbox/article10.md"
+
+    assert should_redirect_owner_request("📥｜いくと依頼", text) is True
+
+
+def test_human_required_auth_request_can_pass():
+    text = f"{OWNER_REQUEST_MARKER} YouTube OAuth の認証コード入力だけお願いします。"
+
+    assert should_allow_owner_request(text) is True
+    assert should_redirect_owner_request("📥｜いくと依頼", text) is False
+
+
+def test_marker_without_hard_human_keyword_is_still_redirected():
+    text = f"{OWNER_REQUEST_MARKER} Xに投稿してください。"
+
+    assert should_redirect_owner_request("📥｜いくと依頼", text) is True
+
+
+def test_redirect_notice_removes_direct_owner_addressing():
+    notice = build_redirect_notice("@いくと X投稿お願いします。", "黒羽ユウ")
+
+    assert "@いくと" not in notice
+    assert "OWNER_REQUEST_BLOCKED" in notice

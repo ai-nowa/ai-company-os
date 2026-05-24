@@ -29,6 +29,7 @@ from .config import (
     DISPLAY_TO_ID,
     EMPLOYEES,
     append_discord_log,
+    now_jst_iso,
 )
 from .context_assembler import write_usage_metric
 from .employee_runner import run_employee_result
@@ -43,6 +44,11 @@ from .mention_chain import (
     mode_for_mention,
     parse_meta_tag,
     strip_meta_tag,
+)
+from .owner_request_policy import (
+    build_redirect_notice,
+    is_owner_request_channel_name,
+    should_redirect_owner_request,
 )
 from . import dynamic_config, multi_client, thread_registry
 
@@ -150,6 +156,55 @@ def convert_text_mentions_to_discord(text: str) -> str:
     return text
 
 
+async def _guard_owner_request_post(
+    channel: discord.abc.Messageable,
+    content: str,
+    sender_label: str,
+) -> tuple[Optional[discord.abc.Messageable], str, bool]:
+    """通常作業の `いくと依頼` 投稿を成果物報告へ逃がす。
+
+    find_channel_by_substr は後続定義だが、実行時には定義済みなのでここから参照できる。
+    """
+    channel_name = getattr(channel, "name", "dm")
+    if not should_redirect_owner_request(channel_name, content):
+        return channel, content, False
+
+    redirected = await find_channel_by_substr("成果物報告")
+    if redirected is None:
+        redirected = await find_channel_by_substr("経営会議")
+    if redirected is None:
+        log.warning(
+            "owner request blocked but no redirect channel found: sender=%s chars=%d",
+            sender_label,
+            len(content),
+        )
+        write_usage_metric(
+            employee_id="dispatcher",
+            mode="owner_request_gate",
+            reason=f"{sender_label}: owner request blocked",
+            response_chars=0,
+            skipped_reason="owner_request_blocked_no_redirect",
+        )
+        return None, "", True
+
+    notice = build_redirect_notice(content, sender_label)
+    log.warning(
+        "owner request redirected: sender=%s from=%s to=%s chars=%d",
+        sender_label,
+        channel_name,
+        getattr(redirected, "name", ""),
+        len(content),
+    )
+    write_usage_metric(
+        employee_id="dispatcher",
+        mode="owner_request_gate",
+        reason=f"{sender_label}: owner request redirected",
+        response_chars=len(notice),
+        skipped_reason=f"redirected_from:{channel_name}",
+    )
+    return redirected, notice, True
+
+
 def resolve_initial_targets_native(message: discord.Message) -> list[str]:
     """Discord ネイティブメンション (user + role) から社員IDを順序保持で抽出.
     Bot 招待時に自動生成されるマネージドロールへのメンション (<@&role_id>) も対応."""
@@ -178,6 +233,12 @@ async def send_employee_response(
     """社員 bot として投稿。社員 client が無ければメインbot代理（プレフィックス付き）"""
     if not content:
         return False
+    guarded = await _guard_owner_request_post(channel, content, EMPLOYEES[emp_id]["display"])
+    guarded_channel, guarded_content, _redirected = guarded
+    if guarded_channel is None:
+        return False
+    channel = guarded_channel
+    content = guarded_content
     channel_name = getattr(channel, "name", "dm")
     if hasattr(channel, "id"):
         ok = await multi_client.send_as_employee(emp_id, channel.id, content)
@@ -550,8 +611,7 @@ async def dispatch_to_employee(
     # 連鎖（visited は target 自身のみ → A→B→A→B... の往復が可能、上限は mention_chain 側で制御）
     # ただし「いくと依頼」チャンネル内では連鎖しない（依頼投稿専用、議論は別チャンネルで）
     def _is_owner_request_channel(ch: discord.abc.Messageable) -> bool:
-        ch_name = getattr(ch, "name", "")
-        return "いくと依頼" in ch_name or "📥" in ch_name
+        return is_owner_request_channel_name(getattr(ch, "name", ""))
 
     child_used = 0
     if clean_text.strip():
@@ -648,11 +708,26 @@ async def process_architect_outbox_loop() -> None:
                         continue
 
                     if not data.get("posted_at"):
-                        text = convert_text_mentions_to_discord(data["content"])
+                        guarded_ch, guarded_content, redirected = await _guard_owner_request_post(
+                            ch,
+                            data["content"],
+                            "architect_outbox",
+                        )
+                        if guarded_ch is None:
+                            data["posted_at"] = now_jst_iso()
+                            data["posted_channel"] = "blocked"
+                            data["posted_chunks"] = 0
+                            data["owner_request_blocked"] = True
+                            f.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+                            continue
+                        ch = guarded_ch
+                        if redirected:
+                            data["owner_request_redirected"] = True
+                            data["redirected_channel"] = getattr(ch, "name", "")
+                        text = convert_text_mentions_to_discord(guarded_content)
                         chunks = [text[i:i + 1900] for i in range(0, len(text), 1900)] or ["(空)"]
                         for c in chunks:
                             await ch.send(c)
-                        from .config import now_jst_iso
                         data["posted_at"] = now_jst_iso()
                         data["posted_channel"] = getattr(ch, "name", "")
                         data["posted_chunks"] = len(chunks)
