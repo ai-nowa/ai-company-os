@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import json
 import os
+import shutil
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Optional
@@ -58,9 +59,54 @@ EMPLOYEES: dict[str, dict] = {
 
 DISPLAY_TO_ID = {v["display"]: k for k, v in EMPLOYEES.items()}
 
+def resolve_executable_path(command: str) -> str:
+    """CLI executable を PATH / common local install locations から解決する。
+
+    nvm 管理の `claude`/`codex` は再起動タイミングや systemd/手元 shell の PATH 差で
+    見えなくなることがある。実行直前にもこの関数を通すことで、一時的な PATH 差で
+    社員応答が system_error になる確率を下げる。
+    """
+    expanded = os.path.expanduser(str(command))
+    name = Path(expanded).name
+
+    if os.path.isabs(expanded) and os.access(expanded, os.X_OK):
+        return expanded
+
+    resolved = shutil.which(expanded)
+    if resolved:
+        return resolved
+
+    search_paths: list[Path] = [
+        Path.home() / ".local" / "bin" / name,
+        Path("/usr/local/bin") / name,
+        Path("/usr/bin") / name,
+    ]
+
+    nvm_root = Path.home() / ".nvm" / "versions" / "node"
+    if nvm_root.exists():
+        def _node_version_key(path: Path) -> tuple[int, ...]:
+            raw = path.parent.parent.name.lstrip("v")
+            try:
+                return tuple(int(part) for part in raw.split("."))
+            except ValueError:
+                return (0,)
+
+        search_paths = sorted(
+            nvm_root.glob(f"v*/bin/{name}"),
+            key=_node_version_key,
+            reverse=True,
+        ) + search_paths
+
+    for candidate in search_paths:
+        if candidate.exists() and os.access(candidate, os.X_OK):
+            return str(candidate)
+
+    return expanded
+
+
 # Claude Code MAX プラン経由で認証する前提（API キー不要、~/.claude/ の OAuth セッションを使用）
-CLAUDE_CLI_PATH = os.environ.get("CLAUDE_CLI_PATH", "claude")
-CODEX_CLI_PATH = os.environ.get("CODEX_CLI_PATH", "codex")
+CLAUDE_CLI_PATH = resolve_executable_path(os.environ.get("CLAUDE_CLI_PATH", "claude"))
+CODEX_CLI_PATH = resolve_executable_path(os.environ.get("CODEX_CLI_PATH", "codex"))
 DISCORD_BOT_TOKEN = os.environ.get("DISCORD_BOT_TOKEN")
 
 LOG_COMPRESSION_THRESHOLD = 500   # 会話ログ行数の上限

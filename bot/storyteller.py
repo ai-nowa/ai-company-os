@@ -342,7 +342,9 @@ async def generate_story_draft(ctx: StoryContext) -> str:
     import json as _json
 
     prompt = build_llm_prompt(ctx)
-    claude_cli = os.environ.get("CLAUDE_CLI_PATH", "claude")
+    from .config import resolve_executable_path
+
+    claude_cli = resolve_executable_path(os.environ.get("CLAUDE_CLI_PATH", "claude"))
 
     proc = await asyncio.create_subprocess_exec(
         claude_cli, "-p",

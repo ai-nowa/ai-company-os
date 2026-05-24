@@ -488,7 +488,8 @@ async def dispatch_to_employee(
         # POST マーカーだけ残っている場合は除去（中身は保持）
         clean_text = POST_BLOCK_RE.sub(lambda m: (m.group(2) or "").strip(), clean_text)
 
-    # テキスト @ メンションを Discord ネイティブメンションに変換（投稿時のみ。連鎖検出は変換前の text 経由）
+    # テキスト @ メンションを Discord ネイティブメンションに変換。
+    # 連鎖検出は変換前/後の両方を見る（古いrole idや変換後タグの取りこぼし防止）。
     discord_text = convert_text_mentions_to_discord(clean_text)
 
     # 投稿先決定
@@ -523,6 +524,7 @@ async def dispatch_to_employee(
             return call_used
 
     # チャンネル指定ありのPOSTブロックを各チャンネルへ個別投稿
+    routed_chain_items: list[tuple[discord.abc.Messageable, str, str]] = []
     for ch_hint, routed_content in routed_blocks:
         routed_ch = await find_channel_by_substr(ch_hint)
         if routed_ch is None:
@@ -530,6 +532,7 @@ async def dispatch_to_employee(
             continue
         routed_discord = convert_text_mentions_to_discord(routed_content)
         await send_employee_response(target, routed_ch, routed_discord)
+        routed_chain_items.append((routed_ch, routed_content, routed_discord))
         log.info(f"routed POST: {target} → #{routed_ch.name} ({len(routed_content)} chars)")
         posted = True
 
@@ -544,24 +547,43 @@ async def dispatch_to_employee(
         except discord.HTTPException as e:
             log.warning(f"Thread archive failed: {e}")
 
-    # 連鎖（visited は target 自身のみ → A→B→A→B... の往復が可能、無限ループは depth 100 で防ぐ）
+    # 連鎖（visited は target 自身のみ → A→B→A→B... の往復が可能、上限は mention_chain 側で制御）
     # ただし「いくと依頼」チャンネル内では連鎖しない（依頼投稿専用、議論は別チャンネルで）
-    post_channel_name = getattr(post_target, "name", "")
-    if "いくと依頼" in post_channel_name or "📥" in post_channel_name:
-        log.info(f"いくと依頼チャンネル内では連鎖スキップ: {target}")
-    else:
-        child_used = await process_mention_chain(
-            clean_text,
+    def _is_owner_request_channel(ch: discord.abc.Messageable) -> bool:
+        ch_name = getattr(ch, "name", "")
+        return "いくと依頼" in ch_name or "📥" in ch_name
+
+    child_used = 0
+    if clean_text.strip():
+        if _is_owner_request_channel(post_target):
+            log.info(f"いくと依頼チャンネル内では連鎖スキップ: {target}")
+        else:
+            child_used += await process_mention_chain(
+                f"{clean_text}\n{discord_text}",
+                target,
+                post_target,
+                depth,
+                {target},
+                chain_id=chain_id,
+                call_count=call_count + call_used + child_used,
+                origin=origin,
+            )
+
+    for routed_ch, routed_content, routed_discord in routed_chain_items:
+        if _is_owner_request_channel(routed_ch):
+            log.info(f"いくと依頼チャンネル内では連鎖スキップ: {target}")
+            continue
+        child_used += await process_mention_chain(
+            f"{routed_content}\n{routed_discord}",
             target,
-            post_target,
+            routed_ch,
             depth,
             {target},
             chain_id=chain_id,
-            call_count=call_count + call_used,
+            call_count=call_count + call_used + child_used,
             origin=origin,
         )
-        return call_used + child_used
-    return call_used
+    return call_used + child_used
 
 
 async def ensure_required_channels() -> None:

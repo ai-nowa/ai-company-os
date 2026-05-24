@@ -11,7 +11,7 @@ import logging
 import os
 from typing import Optional
 
-from .config import BASE_DIR, CLAUDE_CLI_PATH, now_jst_iso
+from .config import BASE_DIR, CLAUDE_CLI_PATH, now_jst_iso, resolve_executable_path
 from .context_assembler import write_usage_metric
 from .architect_policy import ArchitectModeSettings, architect_mode_settings
 
@@ -151,7 +151,7 @@ async def run_architect(
     session_id = state.get("claude_session_id")
 
     args = [
-        CLAUDE_CLI_PATH, "-p",
+        resolve_executable_path(CLAUDE_CLI_PATH), "-p",
         "--output-format", "json",
         "--model", settings.model,
         "--effort", settings.effort,

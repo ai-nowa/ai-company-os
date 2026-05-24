@@ -24,6 +24,8 @@ WORK_MODE_MARKERS = (
     "コード修正", "ファイルを作成", "ファイル更新", "台本を書", "仕様書を作成",
     "設計してください", "設計書を作成", "成果物を作成",
 )
+NAME_CONTEXT_CHARS = 24
+NAME_BOUNDARY_CHARS = r"A-Za-z0-9_一-鿿々ヶぁ-んァ-ヶー"
 
 
 def _cfg(path: str, default: int) -> int:
@@ -142,6 +144,72 @@ def _split_display(display: str) -> tuple[str, str]:
     return display, display
 
 
+def _employee_name_tokens(employee_id: str) -> list[str]:
+    info = EMPLOYEES.get(employee_id, {})
+    display = info.get("display", "")
+    family, given = _split_display(display)
+    tokens: list[str] = []
+    if display:
+        tokens.append(display)
+    for token in (family, given):
+        if token and len(token) >= 2:
+            tokens.append(token)
+    return sorted(set(tokens), key=len, reverse=True)
+
+
+def _name_token_re(token: str) -> re.Pattern[str]:
+    return re.compile(
+        rf"(?<![{NAME_BOUNDARY_CHARS}]){re.escape(token)}(?![{NAME_BOUNDARY_CHARS}])"
+    )
+
+
+def _configured_role_alias(role_id: int, exclude: set[str]) -> Optional[str]:
+    """古い/手動ロールIDを設定で救済するための任意フック。"""
+    try:
+        from .dynamic_config import get
+        aliases = get("mention_chain.role_aliases", {}) or {}
+    except Exception:
+        return None
+    if not isinstance(aliases, dict):
+        return None
+    emp_id = aliases.get(str(role_id)) or aliases.get(role_id)
+    if isinstance(emp_id, str) and emp_id in EMPLOYEES and emp_id not in exclude:
+        return emp_id
+    return None
+
+
+def _infer_employee_near_unknown_role_tag(
+    text: str,
+    start: int,
+    end: int,
+    exclude: set[str],
+) -> Optional[str]:
+    """未知の `<@&role_id>` の近くに書かれた社員名から意図先を推定する。
+
+    社員が古いロールIDを貼ってしまった場合でも、`<@&old> カイ、...` のような
+    Discord上の見た目を手がかりに実行役へ届ける。通常文の「カイに任せる」は
+    これまで通り拾わず、ロールタグ隣接時だけ救済する。
+    """
+    before = text[max(0, start - NAME_CONTEXT_CHARS):start]
+    after = text[end:end + NAME_CONTEXT_CHARS]
+    candidates: list[tuple[int, int, str]] = []
+
+    for emp_id in EMPLOYEES.keys():
+        if emp_id in exclude:
+            continue
+        for token in _employee_name_tokens(emp_id):
+            pattern = _name_token_re(token)
+            for match in pattern.finditer(after):
+                candidates.append((match.start(), -len(token), emp_id))
+            for match in pattern.finditer(before):
+                candidates.append((len(before) - match.end(), -len(token), emp_id))
+
+    if not candidates:
+        return None
+    candidates.sort()
+    return candidates[0][2]
+
+
 def _candidate_patterns(employee_id: str) -> list[str]:
     """検出に使う `@プレフィックス必須` のパターン群。
     これは社員に「呼びたければ @ を付ける」文化を強制するための設計。
@@ -198,6 +266,10 @@ def extract_mentions(text: str, exclude: Optional[set[str]] = None) -> list[str]
         except ValueError:
             continue
         emp_id = multi_client.get_emp_for_role_id(role_id)
+        if not emp_id:
+            emp_id = _configured_role_alias(role_id, exclude)
+        if not emp_id:
+            emp_id = _infer_employee_near_unknown_role_tag(text_clean, m.start(), m.end(), exclude)
         if emp_id and emp_id not in exclude and emp_id not in found_positions:
             found_positions[emp_id] = m.start()
 

@@ -206,7 +206,12 @@ async def heartbeat_tick(main_client: discord.Client) -> None:
         from .dispatcher import process_mention_chain
         from .mention_chain import strip_meta_tag
         await process_mention_chain(
-            strip_meta_tag(msg), emp, ch, depth=0, visited={emp}, origin="heartbeat"
+            f"{strip_meta_tag(msg)}\n{discord_text}",
+            emp,
+            ch,
+            depth=0,
+            visited={emp},
+            origin="heartbeat",
         )
     except Exception:
         log.exception("heartbeat 連鎖発火失敗")

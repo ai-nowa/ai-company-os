@@ -256,7 +256,13 @@ async def _post_blocks_and_chain(emp_id: str, msg: str, main_client: discord.Cli
 
         # 連鎖発火
         try:
-            await process_mention_chain(content, emp_id, ch, depth=0, visited={emp_id})
+            await process_mention_chain(
+                f"{content}\n{discord_text}",
+                emp_id,
+                ch,
+                depth=0,
+                visited={emp_id},
+            )
         except Exception:
             log.exception(f"autonomy chain failed: {emp_id}")
 

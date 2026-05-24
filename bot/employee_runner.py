@@ -35,6 +35,7 @@ from .config import (
     load_relationship_snippet,
     load_session_state,
     now_jst_iso,
+    resolve_executable_path,
     save_session_state,
 )
 from .context_assembler import assemble_state_digest, write_usage_metric
@@ -416,7 +417,7 @@ async def _exec_claude(
     home = employee_home(employee_id)
 
     args = [
-        CLAUDE_CLI_PATH, "-p",
+        resolve_executable_path(CLAUDE_CLI_PATH), "-p",
         "--output-format", "json",
         "--model", model,
         "--effort", effort,
@@ -545,7 +546,7 @@ async def run_codex(employee_id: str, prompt: str, route: ModelRoute) -> str:
         out_path = out_f.name
 
     args = [
-        CODEX_CLI_PATH, "exec",
+        resolve_executable_path(CODEX_CLI_PATH), "exec",
         "--skip-git-repo-check",
         "-C", str(home),
         "--output-last-message", out_path,
