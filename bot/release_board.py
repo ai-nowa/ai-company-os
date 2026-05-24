@@ -45,9 +45,22 @@ HUMAN_WAIT_KEYWORDS = [
 ]
 INTERNAL_ONLY_NAME_RE = re.compile(
     r"(ack|ceo|decision|judgment|handover|praise|findings|review|audit|"
-    r"measure|measurement|state_correction|scope)",
+    r"measure|measurement|state_correction|scope|eod|completion|"
+    r"phase_restructure|observation_sheet|pm_completion|audit_ng|"
+    r"policy|concept|value_definition|load_design|runbook|strategy)",
     re.IGNORECASE,
 )
+QUIET_START_HOUR = 22
+QUIET_END_HOUR = 7
+QUIET_COOLDOWN_MIN = 360
+TOPIC_TOKEN_SKIP = {
+    "2025", "2026", "2027", "draft", "ack", "pm", "ceo", "coo", "cto",
+    "post", "note", "yt", "youtube", "article", "zenn", "copy", "cta",
+    "audit", "review", "judgment", "handover", "decision", "shop", "about",
+    "lock", "completion", "phase", "restructure", "observation", "sheet",
+    "eod", "report", "memo", "ng", "ok", "exp", "x_post", "xpost", "pm_ack",
+    "outbox", "final", "fix", "v01", "v02", "v03", "v04", "v05",
+}
 KEY_RELEASE_EMPLOYEES = {
     "arima_reiji",
     "saegusa_mio",
@@ -90,6 +103,64 @@ class HumanWaitRequest:
 
 def _now() -> datetime:
     return datetime.now(JST)
+
+
+def _is_quiet_hours(now: datetime | None = None) -> bool:
+    h = (now or _now()).hour
+    if QUIET_START_HOUR <= QUIET_END_HOUR:
+        return QUIET_START_HOUR <= h < QUIET_END_HOUR
+    return h >= QUIET_START_HOUR or h < QUIET_END_HOUR
+
+
+def _extract_topic_keys(name: str, text: str = "") -> set[str]:
+    keys: set[str] = set()
+    stem = name.lower()
+    if stem.endswith(".md") or stem.endswith(".mp4") or stem.endswith(".html"):
+        stem = stem.rsplit(".", 1)[0]
+    for m in re.findall(r"exp[-_]?(\d{3})", stem):
+        keys.add(f"exp-{m}")
+        keys.add(f"exp{m}")
+    for m in re.findall(r"article[-_]?(\d{1,3})", stem):
+        n = int(m)
+        keys.update({f"article-{n:02d}", f"article{n:02d}", f"article-{n}", f"article{n}"})
+    tokens = [t for t in re.split(r"[_\-]", stem) if t]
+    for tok in tokens:
+        if len(tok) >= 5 and not tok.isdigit() and tok not in TOPIC_TOKEN_SKIP:
+            keys.add(tok)
+    for i in range(len(tokens) - 1):
+        a, b = tokens[i], tokens[i + 1]
+        if a.isdigit() or b.isdigit() or len(a) + len(b) < 6:
+            continue
+        if a in TOPIC_TOKEN_SKIP and b in TOPIC_TOKEN_SKIP:
+            continue
+        keys.add(f"{a}-{b}")
+        keys.add(f"{a}{b}")
+    head = (text or "")[:1500]
+    for m in re.findall(r"EXP[-_]?(\d{3})", head, re.IGNORECASE):
+        keys.add(f"exp-{m.lower()}")
+        keys.add(f"exp{m.lower()}")
+    for m in re.findall(r"article[-_]?(\d{1,3})", head, re.IGNORECASE):
+        n = int(m)
+        keys.update({f"article-{n:02d}", f"article{n:02d}", f"article-{n}", f"article{n}"})
+    return keys
+
+
+def _published_topic_keys(outputs: list["PublicOutput"]) -> set[str]:
+    keys: set[str] = set()
+    for out in outputs:
+        blob = f"{out.url} {out.label}".lower()
+        for m in re.findall(r"exp[-_]?(\d{3})", blob):
+            keys.add(f"exp-{m}")
+            keys.add(f"exp{m}")
+        for m in re.findall(r"article[-_]?(\d{1,3})", blob):
+            n = int(m)
+            keys.update({f"article-{n:02d}", f"article{n:02d}", f"article-{n}", f"article{n}"})
+        for seg in re.findall(r"/(?:notes|articles)/([a-z0-9][a-z0-9\-]{4,})/?", out.url.lower()):
+            keys.add(seg)
+        for tok in re.findall(r"[a-z][a-z0-9\-]{5,}", out.label.lower()):
+            if tok not in TOPIC_TOKEN_SKIP and "-" in tok:
+                keys.add(tok)
+    return keys
 
 
 def _short(text: str, limit: int = 180) -> str:
@@ -187,6 +258,8 @@ def _candidate_title(path: Path, text: str) -> str:
 
 
 def _suggest_action(kind: str, path: str, text: str = "") -> str:
+    if kind == "video" and not path.lower().endswith(".mp4"):
+        return "台本/説明欄は対応mp4を確認。mp4がなければ動画生成してから `bot.youtube_upload --video <mp4>`。URLが出なければ site noteへ転用。"
     try:
         from .output_routes import route_for_kind
 
@@ -242,6 +315,21 @@ def collect_public_outputs(hours: int = 24) -> list[PublicOutput]:
                     label=_short(data.get("title") or path.name, 90),
                 ))
 
+    try:
+        from .shipped_artifacts import load_shipped_artifacts
+
+        for row in load_shipped_artifacts(hours=hours):
+            url = str(row.get("output_url") or "")
+            if url and _public_urls(url):
+                outputs.append(PublicOutput(
+                    ts=str(row.get("verified_at") or row.get("ts") or now_jst_iso()),
+                    source="company/shipped_artifacts.jsonl",
+                    url=url,
+                    label=_short(row.get("title") or row.get("source_path") or url, 90),
+                ))
+    except Exception:
+        pass
+
     unique: dict[str, PublicOutput] = {}
     for item in outputs:
         unique.setdefault(item.url, item)
@@ -278,12 +366,24 @@ def collect_ready_candidates(hours: int = 48) -> list[ReleaseCandidate]:
             hay = f"{path.name}\n{text}"
             if not any(keyword.lower() in hay.lower() for keyword in READY_KEYWORDS):
                 continue
-            has_publish_language = any(
+            has_publish_language = path.suffix.lower() == ".mp4" or any(
                 keyword in hay
                 for keyword in ("公開依頼", "投稿依頼", "公開GO", "投稿本文", "コピペOK", "YouTube", "Xポスト")
             )
-            if INTERNAL_ONLY_NAME_RE.search(path.name) and not has_publish_language:
+            if INTERNAL_ONLY_NAME_RE.search(path.name):
                 continue
+            heading = ""
+            for line in text.splitlines()[:5]:
+                s = line.strip().lstrip("# ").strip().lower()
+                if s:
+                    heading = s
+                    break
+            if heading and any(tok in heading for tok in (
+                "判定", "review", "ack", "決定", "承認", "ng", "監査",
+                "引き継ぎ", "handover", "観測", "観察", "decision", "judgment",
+            )):
+                if not has_publish_language:
+                    continue
 
             kind = _candidate_kind(path, text)
             age = round((_now() - mtime).total_seconds() / 3600, 1)
@@ -347,7 +447,50 @@ def collect_human_wait_requests(hours: int = 24) -> list[HumanWaitRequest]:
 def collect_release_metrics() -> dict[str, Any]:
     public_outputs = collect_public_outputs(hours=24)
     candidates = collect_ready_candidates(hours=72)
+    published_keys = _published_topic_keys(public_outputs)
+    shipped_ledger_count = 0
+    try:
+        from .shipped_artifacts import shipped_topic_keys, load_shipped_artifacts
+
+        published_keys |= shipped_topic_keys(hours=72)
+        shipped_ledger_count = len(load_shipped_artifacts(hours=72))
+    except Exception:
+        pass
+    superseded = 0
+    if published_keys:
+        kept: list[ReleaseCandidate] = []
+        for c in candidates:
+            path = BASE_DIR / c.path
+            try:
+                from .shipped_artifacts import source_is_shipped
+
+                if source_is_shipped(c.path):
+                    superseded += 1
+                    continue
+            except Exception:
+                pass
+            text = ""
+            if path.exists() and path.suffix.lower() != ".mp4":
+                try:
+                    text = path.read_text(encoding="utf-8", errors="replace")[:1500]
+                except Exception:
+                    pass
+            topic_keys = _extract_topic_keys(path.name, text)
+            if topic_keys & published_keys:
+                superseded += 1
+                continue
+            kept.append(c)
+        candidates = kept
     human_waits = collect_human_wait_requests(hours=24)
+    if published_keys:
+        kept_waits: list[HumanWaitRequest] = []
+        for req in human_waits:
+            wait_keys = _extract_topic_keys(req.kind, req.text)
+            if wait_keys & published_keys:
+                superseded += 1
+                continue
+            kept_waits.append(req)
+        human_waits = kept_waits
     stale_candidates = [c for c in candidates if c.age_hours >= 2]
     return {
         "ts": now_jst_iso(),
@@ -356,6 +499,9 @@ def collect_release_metrics() -> dict[str, Any]:
         "stale_ready_count": len(stale_candidates),
         "human_wait_requests_24h": len(human_waits),
         "output_debt": max(0, len(candidates) + len(human_waits) - len(public_outputs)),
+        "superseded_count": superseded,
+        "shipped_ledger_72h": shipped_ledger_count,
+        "quiet_hours": _is_quiet_hours(),
         "latest_public_outputs": [asdict(x) for x in public_outputs[:8]],
         "top_candidates": [asdict(x) for x in candidates[:8]],
         "human_waits": [asdict(x) for x in human_waits[:8]],
@@ -372,6 +518,12 @@ def release_digest(max_chars: int = 900, employee_id: str | None = None) -> str:
         "- rule: 日付/明朝/24h後は待機理由ではない。公開待ち候補があるなら今、別チャネルで出す。",
         "- template: shared/templates/output_playbook.md",
     ]
+    if metrics.get("superseded_count"):
+        lines.append(f"- superseded_24h: {metrics['superseded_count']}（同テーマ公開済みで自動降格）")
+    if metrics.get("shipped_ledger_72h"):
+        lines.append(f"- shipped_ledger_72h: {metrics['shipped_ledger_72h']}（source_path→URL確定済み）")
+    if metrics.get("quiet_hours"):
+        lines.append("- quiet_hours: 22-07時。公開チャネル新規投稿は1チャネル合計1件まで。site/notes/articles更新は可。")
     top_candidates = metrics.get("top_candidates", [])
     if employee_id and employee_id not in KEY_RELEASE_EMPLOYEES:
         top_candidates = [c for c in top_candidates if c.get("employee_id") == employee_id]
@@ -420,12 +572,16 @@ def render_release_board(metrics: dict[str, Any] | None = None) -> str:
         f"| stale_ready_2h+ | {metrics['stale_ready_count']} | 2h以上公開待ち。待機ではなく負債 |",
         f"| human_wait_requests_24h | {metrics['human_wait_requests_24h']} | 人間待ち化した公開/投稿依頼 |",
         f"| output_debt | {metrics['output_debt']} | ready + human_wait - public_output |",
+        f"| shipped_ledger_72h | {metrics.get('shipped_ledger_72h', 0)} | source_path -> URL として確定した公開済み成果 |",
         "",
         "## Operating Rule",
         "",
         "- 内部メモ、承認ログ、判断ファイルは公開成果に数えない。",
         "- Xなど単一チャネルが人間待ちなら、同じ素材をYouTube/Zenn/site/Bluesky/Qiita/Discord公開導線へ転用する。",
         "- 判定日・明朝・24h後は待機日ではない。公開待ち候補がある限り今出す。",
+        f"- superseded_24h: {metrics.get('superseded_count', 0)}（同テーマで公開URLが出た候補は自動降格）",
+        ("- quiet_hours: ON（22-07時）。公開チャネル新規投稿は1チャネル合計1件まで。site/notes/articles更新は可。"
+         if metrics.get("quiet_hours") else "- quiet_hours: OFF（通常時間帯）"),
         "",
         "## Ready To Ship",
         "",
@@ -498,10 +654,12 @@ def _should_alert(metrics: dict[str, Any], state: dict[str, Any]) -> bool:
     if metrics.get("output_debt", 0) <= 0 and metrics.get("human_wait_requests_24h", 0) == 0:
         return False
     sig = _signature(metrics)
-    if sig != state.get("last_signature"):
+    cooldown_min = int(dynamic_config.get("release_pressure.cooldown_minutes", 90))
+    if _is_quiet_hours():
+        cooldown_min = max(cooldown_min, QUIET_COOLDOWN_MIN)
+    if sig != state.get("last_signature") and not _is_quiet_hours():
         return True
     last = _parse_ts(str(state.get("last_alert_ts", "")))
-    cooldown_min = int(dynamic_config.get("release_pressure.cooldown_minutes", 90))
     return last is None or (_now() - last).total_seconds() >= cooldown_min * 60
 
 

@@ -2,14 +2,16 @@
 
 問題: 社員が active_tasks.md に「blocked_by: いくと」と書いて満足し、
       📥いくと依頼チャンネルに正式投稿せずに業務が滞る。
+      さらに、社員側で実行できる公開/投稿まで人間待ち化して止まる。
 
 仕組み:
 1. 1分ごとに active_tasks.md をパース（会社・社員両方）
 2. blocked_by に「いくと」を含むタスクを抽出
 3. 📥いくと依頼チャンネルログをスキャンして、過去24時間に該当タスクの依頼があるか確認
 4. なければ:
-   a) 1回目: 状態ファイルに記録 + Architect が代行投稿（owner_request_protocol.md テンプレで自動生成）
-   b) 既投稿済み: スキップ
+   a) 出力経路がある通常作業は「成果物報告」へ差し戻し、社員実行に戻す
+   b) 本当に人間しかできない認証/本人確認/契約だけ📥へ代行投稿
+   c) 既投稿済み: スキップ
 5. blocked が解除されたら自動的に「フォロー対象外」になる（次のスキャンで自然消滅）
 
 スキャン対象:
@@ -30,6 +32,12 @@ from typing import Optional
 
 from .config import BASE_DIR, EMPLOYEES, JST, now_jst_iso
 from .architect_outbox import submit_post
+from .owner_request_policy import (
+    HARD_HUMAN_KEYWORDS,
+    OWNER_REQUEST_MARKER,
+    build_redirect_notice,
+    evaluate_owner_request,
+)
 
 log = logging.getLogger("owner_request_watcher")
 
@@ -245,6 +253,16 @@ def _generate_request_text(task: dict[str, str]) -> str:
 *この依頼は `bot/owner_request_watcher.py` が active_tasks.md を監視して自動投稿したものです。起票者が手順を補完してください。*"""
 
 
+def _mark_human_required_if_needed(task: dict[str, str], content: str) -> str:
+    hay = "\n".join(
+        str(task.get(key, ""))
+        for key in ("blocked_by", "notes", "title")
+    ).lower()
+    if any(keyword.lower() in hay for keyword in HARD_HUMAN_KEYWORDS):
+        return f"{OWNER_REQUEST_MARKER}\n{content}"
+    return content
+
+
 DEPRECATE_INTERVAL = 3600  # 1時間ごと
 DEPRECATE_THRESHOLD_HOURS = 24
 
@@ -426,16 +444,32 @@ async def scan_and_post_loop() -> None:
                     continue
                 # 代行投稿
                 log.info(f"代行投稿: {tid} ({task.get('title','')[:60]})")
-                content = _generate_request_text(task)
-                submit_post(
-                    "いくと依頼",
-                    content,
-                    label=f"watcher_{tid}",
-                )
-                state["posted_tasks"][tid] = {
-                    "auto_posted_at": now_jst_iso(),
-                    "title": task.get("title", "")[:100],
-                }
+                content = _mark_human_required_if_needed(task, _generate_request_text(task))
+                decision = evaluate_owner_request(content)
+                if decision.allowed:
+                    submit_post(
+                        "いくと依頼",
+                        content,
+                        label=f"watcher_{tid}",
+                    )
+                    state["posted_tasks"][tid] = {
+                        "auto_posted_at": now_jst_iso(),
+                        "title": task.get("title", "")[:100],
+                        "decision": decision.reason,
+                    }
+                else:
+                    notice = build_redirect_notice(content, f"owner_request_watcher:{tid}")
+                    submit_post(
+                        "成果物報告",
+                        notice,
+                        label=f"watcher_redirect_{tid}",
+                    )
+                    state["posted_tasks"][tid] = {
+                        "redirected_at": now_jst_iso(),
+                        "title": task.get("title", "")[:100],
+                        "decision": decision.reason,
+                        "route": decision.route,
+                    }
                 _save_state(state)
         except asyncio.CancelledError:
             log.info("owner_request_watcher cancelled")

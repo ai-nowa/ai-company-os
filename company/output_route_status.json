@@ -1,0 +1,86 @@
+{
+  "site": {
+    "label": "ai-nowa.com site",
+    "enabled": true,
+    "human_required": false,
+    "executor": "shirase_kai",
+    "kinds": ["artifact", "sales_page", "site_note", "site_article"],
+    "command": "cd site && wrangler pages deploy public --project-name=ai-nowa --branch=main --commit-dirty=true",
+    "required_inputs": ["公開先slug", "HTML本文", "CTA", "計測条件"],
+    "preflight": ["site/wrangler.toml exists", "CLOUDFLARE_API_TOKEN set"],
+    "verify": ["curl -I -L https://ai-nowa.com/<path>/", "成果物報告にURL/計測条件を書く"],
+    "fallback": "Cloudflare失敗時は失敗ログを成果物報告へ出し、同素材をBluesky/Discord公開導線へ転用"
+  },
+  "article": {
+    "label": "site article",
+    "enabled": true,
+    "human_required": false,
+    "executor": "hoshino_ritsu",
+    "kinds": ["article"],
+    "command": "site/public/articles/article-XX/index.html と site/public/articles/index.html を更新; cd site && wrangler pages deploy public --project-name=ai-nowa --branch=main --commit-dirty=true",
+    "required_inputs": ["title", "slug/article番号", "監査済み本文", "about/shop CTA"],
+    "preflight": ["既存slug衝突確認", "MD->HTML変換", "記事一覧更新", "CLOUDFLARE_API_TOKEN set"],
+    "verify": ["curl -I -L https://ai-nowa.com/articles/article-XX/", "本文/CTAがlive HTMLにあること"],
+    "fallback": "番号衝突時は新規article番号に切替。Zenn/note待ちは禁止"
+  },
+  "note": {
+    "label": "site note/short",
+    "enabled": true,
+    "human_required": false,
+    "executor": "kuroba_yuu",
+    "kinds": ["x_post", "note", "short"],
+    "command": "site/public/notes/<slug>/index.html を作成; cd site && wrangler pages deploy public --project-name=ai-nowa --branch=main --commit-dirty=true",
+    "required_inputs": ["slug", "300-800字本文", "about/shop CTA"],
+    "preflight": ["同slug確認", "X/YouTube待ち素材を短報化", "CLOUDFLARE_API_TOKEN set"],
+    "verify": ["curl -I -L https://ai-nowa.com/notes/<slug>/", "成果物報告にURLを書く"],
+    "fallback": "site失敗時はBlueskyまたはDiscord公開報告へ転用"
+  },
+  "bluesky": {
+    "label": "Bluesky",
+    "enabled": true,
+    "human_required": false,
+    "executor": "kuroba_yuu",
+    "kinds": ["x_post", "announcement"],
+    "command": "bot/.venv/bin/python -m bot.bluesky_client --text \"...\"",
+    "required_inputs": ["300字以内本文", "URL"],
+    "preflight": ["BLUESKY_HANDLE set", "BLUESKY_APP_PASSWORD set", "重複投稿でない"],
+    "verify": ["bsky.app URLまたは投稿履歴を成果物報告へ"],
+    "fallback": "失敗時は同文をsite noteへ転用"
+  },
+  "youtube": {
+    "label": "YouTube upload",
+    "enabled": true,
+    "human_required": false,
+    "executor": "shirase_kai",
+    "kinds": ["video"],
+    "command": "bot/.venv/bin/python -m bot.youtube_upload --video <mp4> --title \"...\" --privacy unlisted",
+    "required_inputs": ["mp4", "title", "description", "privacy", "AI生成/改変コンテンツ開示方針"],
+    "preflight": ["bot/youtube_token.json exists", "youtube.upload scope", "mp4 exists", "title exists"],
+    "verify": ["upload_results/*.json dry_run=false", "youtu.be URLがHTTP 200/303で解決"],
+    "fallback": "upload失敗時は台本/静止画/要約をsite noteへ出す。AI開示UIだけ未自動化ならHUMAN_REQUIREDで切る"
+  },
+  "zenn": {
+    "label": "Zenn",
+    "enabled": true,
+    "human_required": false,
+    "executor": "hoshino_ritsu",
+    "kinds": ["zenn_article"],
+    "command": "bot/.venv/bin/python -m bot.zenn_publisher <slug>",
+    "required_inputs": ["articles/<slug>.md", "監査lock"],
+    "preflight": ["Zenn連携状態", "slug", "監査OK"],
+    "verify": ["zenn.dev URL確認"],
+    "fallback": "Zenn gate失敗時はsite articleへ転用"
+  },
+  "x": {
+    "label": "X/Twitter",
+    "enabled": false,
+    "human_required": false,
+    "executor": "kuroba_yuu",
+    "kinds": ["x_post"],
+    "command": "現状はdry-run扱い。X待ちにせずBlueskyまたはsite noteへ転用",
+    "required_inputs": ["投稿本文", "URL"],
+    "preflight": ["bot.x_publisher is not production route"],
+    "verify": ["X URLがなければ成果物扱いしない"],
+    "fallback": "Bluesky -> site note -> 成果物報告"
+  }
+}

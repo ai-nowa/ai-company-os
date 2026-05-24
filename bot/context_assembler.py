@@ -333,6 +333,7 @@ def _load_wisdom_essence() -> str:
 _DIGEST_BUDGETS = {
     "micro": {
         "release": 520,
+        "shipped": 260,
         "routes": 0,
         "revenue": 560,
         "external_kpi": 520,
@@ -345,6 +346,7 @@ _DIGEST_BUDGETS = {
     },
     "routine": {
         "release": 640,
+        "shipped": 360,
         "routes": 740,
         "revenue": 700,
         "external_kpi": 620,
@@ -357,6 +359,7 @@ _DIGEST_BUDGETS = {
     },
     "work": {
         "release": 760,
+        "shipped": 460,
         "routes": 900,
         "revenue": 820,
         "external_kpi": 760,
@@ -369,6 +372,7 @@ _DIGEST_BUDGETS = {
     },
     "executive": {
         "release": 820,
+        "shipped": 500,
         "routes": 900,
         "revenue": 900,
         "external_kpi": 820,
@@ -447,6 +451,18 @@ def _release_items(employee_id: str, limit: int) -> list[str]:
     return [line for line in text.splitlines() if line.strip()]
 
 
+def _shipped_items(limit: int) -> list[str]:
+    try:
+        from .shipped_artifacts import shipped_digest
+
+        text = shipped_digest(max_chars=limit)
+    except Exception:
+        return []
+    if not text.strip():
+        return []
+    return [line for line in text.splitlines() if line.strip()]
+
+
 def _external_kpi_items(limit: int) -> list[str]:
     try:
         from .external_metrics import external_digest_items
@@ -494,6 +510,8 @@ def assemble_state_digest(employee_id: str, reason: str, mode: str = "routine") 
         "- 投稿/公開/確認をいくとへ依頼しない。Output Routesのどれかへ出すか、失敗理由と代替公開パスを成果物報告へ残す",
         "",
         *_fit_section("Release OS（公開・出荷ゲート）", _release_items(employee_id, budgets["release"]), budgets["release"], "- 未初期化"),
+        "",
+        *_fit_section("Shipped Ledger（公開済み確定・再依頼禁止）", _shipped_items(budgets["shipped"]), budgets["shipped"], "- 公開済み台帳なし"),
         "",
         *([] if mode == "micro" else _fit_section("Output Routes（人間待ち禁止・先に試す出口）", _output_route_items(mode, budgets.get("routes", 0)), budgets.get("routes", 0), "- 未定義")),
         *([] if mode == "micro" else [""]),

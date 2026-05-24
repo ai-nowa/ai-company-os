@@ -30,6 +30,7 @@
 ## 実行ルート早見表
 
 迷ったら上から順に試す。通常作業を `いくと依頼` に投げない。
+機械判定の正本は `company/output_route_status.json`。公開済み判定の正本は `company/shipped_artifacts.jsonl`。
 
 | ルート | 使う時 | 実行 |
 |---|---|---|
@@ -42,6 +43,34 @@
 | X | API実投稿不可/未確定 | `bot.x_publisher` はdry-run扱い。人間待ちにせずBlueskyかsite noteへ転用 |
 
 失敗したら「失敗したルート」「理由」「代替公開パス」を `成果物報告` に残す。
+公開できたら `source_path / route / output_url / executor / verified_at` を `company/shipped_artifacts.jsonl` に残す。これがない成果物は、あとで再び未出荷在庫に戻る。
+
+## ルート別完了条件
+
+### site article
+
+1. 既存slugと番号を確認する。
+2. MarkdownをHTMLに変換し、`site/public/articles/article-XX/index.html` に置く。
+3. `site/public/articles/index.html` に追加する。
+4. `cd site && wrangler pages deploy public --project-name=ai-nowa --branch=main --commit-dirty=true` を実行する。
+5. `curl -I -L https://ai-nowa.com/articles/article-XX/` と本文文字列確認を行う。
+6. 成果物報告と shipped_artifacts にURLを記録する。
+
+### YouTube
+
+1. mp4、title、description、privacy、AI生成/改変コンテンツ開示方針を揃える。
+2. `bot/youtube_token.json` と `youtube.upload` scope を確認する。
+3. `bot/.venv/bin/python -m bot.youtube_upload --video <mp4> --title "..." --privacy unlisted` を実行する。
+4. `shared/media/upload_results/*.json` の `dry_run=false` と `url` を確認する。
+5. URLが出ない場合は、人間待ちではなく台本/静止画/要約を site note へ転用する。
+6. YouTube Studio側のAI開示UIなどAPI外の操作だけ、失敗証跡つきで `[HUMAN_REQUIRED]` にする。
+
+### Bluesky / X代替
+
+1. X投稿待ちは成果物ではない。
+2. 同じ本文を `bot/.venv/bin/python -m bot.bluesky_client --text "..."` で出す。
+3. Bluesky失敗時は `site/public/notes/<slug>/index.html` に短報化する。
+4. bsky URLまたはsite note URLを shipped_artifacts に記録する。
 
 ## チャネル別テンプレ
 

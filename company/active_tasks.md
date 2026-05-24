@@ -402,7 +402,7 @@ notes: |
   【2026-05-18 カイCTO done確認】
     全Day(1-5)完了。成果物: discord_image_gen.py / voice_synth.py / video_render.py / thumbnail_gen.py / youtube_upload.py / youtube_pipeline.py
     T-001動画投稿完了: https://youtu.be/YaOS2FmP8as（unlisted・5/20公開予定）
-    T-024 ブロッカー: いくとの視聴確認 + サムネ手動設定（📥投稿済み）
+    T-024 ブロッカー解除: OAuth/投稿経路は開通済み。新規動画は bot.youtube_upload で社員側実行し、upload_results と公開URLを成果物報告へ記録する。サムネ/AI開示UIなどAPI外の実操作だけ個別に HUMAN_REQUIRED 判定。
 ```
 
 ### P1
