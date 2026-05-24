@@ -48,6 +48,12 @@ def _defaults() -> dict:
         "token_pace": {
             "alert_prompt_chars": 50000,
         },
+        "llm_circuit": {
+            "enabled": True,
+            "claude_cooldown_minutes": 15,
+            "claude_failure_threshold": 2,
+            "claude_failure_window_minutes": 10,
+        },
         "external_check": {
             "enabled": True,
             "interval_seconds": 1800,

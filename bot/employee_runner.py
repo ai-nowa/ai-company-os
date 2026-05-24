@@ -37,6 +37,7 @@ from .config import (
     save_session_state,
 )
 from .context_assembler import assemble_state_digest, write_usage_metric
+from . import dynamic_config
 from .model_policy import (
     FRESH_ROUTINE_SENDERS,
     ModelRoute,
@@ -53,6 +54,9 @@ _concurrency_semaphore = asyncio.Semaphore(2)
 RESUME_MODES = {"work", "executive"}
 CIRCUIT_SKIP_MODES = {"micro", "routine"}
 CIRCUIT_STATE_PATH = COMPANY_DIR / ".llm_circuit_state.json"
+DEFAULT_CLAUDE_CIRCUIT_COOLDOWN_MINUTES = 15
+DEFAULT_CLAUDE_CIRCUIT_FAILURE_THRESHOLD = 2
+DEFAULT_CLAUDE_CIRCUIT_WINDOW_MINUTES = 10
 
 
 @dataclass
@@ -148,33 +152,123 @@ def _save_circuit_state(state: dict) -> None:
     CIRCUIT_STATE_PATH.write_text(json.dumps(state, ensure_ascii=False, indent=2), encoding="utf-8")
 
 
-def _circuit_skip_reason(mode: str) -> Optional[str]:
+def _parse_iso_datetime(value: str) -> Optional[datetime]:
+    try:
+        return datetime.fromisoformat(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _circuit_enabled() -> bool:
+    value = dynamic_config.get("llm_circuit.enabled", True)
+    if isinstance(value, str):
+        return value.strip().lower() in {"1", "true", "yes", "on"}
+    return bool(value)
+
+
+def _claude_circuit_cooldown_minutes() -> int:
+    try:
+        return int(dynamic_config.get(
+            "llm_circuit.claude_cooldown_minutes",
+            DEFAULT_CLAUDE_CIRCUIT_COOLDOWN_MINUTES,
+        ))
+    except (TypeError, ValueError):
+        return DEFAULT_CLAUDE_CIRCUIT_COOLDOWN_MINUTES
+
+
+def _circuit_skip_reason(mode: str, backend: str) -> Optional[str]:
+    if not _circuit_enabled():
+        return None
     if mode not in CIRCUIT_SKIP_MODES:
         return None
+    # Claude Code の一時停止で Codex 社員まで止めない。
+    if backend != "claude":
+        return None
     state = _load_circuit_state()
-    open_until = state.get("open_until")
+    circuit = (state.get("circuits") or {}).get(backend, {})
+    open_until = circuit.get("open_until")
+    reason = circuit.get("reason", "llm circuit open")
+
+    # 旧フォーマット互換: 以前は単一の global circuit だった。
+    # ただし新しい短い cooldown を適用し、古い90分停止を引きずらない。
+    if not open_until and backend == "claude":
+        open_until = state.get("open_until")
+        reason = state.get("reason", reason)
+        updated_at = _parse_iso_datetime(state.get("updated_at", ""))
+        legacy_until = _parse_iso_datetime(open_until) if open_until else None
+        if updated_at and legacy_until:
+            capped_until = updated_at + timedelta(minutes=_claude_circuit_cooldown_minutes())
+            if capped_until < legacy_until:
+                open_until = capped_until.isoformat(timespec="seconds")
+
     if not open_until:
         return None
-    try:
-        until = datetime.fromisoformat(open_until)
-    except ValueError:
+    until = _parse_iso_datetime(open_until)
+    if until is None:
         return None
     if datetime.now(until.tzinfo) >= until:
         return None
-    reason = state.get("reason", "llm circuit open")
     return f"{reason}; retry_after={open_until}"
 
 
-def _open_circuit(minutes: int, reason: str) -> None:
+def _open_circuit(backend: str, minutes: int, reason: str) -> None:
     from .config import JST
 
     until = datetime.now(JST) + timedelta(minutes=minutes)
-    _save_circuit_state({
+    state = _load_circuit_state()
+    circuits = state.setdefault("circuits", {})
+    circuits[backend] = {
         "open_until": until.isoformat(timespec="seconds"),
         "reason": reason,
         "updated_at": now_jst_iso(),
-    })
-    log.warning("LLM circuit opened for %d minutes: %s", minutes, reason)
+    }
+    state["updated_at"] = now_jst_iso()
+    _save_circuit_state(state)
+    log.warning("%s LLM circuit opened for %d minutes: %s", backend, minutes, reason)
+
+
+def _record_claude_failure_and_maybe_open(reason: str) -> bool:
+    from .config import JST
+
+    try:
+        threshold = int(dynamic_config.get(
+            "llm_circuit.claude_failure_threshold",
+            DEFAULT_CLAUDE_CIRCUIT_FAILURE_THRESHOLD,
+        ))
+    except (TypeError, ValueError):
+        threshold = DEFAULT_CLAUDE_CIRCUIT_FAILURE_THRESHOLD
+    try:
+        window_minutes = int(dynamic_config.get(
+            "llm_circuit.claude_failure_window_minutes",
+            DEFAULT_CLAUDE_CIRCUIT_WINDOW_MINUTES,
+        ))
+    except (TypeError, ValueError):
+        window_minutes = DEFAULT_CLAUDE_CIRCUIT_WINDOW_MINUTES
+
+    state = _load_circuit_state()
+    now = datetime.now(JST)
+    cutoff = now - timedelta(minutes=window_minutes)
+    events = []
+    for event in state.get("failure_events", {}).get("claude", []):
+        ts = _parse_iso_datetime(event.get("ts", ""))
+        if ts and ts >= cutoff:
+            events.append(event)
+    events.append({"ts": now.isoformat(timespec="seconds"), "reason": reason[:180]})
+    state.setdefault("failure_events", {})["claude"] = events[-20:]
+    state["updated_at"] = now_jst_iso()
+    _save_circuit_state(state)
+
+    if len(events) >= threshold:
+        _open_circuit("claude", _claude_circuit_cooldown_minutes(), reason)
+        return True
+    log.warning(
+        "Claude failure recorded without opening circuit: %d/%d in %dmin: %s",
+        len(events),
+        threshold,
+        window_minutes,
+        reason,
+    )
+    return False
 
 
 def _mode_rules(mode: str) -> str:
@@ -351,7 +445,9 @@ async def run_claude_code(
     err_or_result = err or result or ""
     usage_like = _is_usage_cap_error(err_or_result) or (rc == 1 and not err_or_result.strip())
     if usage_like:
-        _open_circuit(90, f"Claude Code unavailable ({err_or_result[:120] or 'rc=1/no stderr'})")
+        _record_claude_failure_and_maybe_open(
+            f"Claude Code unavailable ({err_or_result[:120] or 'rc=1/no stderr'})"
+        )
 
     # usage cap っぽい時の再試行は deep work だけ。routine/micro では二重消費を避ける。
     if usage_like and mode in RESUME_MODES:
@@ -455,7 +551,16 @@ async def run_employee_result(
         "text": user_message,
     })
 
-    circuit_reason = _circuit_skip_reason(resolved_mode)
+    route = resolve_model_route(
+        employee_id,
+        resolved_mode,
+        sender,
+        user_message,
+        run_reason,
+        model_override,
+    )
+
+    circuit_reason = _circuit_skip_reason(resolved_mode, route.backend)
     if circuit_reason:
         append_conversation_log(employee_id, {
             "kind": "system_skip",
@@ -468,6 +573,12 @@ async def run_employee_result(
             mode=resolved_mode,
             reason=run_reason,
             skipped_reason=circuit_reason,
+            model=route.model,
+            effort=route.effort,
+            route_tier=route.tier,
+            route_reason=route.reason,
+            route_escalated=route.escalated,
+            fallback_model=route.fallback_model,
             chain_id=chain_id,
             depth=depth,
         )
@@ -480,15 +591,6 @@ async def run_employee_result(
             depth=depth,
             skipped_reason=circuit_reason,
         )
-
-    route = resolve_model_route(
-        employee_id,
-        resolved_mode,
-        sender,
-        user_message,
-        run_reason,
-        model_override,
-    )
 
     ensure_claude_md(employee_id)
     prompt = _compose_prompt(employee_id, user_message, sender, resolved_mode, run_reason)
