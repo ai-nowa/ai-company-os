@@ -164,6 +164,7 @@ def _render_improvement_sections() -> list[str]:
     eff: dict = {}
     qual: dict = {}
     external: dict = {}
+    release: dict = {}
     trigger_history: list[dict] = []
 
     try:
@@ -179,6 +180,7 @@ def _render_improvement_sections() -> list[str]:
                 eff = latest.get("efficiency", {})
                 qual = latest.get("quality", {})
                 external = latest.get("external", {})
+                release = latest.get("release", {})
                 # 前回との差分
                 if len(snaps) >= 2:
                     prev = snaps[-2].get("cognition", {})
@@ -258,6 +260,16 @@ def _render_improvement_sections() -> list[str]:
         f"| YouTube subscribers/views | {_metric(yt.get('subscriber_count'))} / {_metric(yt.get('view_count'))} | {_source(yt)} |",
         f"| live /shop price | {_metric(site.get('shop_live', {}).get('price'))} | {'取得済み' if site.get('shop_live', {}).get('available') else '--'} |",
         f"| local/live mismatch | {_metric(health.get('shop_local_live_mismatch'))} | {'要同期' if health.get('shop_local_live_mismatch') else 'OK'} |",
+        "",
+        "## Release OS 指標 [auto: release_board.py]",
+        "",
+        "| 指標 | 値 | 状態 |",
+        "|------|----|------|",
+        f"| 公開URL/公開導線 24h | {_metric(release.get('public_outputs_24h'))} | {'OK' if release.get('public_outputs_24h', 0) > 0 else '未達'} |",
+        f"| ready_to_ship | {_metric(release.get('ready_to_ship_count'))} | {'未出荷在庫あり' if release.get('ready_to_ship_count', 0) > 0 else 'OK'} |",
+        f"| 2h+ stale ready | {_metric(release.get('stale_ready_count'))} | {'要即時出荷' if release.get('stale_ready_count', 0) > 0 else 'OK'} |",
+        f"| 人間待ち公開依頼 24h | {_metric(release.get('human_wait_requests_24h'))} | {'代替出口へ転用' if release.get('human_wait_requests_24h', 0) > 0 else 'OK'} |",
+        f"| output_debt | {_metric(release.get('output_debt'))} | {'赤字' if release.get('output_debt', 0) > 0 else 'OK'} |",
         "",
         "## 効率・品質指標 [auto: 1h更新 / self_improvement_loop.py]",
         "",

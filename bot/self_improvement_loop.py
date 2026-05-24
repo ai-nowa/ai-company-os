@@ -283,10 +283,13 @@ def _collect_quality() -> dict:
 def collect_all_metrics() -> dict:
     """全7指標を収集して返す。"""
     from .external_metrics import collect_external_metrics, write_external_metrics_snapshot, write_kpi_observations
+    from .release_board import collect_release_metrics, write_release_board
 
     external = collect_external_metrics()
     write_external_metrics_snapshot(external)
     write_kpi_observations(external)
+    release = collect_release_metrics()
+    write_release_board(release)
     return {
         "ts": external.get("ts", now_jst_iso()),
         "external": external,
@@ -301,6 +304,7 @@ def collect_all_metrics() -> dict:
         "code_health": _collect_code_health(),
         "idle": _collect_idle_employees_tiered(),
         "wake_rate": _collect_wake_rate(window_hours=1),
+        "release": release,
     }
 
 
@@ -438,6 +442,42 @@ def detect_triggers(metrics: dict, snapshots: list[dict]) -> list[dict]:
                     "提案会議で終えず、成果物パス・投稿URL・差し替え箇所のいずれかを残してください。"
                 ),
             })
+
+    # 公開待ち在庫: 内部成果物や人間待ち依頼があるのに、24h公開URLがゼロ。
+    rel = metrics.get("release", {})
+    if (
+        rel
+        and rel.get("output_debt", 0) > 0
+        and (rel.get("stale_ready_count", 0) > 0 or rel.get("human_wait_requests_24h", 0) > 0)
+    ):
+        top_candidates = rel.get("top_candidates", [])
+        waits = rel.get("human_waits", [])
+        candidate_lines = []
+        for c in top_candidates[:3]:
+            candidate_lines.append(
+                f"- {c.get('kind', '?')} `{c.get('path', '?')}`: {str(c.get('suggested_action', ''))[:90]}"
+            )
+        wait_lines = []
+        for w in waits[:2]:
+            wait_lines.append(
+                f"- {w.get('kind', '?')} {w.get('author', '?')}: {str(w.get('suggested_action', ''))[:90]}"
+            )
+        triggers.append({
+            "name": "RELEASE_STALL",
+            "detail": (
+                f"output_debt={rel.get('output_debt', 0)} / public={rel.get('public_outputs_24h', 0)} / "
+                f"ready={rel.get('ready_to_ship_count', 0)} / human_wait={rel.get('human_wait_requests_24h', 0)}"
+            ),
+            "message": (
+                "【Release OS: 未出荷在庫警告】\n"
+                "公開済み成果より未出荷在庫・人間待ち依頼が多い状態です。\n"
+                "内部メモは成果に数えません。Xが止まるなら、同じ素材をサイト短報・YouTube・Zenn・Bluesky・公開Discordへ転用してください。\n"
+                "次の発言は議論ではなく、**出荷担当 / 出す場所 / URLまたは成果物パス / 計測条件** の確定にしてください。\n"
+                + ("\n候補:\n" + "\n".join(candidate_lines) if candidate_lines else "")
+                + ("\n人間待ち置換:\n" + "\n".join(wait_lines) if wait_lines else "")
+                + "\n@有馬レイジ @三枝ミオ @朝倉ノア @黒羽ユウ"
+            ),
+        })
 
     # 議論 30 回超 + 成果物ゼロ
     q = metrics["quality"]

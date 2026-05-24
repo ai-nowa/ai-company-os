@@ -897,6 +897,11 @@ async def on_ready() -> None:
     asyncio.create_task(improvement_loop())
     log.info("Self-improvement loop started (1時間ごと: 認知/収益/効率/品質 監視)")
 
+    if _cfg_bool("release_pressure.enabled", True):
+        from .release_board import release_pressure_loop
+        asyncio.create_task(release_pressure_loop())
+        log.info("Release pressure loop started (未出荷在庫/人間待ちを監視)")
+
     # 会話ログローテ: 10分間隔で 100KB 超のログをアーカイブ
     from .log_rotator import log_rotation_loop
     asyncio.create_task(log_rotation_loop())

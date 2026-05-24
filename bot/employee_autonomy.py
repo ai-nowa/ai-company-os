@@ -111,6 +111,7 @@ def build_self_prompt(emp_id: str) -> str:
 
 - routine相当。巨大ログ・全チャンネル・全outboxは読まず、state_digest、active task、Revenue OS を優先する。
 - 迷ったら自分に関係する Active Experiment の `action_24h` を1つ進める。
+- `company/release_board.md` に ready_to_ship / human_wait がある時は、会議より先に公開・販売・計測可能な出口へ変換する。
 - 雑談は歓迎。ただし有望な発見は行頭に `[IDEA]` を付け、実験候補に接続する。
 - 成果物・判断メモ・短いDiscord投稿のどれかで前進させる。何もせず終わらない。
 
@@ -119,6 +120,7 @@ def build_self_prompt(emp_id: str) -> str:
 - `due` / `期限` / `判定日` / `観察日` は開始日ではなく最遅締切。
 - 「○日まで待つ」「判定日まで静観」だけの判断は禁止。今できる準備・草稿・検証・依頼整理を進める。
 - 本当に外部待ちなら `blocked_by` と `next_action_now` を分け、同じ催促を繰り返さず別タスクへ進む。
+- Xやnoteなど単一チャネルが人間待ちなら、同じ素材をサイト短報・YouTube・Zenn・Bluesky・公開Discord・販売ページ導線のどれかへ転用する。
 
 ## Discord 投稿
 

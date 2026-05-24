@@ -122,10 +122,11 @@ def make_jobs(main_client: discord.Client) -> AsyncIOScheduler:
             "saegusa_mio",
             (
                 "今日のRevenue OS締めです。company/revenue_board.md / "
-                "company/experiment_backlog.md / company/daily_close.md を確認し、"
-                "company/daily_close.md に今日の shipped / signals / blockers / "
-                "revenue_learning / tomorrow_one_move を追記してください。"
-                "Discordには要約と、明日最初に動く実験IDだけを短く投稿してください。"
+                "company/experiment_backlog.md / company/release_board.md / company/daily_close.md を確認し、"
+                "company/daily_close.md に今日の public_urls / shipped / signals / blockers / "
+                "revenue_learning / next_action_now を追記してください。"
+                "public_urls が0なら未達として扱い、明日ではなく今すぐ転用できる公開候補を1つ選んでください。"
+                "Discordには要約と、次に出荷する候補パス・出す場所・計測条件だけを短く投稿してください。"
             ),
             sender="daily_loop",
             mode="work",

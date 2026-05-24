@@ -332,6 +332,7 @@ def _load_wisdom_essence() -> str:
 
 _DIGEST_BUDGETS = {
     "micro": {
+        "release": 520,
         "revenue": 560,
         "external_kpi": 520,
         "mentions": 620,
@@ -342,6 +343,7 @@ _DIGEST_BUDGETS = {
         "wisdom": 260,
     },
     "routine": {
+        "release": 640,
         "revenue": 700,
         "external_kpi": 620,
         "mentions": 700,
@@ -352,6 +354,7 @@ _DIGEST_BUDGETS = {
         "wisdom": 320,
     },
     "work": {
+        "release": 760,
         "revenue": 820,
         "external_kpi": 760,
         "mentions": 760,
@@ -362,6 +365,7 @@ _DIGEST_BUDGETS = {
         "wisdom": 360,
     },
     "executive": {
+        "release": 820,
         "revenue": 900,
         "external_kpi": 820,
         "mentions": 820,
@@ -427,6 +431,18 @@ def _revenue_ops_items(employee_id: str, mode: str, limit: int) -> list[str]:
     return [line for line in text.splitlines() if line.strip()]
 
 
+def _release_items(employee_id: str, limit: int) -> list[str]:
+    try:
+        from .release_board import release_digest
+
+        text = release_digest(max_chars=limit, employee_id=employee_id)
+    except Exception:
+        return []
+    if not text.strip():
+        return []
+    return [line for line in text.splitlines() if line.strip()]
+
+
 def _external_kpi_items(limit: int) -> list[str]:
     try:
         from .external_metrics import external_digest_items
@@ -460,6 +476,8 @@ def assemble_state_digest(employee_id: str, reason: str, mode: str = "routine") 
         "## 期限の読み方（待機禁止）",
         "- due/期限/判定日/観察日は待機日ではなく最遅締切。未来日でも今できる準備・草稿・検証を進める",
         "- 待つ必要がある時だけ blocked_by を明記し、同時に next_action_now または別タスクを進める",
+        "",
+        *_fit_section("Release OS（公開・出荷ゲート）", _release_items(employee_id, budgets["release"]), budgets["release"], "- 未初期化"),
         "",
         *_fit_section("Revenue OS（収益ループ）", _revenue_ops_items(employee_id, mode, budgets["revenue"]), budgets["revenue"], "- 未初期化"),
         "",
@@ -529,6 +547,16 @@ def should_wake_employee(employee_id: str) -> tuple[bool, int, str]:
     if revenue_items:
         score += 2
         reasons.append("自分に関係するRevenue実験あり")
+
+    try:
+        from .release_board import release_wake_items
+
+        release_items = release_wake_items(employee_id, max_items=2)
+    except Exception:
+        release_items = []
+    if release_items:
+        score += 3
+        reasons.append("公開待ち成果物あり")
 
     threshold = 3
     if employee_id in {"morinaga_haru", "saegusa_mio"}:

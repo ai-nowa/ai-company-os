@@ -157,6 +157,12 @@ def _defaults() -> dict:
             "check_interval_seconds": 3600,
             "max_triggers_per_cycle": 2,
         },
+        "release_pressure": {
+            "enabled": True,
+            "interval_seconds": 1800,
+            "initial_delay_seconds": 180,
+            "cooldown_minutes": 90,
+        },
         "mention_chain": {
             "max_depth": 4,
             "max_chain_calls": 6,
