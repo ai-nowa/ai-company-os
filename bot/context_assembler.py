@@ -345,6 +345,7 @@ def _load_wisdom_essence() -> str:
 _DIGEST_BUDGETS = {
     "micro": {
         "revenue": 560,
+        "external_kpi": 520,
         "mentions": 620,
         "tasks": 620,
         "logs": 520,
@@ -354,6 +355,7 @@ _DIGEST_BUDGETS = {
     },
     "routine": {
         "revenue": 700,
+        "external_kpi": 620,
         "mentions": 700,
         "tasks": 720,
         "logs": 720,
@@ -363,6 +365,7 @@ _DIGEST_BUDGETS = {
     },
     "work": {
         "revenue": 820,
+        "external_kpi": 760,
         "mentions": 760,
         "tasks": 820,
         "logs": 860,
@@ -372,6 +375,7 @@ _DIGEST_BUDGETS = {
     },
     "executive": {
         "revenue": 900,
+        "external_kpi": 820,
         "mentions": 820,
         "tasks": 860,
         "logs": 820,
@@ -435,6 +439,26 @@ def _revenue_ops_items(employee_id: str, mode: str, limit: int) -> list[str]:
     return [line for line in text.splitlines() if line.strip()]
 
 
+def _external_kpi_items(limit: int) -> list[str]:
+    try:
+        from .external_metrics import external_digest_items
+
+        items = external_digest_items(max_items=8)
+    except Exception:
+        return []
+    result: list[str] = []
+    used = 0
+    for item in items:
+        if used + len(item) > limit:
+            remaining = limit - used
+            if remaining > 80:
+                result.append(_short(item, remaining))
+            break
+        result.append(item)
+        used += len(item) + 1
+    return result
+
+
 def assemble_state_digest(employee_id: str, reason: str, mode: str = "routine") -> str:
     """Build a compact dynamic context digest for an employee call."""
     info = EMPLOYEES.get(employee_id, {})
@@ -450,6 +474,8 @@ def assemble_state_digest(employee_id: str, reason: str, mode: str = "routine") 
         "- 待つ必要がある時だけ blocked_by を明記し、同時に next_action_now または別タスクを進める",
         "",
         *_fit_section("Revenue OS（収益ループ）", _revenue_ops_items(employee_id, mode, budgets["revenue"]), budgets["revenue"], "- 未初期化"),
+        "",
+        *_fit_section("外部KPI実測（自動取得・未取得は0ではない）", _external_kpi_items(budgets["external_kpi"]), budgets["external_kpi"], "- スナップショットなし"),
         "",
         *_fit_section("自分宛メンション（最大5件）", _recent_mentions(employee_id), budgets["mentions"], "- なし"),
         "",

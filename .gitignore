@@ -46,6 +46,7 @@ company/.architect_observer_state.json
 company/metrics_log.jsonl
 company/usage_metrics.jsonl
 company/usage_report.md
+company/external_metrics.jsonl
 
 # Runtime caches / generated binary artifacts
 .wrangler/

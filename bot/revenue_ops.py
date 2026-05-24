@@ -97,7 +97,8 @@ weekly_target: 1件の購入、または3件の明確な導入意向、または
 
 ## Current Constraints
 
-- 決済、GA4、各SNSの詳細指標は一部いくと権限待ちになる可能性がある。
+- Polar、GA4、Cloudflare KV の主要指標は `company/kpi_observations.md` に自動同期済み。未取得ソースは0扱いせず、状態欄で分離する。
+- YouTube詳細指標はOAuth読み取りスコープ再認可まで未取得。
 - Claude Code のトークン制限があるため、全ログ読みによる会議化は禁止。state_digest と Revenue OS を優先する。
 - 会社らしさは維持するが、会話の出口は「実験、成果物、意思決定、証拠」に寄せる。
 
@@ -111,8 +112,8 @@ weekly_target: 1件の購入、または3件の明確な導入意向、または
 
 | Metric | Current | Source | Owner | Next update |
 | --- | --- | --- | --- | --- |
-| purchases | unknown | payment/sales channel | 有馬レイジ | 権限/導線確認後 |
-| qualified intent signals | unknown | Discord/replies/forms | 黒羽ユウ | 毎日 |
+| purchases | 0 | Polar API / `company/kpi_observations.md` | 有馬レイジ | 毎日 |
+| qualified intent signals | 1 yes / 0 maybe | Cloudflare KV purchase intent / `company/kpi_observations.md` | 黒羽ユウ | 毎日 |
 | shipped customer-facing assets | active | outbox/shared/articles/videos | 三枝ミオ | 毎日 |
 | blocked revenue decisions | active | decision_briefs | 神楽アオイ | 毎日 |
 
@@ -145,17 +146,18 @@ last_updated: {_today()}
 - action_24h: 投稿・記事・動画説明欄から about へ誘導する短いコピーを1つ出す。
 - success_signal: about クリック、返信、問い合わせ、または「何を売っているか分かった」という反応。
 - due: {_today()}
-- evidence: company/kpi_observations.md に about 入口CVRの仮説あり。実測は権限待ちの可能性。
+- evidence: company/kpi_observations.md に GA4 /about PV と取得状態を自動同期。未取得と0を分けて判断する。
 - next_decision: 継続する導線文言を1つに絞るか、別オファーへ切り替える。
 
 ### EXP-002 AI社員OSテンプレ販売仮説
-- status: planned
+- status: measuring
 - owner: 朝倉ノア
+- offer: AI NOWA OS Starter Kit v0.1 / 2,980円
 - hypothesis: AI社員会社運営の設計、役割、ルール、トークン最適化を商品化すると購入意向が出る。
-- action_24h: 1ページのオファー素案を作り、価格/対象/成果物/購入理由を明文化する。
-- success_signal: 「欲しい」「導入したい」「価格を知りたい」という明確な反応、または購入。
+- action_24h: 投稿CTAの反応を `success_signalあり` / `0` / `未取得` / `未成立` に分けて拾う。
+- success_signal: 「欲しい」「導入したい」「詳しく聞きたい」という明確な反応1件以上、または購入。
 - due: {_today()}
-- evidence: いくとがAI会社運営の実装と改善に強い関心を示している。
+- evidence: shop公開 `https://ai-nowa.com/shop/` + GA4タグ本番反映 + Cloudflare KV購入意向 total/yes/maybe を `company/kpi_observations.md` に自動同期。
 - next_decision: テンプレ単体、導入支援、観察ログ商品のどれを先に売るか決める。
 
 ### EXP-003 ガラス越しシリーズ認知仮説
@@ -202,7 +204,7 @@ Purpose: 会社活動を「会話した」ではなく「証拠が増えた」�
 ### {_today()}
 - shipped: Revenue OS を導入し、会話/自律/日次運用を実験と意思決定へ接続する。
 - signals: いくとは「会社らしさ」と「収益に向かう実働」の両立を求めている。
-- blockers: 実際の決済/アクセス解析/外部SNS指標は権限待ちになる可能性がある。
+- blockers: YouTube詳細指標はOAuth読み取りスコープ再認可まで未取得。その他の主要KPIは `company/kpi_observations.md` で取得状態を確認する。
 - revenue_learning: AI社員には自由だけでなく、仮説、証拠、締めの型が必要。
 - tomorrow_one_move: EXP-001/002/003 から1つ選び、顧客向け成果物を出す。
 """
@@ -337,6 +339,15 @@ def revenue_digest(max_chars: int = 900, employee_id: str | None = None) -> str:
         f"- current_offer: {_short(_meta_value(board, 'current_offer') or '未設定', 170)}",
         f"- weekly_target: {_short(_meta_value(board, 'weekly_target') or '未設定', 140)}",
     ]
+    try:
+        from .external_metrics import external_digest_items
+
+        kpi_items = external_digest_items(max_items=4)
+    except Exception:
+        kpi_items = []
+    if kpi_items:
+        lines.append("- external_kpi:")
+        lines.extend(kpi_items)
     experiments = active_experiment_items(employee_id, max_items=3)
     if experiments:
         lines.append("- active_experiments:")

@@ -1,6 +1,6 @@
 /**
  * POST /api/polar/create-checkout
- * Body: { product_id, email?, success_url?, metadata? }
+ * Body: { product_id?, email?, success_url?, metadata? }
  * Returns: { url, checkout_id, expires_at }
  *
  * Env vars (Cloudflare Pages):
@@ -8,9 +8,9 @@
  */
 
 const POLAR_API = "https://api.polar.sh/v1";
-const DEFAULT_PRODUCT_ID = "83b50b18-6f48-4cb2-a4ab-039429d06177"; // AIチーム設計キット v0.1 (980円)
+const DEFAULT_PRODUCT_ID = "";
 
-// 販売準備中フラグ: 監査クリア後に true に戻す（2026-05-23 予定）
+// 現在の /shop は意向受付。実決済を再開する場合は環境変数側で明示的にONにする。
 const CHECKOUT_ENABLED = false;
 
 export async function onRequestPost(context) {
@@ -30,7 +30,8 @@ export async function onRequestPost(context) {
     body = {};
   }
 
-  const productId = body.product_id || DEFAULT_PRODUCT_ID;
+  const productId = body.product_id || env.POLAR_PRODUCT_ID || DEFAULT_PRODUCT_ID;
+  if (!productId) return json({ error: "POLAR_PRODUCT_ID not configured" }, 500);
   const successUrl = body.success_url || "https://ai-nowa.com/shop/thanks/";
 
   const payload = {

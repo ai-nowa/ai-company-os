@@ -17,7 +17,8 @@ weekly_target: 1件の購入、または3件の明確な導入意向、または
 
 ## Current Constraints
 
-- 決済、GA4、各SNSの詳細指標は一部いくと権限待ちになる可能性がある。
+- Polar、GA4、Cloudflare KV の主要指標は `company/kpi_observations.md` に自動同期済み。未取得ソースは0扱いせず、状態欄で分離する。
+- YouTube詳細指標は既存OAuthがアップロード専用スコープのため、読み取りスコープ再認可まで未取得。
 - Claude Code のトークン制限があるため、全ログ読みによる会議化は禁止。state_digest と Revenue OS を優先する。
 - 会社らしさは維持するが、会話の出口は「実験、成果物、意思決定、証拠」に寄せる。
 
@@ -39,8 +40,8 @@ weekly_target: 1件の購入、または3件の明確な導入意向、または
 
 | Metric | Current | Source | Owner | Next update |
 | --- | --- | --- | --- | --- |
-| purchases | unknown | payment/sales channel | 有馬レイジ | 権限/導線確認後 |
-| qualified intent signals | unknown | Discord/replies/forms | 黒羽ユウ | 毎日 |
+| purchases | 0 | Polar API / `company/kpi_observations.md` | 有馬レイジ | 毎日 |
+| qualified intent signals | 1 yes / 0 maybe | Cloudflare KV purchase intent / `company/kpi_observations.md` | 黒羽ユウ | 毎日 |
 | shipped customer-facing assets | active | outbox/shared/articles/videos | 三枝ミオ | 毎日 |
 | blocked revenue decisions | active | decision_briefs | 神楽アオイ | 毎日 |
 

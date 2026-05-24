@@ -4,8 +4,6 @@ watchdog から呼ばれて自動修復に使われる。
 """
 from __future__ import annotations
 
-import os
-import signal
 import subprocess
 import time
 from pathlib import Path
@@ -39,20 +37,38 @@ def is_dispatcher_running() -> bool:
 
 
 def stop_dispatcher(timeout: int = 5) -> bool:
-    """SIGTERM で停止を試みる。停止できれば True。"""
+    """dispatcher と配下の Claude 実行をプロセスツリーごと停止する。"""
     pid = get_dispatcher_pid()
     if pid is None:
         return True
     try:
-        os.kill(pid, signal.SIGTERM)
-        for _ in range(timeout * 2):
-            time.sleep(0.5)
-            if get_dispatcher_pid() is None:
-                return True
-        os.kill(pid, signal.SIGKILL)
-        time.sleep(1)
+        parent = psutil.Process(pid)
+        procs = parent.children(recursive=True) + [parent]
+        for proc in procs:
+            try:
+                proc.terminate()
+            except psutil.NoSuchProcess:
+                pass
+        deadline = time.time() + timeout
+        alive = []
+        for proc in procs:
+            try:
+                proc.wait(timeout=max(0.1, deadline - time.time()))
+            except (psutil.NoSuchProcess, psutil.TimeoutExpired, OSError):
+                if proc.is_running():
+                    alive.append(proc)
+        for proc in alive:
+            try:
+                proc.kill()
+            except psutil.NoSuchProcess:
+                pass
+        for proc in alive:
+            try:
+                proc.wait(timeout=2)
+            except (psutil.NoSuchProcess, psutil.TimeoutExpired, OSError):
+                pass
         return get_dispatcher_pid() is None
-    except ProcessLookupError:
+    except (ProcessLookupError, psutil.NoSuchProcess):
         return True
 
 

@@ -31,7 +31,11 @@ def submit_post(
     """
     OUTBOX_DIR.mkdir(parents=True, exist_ok=True)
     stamp = now_jst_iso().replace(":", "-").replace("+", "_")
-    safe_label = ("_" + label) if label else ""
+    cleaned_label = ""
+    if label:
+        cleaned_label = "".join(ch if ch.isalnum() or ch in ("-", "_") else "_" for ch in label)
+        cleaned_label = cleaned_label.strip("_")[:80]
+    safe_label = ("_" + cleaned_label) if cleaned_label else ""
     fname = f"post_{stamp}{safe_label}.json"
     path = OUTBOX_DIR / fname
     tmp_path = OUTBOX_DIR / f".{fname}.tmp"

@@ -167,6 +167,7 @@ def _render_improvement_sections() -> list[str]:
     rev: dict = {}
     eff: dict = {}
     qual: dict = {}
+    external: dict = {}
     trigger_history: list[dict] = []
 
     try:
@@ -181,6 +182,7 @@ def _render_improvement_sections() -> list[str]:
                 rev = latest.get("revenue", {})
                 eff = latest.get("efficiency", {})
                 qual = latest.get("quality", {})
+                external = latest.get("external", {})
                 # 前回との差分
                 if len(snaps) >= 2:
                     prev = snaps[-2].get("cognition", {})
@@ -189,6 +191,15 @@ def _render_improvement_sections() -> list[str]:
                     cog["_d_hatena"] = cog.get("hatena_bookmarks", 0) - prev.get("hatena_bookmarks", 0)
     except Exception:
         pass
+    try:
+        from .external_metrics import load_latest_external_metrics
+
+        latest_external = load_latest_external_metrics()
+        if latest_external and latest_external.get("ts", "") >= external.get("ts", ""):
+            external = latest_external
+    except Exception:
+        if not external:
+            external = {}
 
     def _sign(v: int) -> str:
         return f"+{v}" if v >= 0 else str(v)
@@ -208,6 +219,25 @@ def _render_improvement_sections() -> list[str]:
     result_zero_icon = ("🟢" if result_zero == 0 else "🔴") if result_zero is not None else "--"
     gross = rev.get("gross_jpy")
     gross_str = f"¥{gross:,}" if gross is not None else "--"
+    ga4 = external.get("traffic", {}).get("ga4", {}) if external else {}
+    yt = external.get("youtube", {}) if external else {}
+    intent = external.get("intent", {}).get("purchase_form", {}) if external else {}
+    site = external.get("site", {}) if external else {}
+    health = external.get("health", {}) if external else {}
+
+    def _metric(v) -> str:
+        if v is None or v == "":
+            return "--"
+        if isinstance(v, int):
+            return f"{v:,}"
+        if isinstance(v, bool):
+            return "yes" if v else "no"
+        return str(v)
+
+    def _source(src: dict) -> str:
+        if not src:
+            return "--"
+        return "取得済み" if src.get("available") else f"未取得: {src.get('unavailable_reason', 'unknown')[:45]}"
 
     lines = [
         "## 認知・収益指標 [auto: 1h更新 / self_improvement_loop.py]",
@@ -217,8 +247,21 @@ def _render_improvement_sections() -> list[str]:
         f"| GitHub stars | {cog.get('stars', '--')} | {_sign(cog.get('_d_stars', 0)) if cog else '--'} | {ts_label} |",
         f"| Zenn likes (全記事合計) | {cog.get('zenn_liked', '--')} | {_sign(cog.get('_d_liked', 0)) if cog else '--'} | {ts_label} |",
         f"| はてブ (全記事合計) | {cog.get('hatena_bookmarks', '--')} | {_sign(cog.get('_d_hatena', 0)) if cog else '--'} | {ts_label} |",
-        f"| Design Kit v1 売上 | {gross_str} | -- | {ts_label} |",
+        f"| AI NOWA OS Starter Kit 売上 | {gross_str} | -- | {ts_label} |",
         f"| Polar 注文数 | {rev.get('order_count', '--')} | -- | {ts_label} |",
+        "",
+        "## 外部観測・導線指標 [auto: external_metrics.py]",
+        "",
+        "| 指標 | 値 | 状態 |",
+        "|------|----|------|",
+        f"| GA4 PV today | {_metric(ga4.get('pageviews_today'))} | {_source(ga4)} |",
+        f"| GA4 /shop PV today | {_metric(ga4.get('shop_pageviews_today'))} | {_source(ga4)} |",
+        f"| GA4 /about PV today | {_metric(ga4.get('about_pageviews_today'))} | {_source(ga4)} |",
+        f"| 購入意思フォーム total | {_metric(intent.get('total'))} | {_source(intent)} |",
+        f"| 購入意思フォーム yes/maybe | {_metric(intent.get('yes'))} / {_metric(intent.get('maybe'))} | {_source(intent)} |",
+        f"| YouTube subscribers/views | {_metric(yt.get('subscriber_count'))} / {_metric(yt.get('view_count'))} | {_source(yt)} |",
+        f"| live /shop price | {_metric(site.get('shop_live', {}).get('price'))} | {'取得済み' if site.get('shop_live', {}).get('available') else '--'} |",
+        f"| local/live mismatch | {_metric(health.get('shop_local_live_mismatch'))} | {'要同期' if health.get('shop_local_live_mismatch') else 'OK'} |",
         "",
         "## 効率・品質指標 [auto: 1h更新 / self_improvement_loop.py]",
         "",

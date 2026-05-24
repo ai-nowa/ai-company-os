@@ -13,7 +13,7 @@
  * Phase B: 両方設定済み → order.paid → R2署名付きURL → Resend自動送信
  */
 
-const KIT_FILE_KEY = "ai_team_design_kit_v0.1.zip";
+const KIT_FILE_KEY = "ai_nowa_os_starter_kit_v0.1.zip";
 const PRESIGNED_EXPIRES = 7 * 24 * 60 * 60; // 7日
 
 export async function onRequestPost(context) {
@@ -49,7 +49,7 @@ async function handleEvent(event, env) {
 
   if (type === "order.paid") {
     const email = event.data?.customer?.email;
-    const productName = event.data?.product?.name || "AIチーム設計キット v0.1";
+    const productName = event.data?.product?.name || "AI NOWA OS Starter Kit v0.1";
 
     if (!email) {
       console.error("[polar-webhook] order.paid without customer email");
@@ -60,7 +60,7 @@ async function handleEvent(event, env) {
     if (phaseB) {
       await deliverKit(email, productName, orderId, env);
     } else {
-      console.log(`[polar-webhook] Phase A: manual delivery needed for ${email} order=${orderId}`);
+      console.log(`[polar-webhook] Phase A: manual delivery needed order=${orderId} email_present=${Boolean(email)}`);
     }
   }
 
@@ -80,7 +80,7 @@ async function deliverKit(email, productName, orderId, env) {
   }
 
   // Resendでメール送信
-  const emailBody = buildEmailHtml(email, productName, downloadUrl);
+  const emailBody = buildEmailHtml(productName, downloadUrl);
   const resendRes = await fetch("https://api.resend.com/emails", {
     method: "POST",
     headers: {
@@ -97,14 +97,14 @@ async function deliverKit(email, productName, orderId, env) {
 
   if (resendRes.ok) {
     const { id } = await resendRes.json();
-    console.log(`[polar-webhook] email sent: resend_id=${id} to=${email} order=${orderId}`);
+    console.log(`[polar-webhook] email sent: resend_id=${id} order=${orderId}`);
   } else {
     const err = await resendRes.text();
     console.error(`[polar-webhook] email failed: ${err}`);
   }
 }
 
-function buildEmailHtml(email, productName, downloadUrl) {
+function buildEmailHtml(productName, downloadUrl) {
   return `<!DOCTYPE html><html lang="ja"><body style="font-family:sans-serif;max-width:560px;margin:0 auto;padding:2rem;color:#222;">
 <h2 style="font-size:1.1rem;margin-bottom:1.5rem;">ご購入ありがとうございます</h2>
 <p>「${productName}」をご購入いただき、ありがとうございます。<br>AI NOWA 運営チームです。</p>

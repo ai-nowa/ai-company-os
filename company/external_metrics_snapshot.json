@@ -1,0 +1,85 @@
+{
+  "ts": "2026-05-24T13:40:45+09:00",
+  "cognition": {
+    "available": true,
+    "source": "cognition_metrics.py",
+    "stars": 0,
+    "forks": 0,
+    "zenn_liked": 3,
+    "zenn_articles": 7,
+    "zenn_books": 1,
+    "hatena_bookmarks": 0
+  },
+  "revenue": {
+    "available": true,
+    "source": "polar_api",
+    "order_count": 0,
+    "gross_jpy": 0,
+    "latest_order_ts": null
+  },
+  "traffic": {
+    "ga4": {
+      "available": true,
+      "source": "ga4_data_api",
+      "property_id": "538228621",
+      "pageviews_today": 0,
+      "active_users_today": 0,
+      "shop_pageviews_today": 0,
+      "about_pageviews_today": 0,
+      "top_pages_today": []
+    }
+  },
+  "youtube": {
+    "available": true,
+    "source": "youtube_data_api",
+    "channel_title": "AI NOWA",
+    "subscriber_count": 1,
+    "view_count": 0,
+    "video_count": 0
+  },
+  "intent": {
+    "purchase_form": {
+      "available": true,
+      "source": "cloudflare_kv_purchase_intent",
+      "total": 1,
+      "yes": 1,
+      "maybe": 0,
+      "other": 0,
+      "recent_24h": 0,
+      "latest_ts": "2026-05-18T00:49:22.270Z",
+      "contains_pii": false
+    }
+  },
+  "site": {
+    "shop_live": {
+      "available": true,
+      "url": "https://ai-nowa.com/shop/",
+      "title": "AI NOWA OS Starter Kit v0.1 — AI NOWA",
+      "price": "¥2,980",
+      "has_intent_anchor": true,
+      "has_mailto": true,
+      "has_ga4_tag": false
+    },
+    "home_live": {
+      "available": true,
+      "url": "https://ai-nowa.com/",
+      "title": "AI NOWA — AIだけで動く会社",
+      "has_ga4_tag": false
+    },
+    "shop_local": {
+      "available": true,
+      "path": "site/public/shop/index.html",
+      "title": "AI NOWA OS Starter Kit v0.1 — AI NOWA",
+      "price": "¥2,980",
+      "has_intent_anchor": true,
+      "has_mailto": true,
+      "has_ga4_tag": true
+    },
+    "shop_local_live_mismatch": false
+  },
+  "health": {
+    "all_available": true,
+    "unavailable": {},
+    "shop_local_live_mismatch": false
+  }
+}

@@ -3,14 +3,14 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>AIチーム設計キット v0.1 — AI NOWA</title>
-  <meta name="description" content="AI社員9人の役割設計テンプレ。止め役・監査役の設計書・衝突パターン・監査ゲート設計含む。980円。">
+  <title>AI NOWA OS Starter Kit v0.1 — AI NOWA</title>
+  <meta name="description" content="AI社員9人の実判断ログから作った、AIエージェント会社運用スターターキット。役割表・運用テンプレ・判断ログ・実験判定表・セットアップ手順。¥2,980。">
   <link rel="stylesheet" href="../style.css">
   <style>
     .shop-hero { text-align: center; padding: 3.5rem 0 2.5rem; }
     .shop-hero .catch { font-size: 0.9rem; color: var(--accent2); margin-bottom: 1rem; letter-spacing: 0.05em; }
-    .shop-hero h1 { font-size: clamp(1.5rem, 4vw, 2.3rem); font-weight: 800; line-height: 1.3; margin-bottom: 1rem; }
-    .shop-hero .sub { color: var(--muted); font-size: 0.95rem; max-width: 480px; margin: 0 auto; }
+    .shop-hero h1 { font-size: clamp(1.5rem, 4vw, 2.3rem); font-weight: 800; line-height: 1.4; margin-bottom: 1rem; }
+    .shop-hero .sub { color: var(--muted); font-size: 0.95rem; max-width: 520px; margin: 0 auto; }
 
     .price-box {
       background: var(--bg2);
@@ -27,51 +27,40 @@
       background: var(--accent);
       color: var(--bg);
       font-weight: 800;
-      padding: 0.9rem 2.5rem;
+      padding: 0.95rem 2.2rem;
       border-radius: 8px;
       font-size: 1rem;
       letter-spacing: 0.03em;
       transition: opacity 0.15s;
+      text-decoration: none;
     }
     .btn-buy:hover { opacity: 0.85; text-decoration: none; }
-    .btn-buy-disabled {
-      background: var(--muted);
-      color: var(--bg);
-      cursor: not-allowed;
-      opacity: 0.7;
-      user-select: none;
-    }
-    .btn-buy-disabled:hover { opacity: 0.7; text-decoration: none; }
-    .prep-banner {
-      background: var(--bg2);
-      border: 1px solid var(--accent2);
-      border-radius: 8px;
-      padding: 0.9rem 1.2rem;
-      margin: 1.5rem 0;
-      font-size: 0.9rem;
-      color: var(--text);
-      text-align: center;
-    }
-    .prep-banner strong { color: var(--accent2); }
 
+    .intent-note {
+      font-size: 0.85rem;
+      color: var(--accent2);
+      font-weight: 600;
+      margin-top: 1rem;
+    }
     .delivery-note {
       font-size: 0.82rem;
       color: var(--muted);
-      margin-top: 0.9rem;
+      margin-top: 0.7rem;
+      line-height: 1.7;
     }
 
-    .situation-list { list-style: none; padding: 0; }
-    .situation-list li {
+    .target-list { list-style: none; padding: 0; }
+    .target-list li {
       padding: 0.7rem 0 0.7rem 1.4rem;
       position: relative;
       color: var(--muted);
       font-size: 0.92rem;
       border-bottom: 1px solid var(--border);
     }
-    .situation-list li:last-child { border-bottom: none; }
-    .situation-list li::before { content: "—"; position: absolute; left: 0; color: var(--accent2); }
+    .target-list li:last-child { border-bottom: none; }
+    .target-list li::before { content: "-"; position: absolute; left: 0; color: var(--accent2); }
 
-    .contents-table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
+    .contents-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
     .contents-table th {
       text-align: left;
       padding: 0.6rem 0.8rem;
@@ -81,32 +70,57 @@
       font-size: 0.8rem;
     }
     .contents-table td {
-      padding: 0.8rem 0.8rem;
+      padding: 0.85rem 0.8rem;
       border-bottom: 1px solid var(--border);
       vertical-align: top;
+      line-height: 1.6;
     }
     .contents-table tr:last-child td { border-bottom: none; }
-    .contents-table td:first-child { font-weight: 700; color: var(--text); white-space: nowrap; }
-
-    .format-badge {
-      display: inline-block;
-      background: var(--bg);
-      border: 1px solid var(--border);
-      border-radius: 4px;
-      padding: 0.15rem 0.5rem;
-      font-size: 0.75rem;
-      color: var(--muted);
-      margin-right: 0.3rem;
+    .contents-table td:first-child {
+      font-weight: 700;
+      color: var(--text);
+      white-space: nowrap;
+      width: 2.5rem;
+      text-align: center;
     }
+
+    .body-copy {
+      font-size: 0.95rem;
+      color: var(--text);
+      line-height: 1.95;
+      margin: 1.5rem 0;
+    }
+
+    .intent-options {
+      display: flex;
+      flex-direction: column;
+      gap: 0.6rem;
+      align-items: center;
+      margin-top: 1rem;
+    }
+    .intent-sub {
+      display: inline-block;
+      font-size: 0.85rem;
+      color: var(--muted);
+      padding: 0.5rem 1rem;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      text-decoration: none;
+      transition: all 0.15s;
+    }
+    .intent-sub:hover { color: var(--accent); border-color: var(--accent); text-decoration: none; }
   </style>
+
+  <!-- GA4: AI NOWA site analytics -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-TJN3FYJDET"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag("js", new Date());
+    gtag("config", "G-TJN3FYJDET");
+  </script>
 </head>
 <body>
-  <a href="https://zenn.dev/ai_nowa/articles/ainowa-design-kit-v1" target="_blank" rel="noopener" class="promo-banner">
-    <span>🎨</span>
-    <span><strong>Design Kit v1 公開しました</strong> — AI会社の設計テンプレ16点・1194行</span>
-    <span class="promo-price">¥800 販売中</span>
-    <span class="promo-arrow">→</span>
-  </a>
   <header>
     <div class="logo"><a href="/" style="color:inherit;text-decoration:none;">AI <span>NOWA</span></a></div>
     <nav>
@@ -118,99 +132,154 @@
 
   <main>
     <div class="shop-hero">
-      <div class="catch">AIチーム設計キット v0.1</div>
-      <h1>AIに役割を与えたのに、<br>誰も止めてくれない。</h1>
-      <p class="sub">「止め役」の設計書つき ── AI社員9人の役割テンプレをそのまま渡します</p>
+      <div class="catch">AI NOWA OS Starter Kit v0.1</div>
+      <h1>AI社員9人の実判断ログから作った、<br>AIエージェント会社運用スターターキット</h1>
+      <p class="sub">プロンプト集ではありません。AI社員が実際に判断し、衝突し、撤退したログと、主要な設計ルールをテンプレ形式で渡します。</p>
     </div>
 
-    <div class="price-box">
-      <div class="price-sale">¥800<span style="font-size:1rem;font-weight:400;color:var(--muted);">（税込）</span></div>
-      <p style="font-size:0.8rem;color:var(--muted);margin:0.3rem 0 0.5rem;">YAMLファイル9種 ／ Markdown + JSON サンプル &nbsp;—&nbsp; ダウンロード後すぐ使えます</p>
-      <p style="font-size:0.88rem;color:var(--text);margin:0 0 1.2rem;">実際に動いているAIチームの止め役設計を、そのままコピーできます。</p>
-      <!-- TODO: Polar OAT 発行後に href を実URLに差し替える -->
-      <a href="https://buy.polar.sh/ainowa/design-kit-v01" class="btn-buy" id="btn-buy-top" target="_blank" rel="noopener">¥800 で購入する</a>
-      <p class="delivery-note">Polar.sh 経由の安全な決済。ご購入後、メールでダウンロードリンクをお送りします（2営業日以内）。</p>
-      <p class="delivery-note" style="margin-top:0.4rem;color:var(--accent2);font-size:0.78rem;">クレジットカード / PayPal 対応 &nbsp;|&nbsp; 海外決済代行（MoR）</p>
-      <p class="delivery-note" style="margin-top:0.4rem;font-size:0.75rem;">※ AIが生成・補助したコンテンツを含みます。デジタルコンテンツの性質上、原則返金不可。</p>
-    </div>
-
-    <section style="margin-bottom:3rem;">
-      <h2 class="section-title">こんな状況、ありませんか</h2>
-      <ul class="situation-list">
-        <li>ChatGPT / Claude に「エンジニア役」「レビュー役」と名付けたが、誰かが「それは間違い」と言う設計になっていない</li>
-        <li>AIが暴走したとき、止める役割を誰が持つか決まっていない</li>
-        <li>複数エージェントが動き始めると、役割の衝突パターンが読めない</li>
+    <section style="margin-bottom:2.5rem;">
+      <h2 class="section-title">こんな人が対象です</h2>
+      <ul class="target-list">
+        <li>複数のAIエージェントで事業・制作・チーム運用を組みたい個人開発者</li>
+        <li>創業者・PM・クリエイター</li>
+        <li>「AIに役割を与えたけど、衝突・待機・撤退基準が決められない」と感じている方</li>
       </ul>
     </section>
 
+    <div class="price-box">
+      <div style="font-size:0.85rem;color:var(--muted);margin-bottom:0.3rem;">AI NOWA OS Starter Kit v0.1</div>
+      <div class="price-sale">¥2,980<span style="font-size:1rem;font-weight:400;color:var(--muted);">（税込）</span></div>
+      <p style="font-size:0.88rem;color:var(--text);margin:0.6rem 0 1.4rem;">役割表・運用テンプレ・判断ログ・実験判定表・セットアップ手順 一式</p>
+
+      <a href="#intent-form" class="btn-buy">欲しい / 詳しく聞きたい → こちら</a>
+
+      <p class="intent-note">v0.1 は意向取得期間です（決済導線は次バージョンで提供）</p>
+      <p class="delivery-note">「欲しい」「価格が気になる」「内容をもっと知りたい」のいずれでもOK。1分で送れます。</p>
+    </div>
+
     <section style="margin-bottom:3rem;">
-      <h2 class="section-title">このテンプレで解決すること</h2>
-      <p style="font-size:0.93rem;color:var(--muted);margin-bottom:1.2rem;">実際に動いているAIチームの止め役設計を、ゼロから考える手間なくコピーできます。AI NOWAが9人を動かしながら踏んだ実ログ付きの設計判断です。</p>
+      <h2 class="section-title">なぜ今これを買う理由があるか</h2>
+      <p class="body-copy">
+        AIエージェントを増やした後に詰まる「役割衝突・待機・レビュー・収益接続」を、実際に動いているAI会社の型から始められます。
+      </p>
+      <p class="body-copy">
+        単なるテンプレートではなく、判断ログの抜粋と撤退基準まで含むため、自分の運用への移植時の判断材料になります。
+      </p>
+    </section>
+
+    <section style="margin-bottom:3rem;">
+      <h2 class="section-title">成果物（ダウンロード中身）</h2>
       <table class="contents-table">
         <thead>
           <tr>
-            <th>含まれるもの</th>
+            <th>#</th>
             <th>内容</th>
           </tr>
         </thead>
         <tbody>
           <tr>
-            <td>persona定義テンプレ</td>
-            <td>CEO・COO・CTO・PM・監査・マーケ他（<span class="format-badge">YAML</span><span class="format-badge">Markdown</span>）</td>
+            <td>1</td>
+            <td><strong>AI社員の役割表テンプレート</strong><br><span style="color:var(--muted);font-size:0.85rem;">CEO / COO / CTO / PM / 監査 / マーケ / People / 編集 / 視聴者代表 - 9役の責任範囲・口癖・衝突関係まで定義済み</span></td>
           </tr>
           <tr>
-            <td>止め役の設計書</td>
-            <td>「No を言う役」の権限範囲・介入タイミング</td>
+            <td>2</td>
+            <td><strong>運用テンプレート一式</strong><br><span style="color:var(--muted);font-size:0.85rem;">active_tasks / Revenue Board / Daily Close - 日次運用と意思決定をつなげるフォーマット</span></td>
           </tr>
           <tr>
-            <td>衝突パターン3例</td>
-            <td>「技術 vs. 出荷速度」など実際のログ付き</td>
+            <td>3</td>
+            <td><strong>判断ログの実例集</strong><br><span style="color:var(--muted);font-size:0.85rem;">CEO・PM・監査・マーケ・制作 - 実際にAI社員が出した判断と、その時の状況・反対意見・最終決定</span></td>
           </tr>
           <tr>
-            <td>監査ゲート設計</td>
-            <td>公開前に必ず通す1枚チェックリスト（<span class="format-badge">JSON</span>）</td>
+            <td>4</td>
+            <td><strong>実験判定表</strong><br><span style="color:var(--muted);font-size:0.85rem;">「0 / 未取得 / 未成立」を分ける判定ルール - 撤退基準を曖昧にしない仕組み</span></td>
+          </tr>
+          <tr>
+            <td>5</td>
+            <td><strong>60分セットアップ手順</strong><br><span style="color:var(--muted);font-size:0.85rem;">3エージェント運用を1時間で起動する初期構築ガイド</span></td>
           </tr>
         </tbody>
       </table>
-      <p style="font-size:0.82rem;color:var(--muted);margin-top:1rem;">配信形式: YAML + Markdown + JSON サンプル</p>
     </section>
 
-    <section style="margin-bottom:3rem;">
-      <h2 class="section-title">こんな人が使っています</h2>
-      <p style="font-size:0.92rem;color:var(--muted);line-height:1.8;">
-        副業で複数AIエージェントを試している方。<br>
-        「役割を与えたけど、暴走したときの止め方が分からない」というのが最初の詰まりポイントです。
+    <section id="intent-form" style="margin-bottom:3rem;background:var(--bg2);border-radius:8px;padding:1.6rem 1.8rem;">
+      <h2 class="section-title" style="margin-bottom:1rem;">意向を送る（1クリック）</h2>
+      <p style="font-size:0.92rem;color:var(--text);line-height:1.8;margin-bottom:1.4rem;">
+        どれか1つ押すだけで意向が届きます。メールアプリは開きません。
       </p>
-    </section>
 
-    <div class="price-box">
-      <div class="price-sale">¥800<span style="font-size:1rem;font-weight:400;color:var(--muted);">（税込）</span></div>
-      <p style="font-size:0.8rem;color:var(--muted);margin:0.3rem 0 0.5rem;">YAMLファイル9種 ／ Markdown + JSON サンプル &nbsp;—&nbsp; ダウンロード後すぐ使えます</p>
-      <p style="font-size:0.88rem;color:var(--text);margin:0 0 1.2rem;">実際に動いているAIチームの止め役設計を、そのままコピーできます。</p>
-      <!-- TODO: Polar OAT 発行後に href を実URLに差し替える -->
-      <a href="https://buy.polar.sh/ainowa/design-kit-v01" class="btn-buy" id="btn-buy-bottom" target="_blank" rel="noopener">¥800 で購入する</a>
-      <p class="delivery-note">Polar.sh 経由の安全な決済。ご購入後、メールでダウンロードリンクをお送りします（2営業日以内）。</p>
-      <p class="delivery-note" style="margin-top:0.4rem;color:var(--accent2);font-size:0.78rem;">クレジットカード / PayPal 対応 &nbsp;|&nbsp; 海外決済代行（MoR）</p>
-      <p class="delivery-note" style="margin-top:0.4rem;font-size:0.75rem;">※ AIが生成・補助したコンテンツを含みます。デジタルコンテンツの性質上、原則返金不可。</p>
-    </div>
+      <div class="intent-buttons" style="display:flex;flex-direction:column;gap:0.7rem;">
+        <button type="button" data-intent="want" class="intent-btn btn-buy" style="border:0;cursor:pointer;text-align:left;">
+          ✋ 欲しい（買いたい）
+        </button>
+        <button type="button" data-intent="want_details" class="intent-btn btn-buy" style="border:0;cursor:pointer;text-align:left;background:var(--accent2);">
+          📝 詳しく聞きたい
+        </button>
+        <button type="button" data-intent="price_concern" class="intent-btn btn-buy" style="border:0;cursor:pointer;text-align:left;background:var(--bg);color:var(--text);border:1px solid var(--accent);">
+          💭 価格・内容が気になる
+        </button>
+      </div>
 
-    <section style="margin-top:2.5rem;margin-bottom:2rem;background:var(--bg2);border-radius:8px;padding:1.4rem 1.6rem;">
-      <h2 class="section-title" style="font-size:0.95rem;margin-bottom:1rem;">ご購入後の流れ</h2>
-      <ol style="padding-left:1.4rem;color:var(--muted);font-size:0.88rem;line-height:2;">
-        <li>購入完了</li>
-        <li>2営業日以内にメールでダウンロードURLをお送りします</li>
-        <li>YAML・Markdown・JSONサンプルをダウンロード</li>
-        <li>ダウンロード後すぐ使えます</li>
-      </ol>
-      <p style="font-size:0.8rem;color:var(--muted);margin-top:0.8rem;">ご不明点は <a href="mailto:ainowa.supports@gmail.com">ainowa.supports@gmail.com</a> まで。</p>
+      <div id="intent-thanks" style="display:none;margin-top:1.4rem;padding:1rem 1.2rem;background:var(--bg);border-radius:6px;border:1px solid var(--accent2);">
+        <p style="font-size:0.95rem;color:var(--text);margin-bottom:0.6rem;"><strong>ありがとうございます。意向を受け取りました。</strong></p>
+        <p style="font-size:0.85rem;color:var(--muted);line-height:1.7;margin-bottom:0.8rem;">
+          通知や相談を希望する場合は、下のメールリンクから直接ご連絡ください。サイト側では連絡先を保存しません。
+        </p>
+      </div>
+
+      <details style="margin-top:1.4rem;font-size:0.85rem;color:var(--muted);">
+        <summary style="cursor:pointer;">直接メールで送りたい方はこちら</summary>
+        <p style="margin-top:0.6rem;line-height:1.7;">
+          <a id="intent-mail-btn" href="mailto:ainowa.supports@gmail.com?subject=AI%20NOWA%20OS%20Starter%20Kit%20v0.1%20%E6%84%8F%E5%90%91" style="color:var(--accent);">ainowa.supports@gmail.com</a>
+        </p>
+      </details>
+
+      <script>
+        (function () {
+          function send(payload) {
+            return fetch('/api/intent-click', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(payload),
+              keepalive: true,
+            }).catch(function () {});
+          }
+          send({ kind: 'shop_view', source: 'shop_index' });
+
+          var thanks = document.getElementById('intent-thanks');
+          var btns = document.querySelectorAll('.intent-btn');
+          var selected = null;
+          btns.forEach(function (b) {
+            b.addEventListener('click', function () {
+              selected = b.getAttribute('data-intent');
+              send({ kind: 'intent_click', source: selected });
+              btns.forEach(function (x) { x.style.opacity = '0.55'; });
+              b.style.opacity = '1';
+              b.style.outline = '2px solid #fff';
+              if (thanks) thanks.style.display = 'block';
+            });
+          });
+
+          var mailBtn = document.getElementById('intent-mail-btn');
+          if (mailBtn) {
+            mailBtn.addEventListener('click', function () {
+              send({ kind: 'intent_click', source: 'shop_mail' });
+            });
+          }
+        })();
+      </script>
+
+      <p style="font-size:0.8rem;color:var(--muted);margin-top:1.4rem;line-height:1.7;">
+        ※ ボタンを押すだけで意向の件数・種類が集計されます（個人情報は不要）<br>
+        ※ 連絡先が必要なやり取りは、メール送信時のみメールクライアント側で扱われます
+      </p>
     </section>
 
     <section style="margin-top:1rem;margin-bottom:2rem;background:var(--bg2);border-radius:8px;padding:1.2rem 1.4rem;">
       <p style="font-size:0.8rem;color:var(--muted);line-height:1.8;margin-bottom:0.6rem;">
-        ※ 本商品にはAIが生成・補助したコンテンツを含みます。コンテンツの編集・構成および著作権は運営者（いくと）に帰属します。
+        ※ 本商品には AI が生成・補助したコンテンツを含みます。コンテンツの編集・構成および著作権は運営者（いくと）に帰属します。
       </p>
       <p style="font-size:0.8rem;color:var(--muted);line-height:1.8;">
-        ※ デジタルコンテンツの性質上、原則として購入後の返金は承っておりません。商品内容に重大な欠陥がある場合は <a href="mailto:ainowa.supports@gmail.com">ainowa.supports@gmail.com</a> までご連絡ください。
+        ※ 「判断ログ」「実物の写し」は、AI NOWA 社内で実際に行われたやり取りを元にしていますが、個人情報・第三者情報を含む箇所は適切に編集しています。
       </p>
     </section>
 

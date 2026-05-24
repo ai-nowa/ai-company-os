@@ -2,21 +2,39 @@ name = "ai-nowa"
 compatibility_date = "2024-01-01"
 
 # Cloudflare Pages 設定
-# デプロイコマンド:
-#   cd /home/ikuto/ai-company-os && wrangler pages deploy site/public --project-name=ai-nowa
+# デプロイコマンド（cwd=site/ にすること。Pages Functions の自動検出は cwd 直下の functions/ を見るため）:
+#   cd /home/ikuto/ai-company-os/site && wrangler pages deploy public --project-name=ai-nowa --branch=main --commit-dirty=true
 #
-# Pages Functions は site/functions/ に配置（自動認識）
+# ⚠️ `cd /home/ikuto/ai-company-os && wrangler pages deploy site/public` だと Functions が含まれない
+#    成功ログに ✨ Compiled Worker / Uploading Functions bundle が出ないので必ず確認
+#
+# Pages Functions は site/functions/ に配置（cwd=site/ なら自動認識）
 # API エンドポイント:
-#   POST /api/lemonsqueezy/create-checkout  → site/functions/api/lemonsqueezy/create-checkout.js
-#   POST /api/lemonsqueezy/webhook          → site/functions/api/lemonsqueezy/webhook.js
+#   POST /api/intent-click                 → 匿名の意向クリック計測（PIIなし）
+#   POST /api/polar/create-checkout        → 現在は販売準備中として503
+#   POST /api/polar/webhook                → 将来のPolar自動配信用
+#   POST /api/lemonsqueezy/*               → 撤退済み。410でfail closed
 #
-# Cloudflare Dashboard > Pages > ai-nowa > Settings > Environment variables で設定必要:
-#   LEMONSQUEEZY_API_KEY  (シークレット)
-#   LS_STORE_ID           = 379291
-#   LS_WEBHOOK_SECRET     (シークレット・Lemon Squeezy Webhook設定時に発行)
-#   LS_TEST_MODE          = "true" (本番審査完了後に "false" へ変更)
+# 現在の /shop は購入意思受付。決済を再開する場合は、商品名・価格・法務表記・
+# PII保存方針・Webhook配送を監査してから環境変数で明示的にONにする。
 #
 # R2バインディング（ダウンロード商品ファイル格納用）:
 #   バケット作成: wrangler r2 bucket create ai-nowa-downloads
 #   CF Dashboard > Pages > ai-nowa > Settings > Functions > R2 bucket bindings
 #   変数名: R2_BUCKET  / バケット: ai-nowa-downloads
+#
+# Analytics Engine バインディング（EXP-002 計測 B案 / intent-click 用）:
+#   いくと作業（5分）:
+#     CF Dashboard > Pages > ai-nowa > Settings > Functions
+#       > Analytics Engine bindings > Add binding
+#       Variable name: ANALYTICS
+#       Dataset:       shop_intent
+#   未設定の場合も /api/intent-click は 200 を返し、Pages Functions logs に痕跡が残る
+#   設定後の集計クエリ例:
+#     SELECT
+#       blob1 AS kind,
+#       blob2 AS source,
+#       SUM(_sample_interval) AS clicks
+#     FROM shop_intent
+#     WHERE timestamp > NOW() - INTERVAL '1' DAY
+#     GROUP BY blob1, blob2

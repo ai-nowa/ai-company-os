@@ -317,10 +317,20 @@ def _collect_quality() -> dict:
 
 def collect_all_metrics() -> dict:
     """全7指標を収集して返す。"""
+    from .external_metrics import collect_external_metrics, write_external_metrics_snapshot, write_kpi_observations
+
+    external = collect_external_metrics()
+    write_external_metrics_snapshot(external)
+    write_kpi_observations(external)
     return {
-        "ts": now_jst_iso(),
-        "cognition": _collect_cognition(),
-        "revenue": _collect_revenue(),
+        "ts": external.get("ts", now_jst_iso()),
+        "external": external,
+        # Backward-compatible top-level fields used by dashboards/triggers.
+        "cognition": external.get("cognition", {}),
+        "revenue": external.get("revenue", {}),
+        "traffic": external.get("traffic", {}),
+        "youtube": external.get("youtube", {}),
+        "intent": external.get("intent", {}),
         "efficiency": _collect_efficiency(),
         "quality": _collect_quality(),
         "code_health": _collect_code_health(),
@@ -392,13 +402,13 @@ def detect_triggers(metrics: dict, snapshots: list[dict]) -> list[dict]:
     if old_snap:
         cog = metrics["cognition"]
         old_cog = old_snap.get("cognition", {})
-        delta_stars = cog.get("stars", 0) - old_cog.get("stars", 0)
-        delta_liked = cog.get("zenn_liked", 0) - old_cog.get("zenn_liked", 0)
-        delta_hatena = cog.get("hatena_bookmarks", 0) - old_cog.get("hatena_bookmarks", 0)
-        if delta_stars == 0 and delta_liked == 0 and delta_hatena == 0:
+        delta_stars = (cog.get("stars") or 0) - (old_cog.get("stars") or 0)
+        delta_liked = (cog.get("zenn_liked") or 0) - (old_cog.get("zenn_liked") or 0)
+        delta_hatena = (cog.get("hatena_bookmarks") or 0) - (old_cog.get("hatena_bookmarks") or 0)
+        if cog.get("available", True) and delta_stars == 0 and delta_liked == 0 and delta_hatena == 0:
             triggers.append({
                 "name": "COGNITION_ZERO",
-                "detail": f"12h変化ゼロ: stars={cog['stars']}, Zenn likes={cog['zenn_liked']}, はてブ={cog['hatena_bookmarks']}",
+                "detail": f"12h変化ゼロ: stars={cog.get('stars', 0)}, Zenn likes={cog.get('zenn_liked', 0)}, はてブ={cog.get('hatena_bookmarks', 0)}",
                 "message": (
                     "【自己改善ループ: 認知ゼロ警告】\n"
                     "過去 12h で GitHub stars / Zenn likes / はてブ の増加がゼロです。\n"
@@ -416,15 +426,28 @@ def detect_triggers(metrics: dict, snapshots: list[dict]) -> list[dict]:
     if old_snap_24h:
         rev = metrics["revenue"]
         old_rev = old_snap_24h.get("revenue", {})
-        if rev.get("order_count", 0) == 0 and old_rev.get("order_count", 0) == 0:
+        if (
+            rev.get("available", True)
+            and old_rev.get("available", True)
+            and (rev.get("order_count") or 0) == 0
+            and (old_rev.get("order_count") or 0) == 0
+        ):
+            intent = metrics.get("intent", {}).get("purchase_form", {})
+            intent_text = ""
+            if intent.get("available"):
+                intent_text = (
+                    f"\n購入意思フォーム: total={intent.get('total', 0)}, "
+                    f"yes={intent.get('yes', 0)}, maybe={intent.get('maybe', 0)}。"
+                )
             triggers.append({
                 "name": "REVENUE_ZERO",
                 "detail": f"24h注文数ゼロ (Polar order_count={rev.get('order_count', 0)})",
                 "message": (
                     "【自己改善ループ: 売上ゼロ警告】\n"
-                    "過去 24h で Polar の注文がゼロです。\n"
+                    "過去 24h で Polar の注文がゼロです。"
+                    f"{intent_text}\n"
                     "@有馬レイジ @黒羽ユウ — **商品・価格・導線の改善策を 30 分以内に提案してください**。\n"
-                    "価格調整 / 記事 CTA 改善 / SNS 告知 から1つ実行してください。"
+                    "ただし計測未取得と反応ゼロを混ぜない。価格調整 / 記事 CTA 改善 / SNS 告知 / 計測整備から1つ実行してください。"
                 ),
             })
 
