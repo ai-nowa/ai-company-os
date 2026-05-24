@@ -214,7 +214,17 @@ def resolve_model_route(
     model_override: Optional[str] = None,
 ) -> ModelRoute:
     backend = EMPLOYEES[employee_id]["backend"]
-    text = f"{run_reason}\n{user_message}"
+    is_self_loop_boilerplate = (
+        sender == "self_loop"
+        and "あなた自身の時間です" in user_message
+        and "## まずstate_digestを見る" in user_message
+    )
+    if is_self_loop_boilerplate or sender in {"heartbeat", "watchdog"}:
+        # self_loop/heartbeat の user_message は運用ルール全文を含むため、
+        # 「経営判断」「権限」などの注意書きだけで Opus/xhigh に誤昇格させない。
+        text = run_reason
+    else:
+        text = f"{run_reason}\n{user_message}"
     tier, reasons = _mode_tier(mode, sender, employee_id, text)
 
     if backend == "codex":

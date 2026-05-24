@@ -214,7 +214,11 @@ def _infer_mode(sender: str, user_message: str, mode: Optional[str]) -> str:
         resolved = "routine"
     else:
         resolved = "routine"
-    if resolved != "micro" and needs_executive_model(user_message):
+    if (
+        resolved != "micro"
+        and sender not in FRESH_ROUTINE_SENDERS
+        and needs_executive_model(user_message)
+    ):
         return "executive"
     return resolved
 

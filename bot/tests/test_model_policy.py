@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from bot.employee_autonomy import build_self_prompt
+from bot.employee_runner import _infer_mode
 from bot.model_policy import needs_executive_model, resolve_model_route
 
 
@@ -25,6 +27,25 @@ def test_revenue_routine_for_high_judgment_role_uses_high_sonnet():
         sender="self_loop",
         user_message="Revenue experiment の success_signal を更新する",
         run_reason="self_loop",
+    )
+
+    assert route.backend == "claude"
+    assert route.model == "sonnet"
+    assert route.effort == "high"
+    assert route.tier == "business_routine"
+
+
+def test_self_loop_boilerplate_does_not_escalate_to_executive():
+    prompt = build_self_prompt("asakura_noa")
+
+    assert _infer_mode("self_loop", prompt, "routine") == "routine"
+
+    route = resolve_model_route(
+        "asakura_noa",
+        mode="routine",
+        sender="self_loop",
+        user_message=prompt,
+        run_reason="self_loop/startup: active taskあり, 新規成果物あり, 自分に関係するRevenue実験あり",
     )
 
     assert route.backend == "claude"
