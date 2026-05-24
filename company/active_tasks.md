@@ -12,16 +12,25 @@ reviewer: hinata_nagi           # 品質確認者
 buddy: morinaga_haru            # 相談相手
 status: in_progress             # pending / in_progress / review / done / blocked
 priority: P0                    # P0(最優先) / P1 / P2
-due: 2026-05-20
+due: 2026-05-20                 # 最遅締切。開始日/待機日ではない
+start_after: null               # 物理的にその日まで着手不能な場合のみ指定
 created: 2026-05-16
 updated: 2026-05-16
 triad: youtube                  # 関連トライアド（任意）
 depends_on: []                  # 依存タスクID
 deliverable: outbox/script_v1.md
+next_action_now: 初稿の粗い目次を作る  # blocked以外は「今すぐ進める1手」を必ず置く
 notes: |
   初回なのでチュートリアル要素を入れる。
   ナギの「初見視点レビュー」を経由する。
 ```
+
+## 期限ルール
+
+- `due` / 期限 / 判定日 / 観察日は「その日まで待つ」意味ではなく、最遅締切。
+- 未来日があるタスクでも、Owner は今日できる準備・草稿・検証・依頼整理を進める。
+- 本当に外部待ちなら `status: blocked` と `blocked_by` を明記する。その場合も社員本人は別の未ブロック作業へ移る。
+- 新規タスクには原則 `next_action_now` を置く。`next_action_now` が空の期限付きタスクは待機化リスクとして扱う。
 
 ## 現在のタスク
 

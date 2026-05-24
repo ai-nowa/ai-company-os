@@ -181,15 +181,20 @@ def _active_task_items(employee_id: str, max_items: int = 5) -> list[str]:
             continue
         if "status: closed" in block_lower or "status: archived" in block_lower:
             continue
-        # 1行サマリ（id, title, status, due）を抽出
+        # 1行サマリ（id, title, status, due, next_action_now）を抽出
         summary_parts = []
+        has_next_action = False
         for ln in block:
             s = ln.strip()
-            if s.startswith(("id:", "title:", "status:", "due:", "priority:")):
+            if s.startswith(("id:", "title:", "status:", "due:", "priority:", "next_action_now:")):
                 summary_parts.append(s)
-            if len(summary_parts) >= 5:
+                if s.startswith("next_action_now:"):
+                    has_next_action = True
+            if len(summary_parts) >= 6:
                 break
         if summary_parts:
+            if not has_next_action and any(part.startswith("due:") for part in summary_parts):
+                summary_parts.append("next_action_now: due前に今できる準備・草稿・検証を進める")
             items.append("- " + _short(" / ".join(summary_parts), 260))
             if len(items) >= max_items:
                 break
@@ -440,6 +445,10 @@ def assemble_state_digest(employee_id: str, reason: str, mode: str = "routine") 
         f"- mode: {mode}",
         f"- reason: {_short(reason, 360)}",
         "",
+        "## 期限の読み方（待機禁止）",
+        "- due/期限/判定日/観察日は待機日ではなく最遅締切。未来日でも今できる準備・草稿・検証を進める",
+        "- 待つ必要がある時だけ blocked_by を明記し、同時に next_action_now または別タスクを進める",
+        "",
         *_fit_section("Revenue OS（収益ループ）", _revenue_ops_items(employee_id, mode, budgets["revenue"]), budgets["revenue"], "- 未初期化"),
         "",
         *_fit_section("自分宛メンション（最大5件）", _recent_mentions(employee_id), budgets["mentions"], "- なし"),
@@ -484,7 +493,7 @@ def should_wake_employee(employee_id: str) -> tuple[bool, int, str]:
 
     tasks = _active_task_items(employee_id, max_items=3)
     if tasks:
-        score += 2
+        score += 3
         reasons.append("active taskあり")
 
     logs = _related_recent_logs(employee_id, max_items=4, after_last_out=True)
