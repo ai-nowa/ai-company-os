@@ -15,15 +15,14 @@
 from __future__ import annotations
 
 import asyncio
-import glob
 import json
 import logging
 import re
 from datetime import datetime, timedelta
-from pathlib import Path
 
 from .config import BASE_DIR, JST, now_jst_iso
 from . import dynamic_config
+from .activity_index import iter_all_employee_events, last_employee_out_ts, parse_ts
 
 log = logging.getLogger("self_improvement_loop")
 
@@ -75,7 +74,7 @@ def _collect_revenue() -> dict:
 def _collect_efficiency() -> dict:
     """効率指標: タスク完了率・直近 1h の out 件数。"""
     now = datetime.now(JST)
-    cutoff_1h = (now - timedelta(hours=1)).isoformat()
+    cutoff_1h_dt = now - timedelta(hours=1)
 
     # タスク完了率 (active_tasks.md)
     total_tasks = done_tasks = 0
@@ -103,15 +102,7 @@ def _collect_efficiency() -> dict:
     completion_rate = (done_tasks / total_tasks) if total_tasks > 0 else 1.0
 
     # 直近 1h の out 件数
-    out_1h = 0
-    for f in glob.glob(str(BASE_DIR / "employees/*/session/conversation_log.jsonl")):
-        try:
-            for line in Path(f).read_text(encoding="utf-8", errors="replace").splitlines():
-                e = json.loads(line)
-                if e.get("kind") == "out" and e.get("ts", "") >= cutoff_1h:
-                    out_1h += 1
-        except Exception:
-            continue
+    out_1h = sum(1 for _ in iter_all_employee_events(since=cutoff_1h_dt, kinds={"out"}, archive_limit=2))
 
     return {
         "total_tasks": total_tasks,
@@ -124,31 +115,19 @@ def _collect_efficiency() -> dict:
 def _collect_idle_employees(idle_threshold_hours: int = 6) -> dict:
     """N時間以上 out ゼロの社員を検知。タスク完了後の停止を拾う。"""
     now = datetime.now(JST)
-    cutoff = (now - timedelta(hours=idle_threshold_hours)).isoformat()
+    cutoff = now - timedelta(hours=idle_threshold_hours)
     idle = []
-    for f in glob.glob(str(BASE_DIR / "employees/*/session/conversation_log.jsonl")):
-        emp_id = Path(f).parent.parent.name
-        last_out: str | None = None
-        try:
-            for line in Path(f).read_text(encoding="utf-8", errors="replace").splitlines():
-                e = json.loads(line)
-                if e.get("kind") == "out":
-                    ts = e.get("ts", "")
-                    if last_out is None or ts > last_out:
-                        last_out = ts
-        except Exception:
+    for emp_id in sorted((BASE_DIR / "employees").iterdir()):
+        if not emp_id.is_dir():
             continue
-        if last_out is None or last_out < cutoff:
+        employee_id = emp_id.name
+        last_out = last_employee_out_ts(employee_id)
+        last_dt = parse_ts(last_out)
+        if last_dt is None or last_dt < cutoff:
             idle_hours: float | None = None
-            if last_out:
-                try:
-                    last_dt = datetime.fromisoformat(last_out)
-                    if last_dt.tzinfo is None:
-                        last_dt = last_dt.replace(tzinfo=JST)
-                    idle_hours = round((now - last_dt).total_seconds() / 3600, 1)
-                except Exception:
-                    pass
-            idle.append({"emp_id": emp_id, "last_out": last_out, "idle_hours": idle_hours})
+            if last_dt:
+                idle_hours = round((now - last_dt).total_seconds() / 3600, 1)
+            idle.append({"emp_id": employee_id, "last_out": last_out or None, "idle_hours": idle_hours})
     return {"idle": idle, "alert": len(idle) > 0, "threshold_hours": idle_threshold_hours}
 
 
@@ -160,34 +139,20 @@ def _collect_idle_employees_tiered() -> dict:
     escalate : 6h以上      → 経営層通知
     """
     now = datetime.now(JST)
-    emp_last_out: dict[str, str | None] = {}
-    for f in glob.glob(str(BASE_DIR / "employees/*/session/conversation_log.jsonl")):
-        emp_id = Path(f).parent.parent.name
-        last_out: str | None = None
-        try:
-            for line in Path(f).read_text(encoding="utf-8", errors="replace").splitlines():
-                e = json.loads(line)
-                if e.get("kind") == "out":
-                    ts = e.get("ts", "")
-                    if last_out is None or ts > last_out:
-                        last_out = ts
-        except Exception:
-            continue
-        emp_last_out[emp_id] = last_out
-
     result: dict[str, list] = {"warning": [], "wake": [], "escalate": []}
-    for emp_id, last_out in emp_last_out.items():
+    for emp_dir in sorted((BASE_DIR / "employees").iterdir()):
+        if not emp_dir.is_dir():
+            continue
+        emp_id = emp_dir.name
+        last_out = last_employee_out_ts(emp_id)
+        last_dt = parse_ts(last_out)
         idle_hours: float | None = None
-        if last_out:
-            try:
-                last_dt = datetime.fromisoformat(last_out)
-                if last_dt.tzinfo is None:
-                    last_dt = last_dt.replace(tzinfo=JST)
-                idle_hours = round((now - last_dt).total_seconds() / 3600, 1)
-            except Exception:
-                pass
-        entry = {"emp_id": emp_id, "last_out": last_out, "idle_hours": idle_hours}
-        if idle_hours is None or idle_hours >= 6:
+        if last_dt:
+            idle_hours = round((now - last_dt).total_seconds() / 3600, 1)
+        entry = {"emp_id": emp_id, "last_out": last_out or None, "idle_hours": idle_hours}
+        if idle_hours is None:
+            continue
+        if idle_hours >= 6:
             result["escalate"].append(entry)
         elif idle_hours >= 3:
             result["wake"].append(entry)
@@ -433,11 +398,34 @@ def detect_triggers(metrics: dict, snapshots: list[dict]) -> list[dict]:
             and (old_rev.get("order_count") or 0) == 0
         ):
             intent = metrics.get("intent", {}).get("purchase_form", {})
+            ga4 = metrics.get("traffic", {}).get("ga4", {})
+            shop_pv = ga4.get("shop_pageviews_today")
+            intent_recent = intent.get("recent_24h")
             intent_text = ""
             if intent.get("available"):
                 intent_text = (
                     f"\n購入意思フォーム: total={intent.get('total', 0)}, "
                     f"yes={intent.get('yes', 0)}, maybe={intent.get('maybe', 0)}。"
+                )
+            if ga4.get("available") and shop_pv == 0:
+                diagnosis = (
+                    "\n診断: /shop PV が 0。商品コピー会議ではなく、まず外部導線を1本出す段階です。"
+                    "\n指示: @黒羽ユウ は30分以内に公開導線1本を出す。@朝倉ノア は導線先と判定条件を1行で確定。"
+                )
+            elif ga4.get("available") and shop_pv and intent.get("available") and intent_recent == 0:
+                diagnosis = (
+                    "\n診断: 来訪はあるが直近意向クリック/回答が 0。初見コピー・CTA・価格説明の摩擦を潰す段階です。"
+                    "\n指示: @朝倉ノア @黒羽ユウ は1箇所だけ差し替え、次回EODで `PVあり/意向なし` として判定。"
+                )
+            elif intent.get("available") and (intent_recent or 0) > 0:
+                diagnosis = (
+                    "\n診断: 直近意向シグナルあり。購入ゼロの原因はcheckout/商品内容/価格のどれかに絞る段階です。"
+                    "\n指示: @有馬レイジ は価格・商品内容・checkout摩擦のどれを検証するか1つ選ぶ。"
+                )
+            else:
+                diagnosis = (
+                    "\n診断: 反応ゼロか計測不足かを混ぜない。取得済み指標だけで次の1手を決める。"
+                    "\n指示: @白瀬カイ は計測状態、@黒羽ユウ は外部導線をそれぞれ1つだけ前進。"
                 )
             triggers.append({
                 "name": "REVENUE_ZERO",
@@ -446,8 +434,8 @@ def detect_triggers(metrics: dict, snapshots: list[dict]) -> list[dict]:
                     "【自己改善ループ: 売上ゼロ警告】\n"
                     "過去 24h で Polar の注文がゼロです。"
                     f"{intent_text}\n"
-                    "@有馬レイジ @黒羽ユウ — **商品・価格・導線の改善策を 30 分以内に提案してください**。\n"
-                    "ただし計測未取得と反応ゼロを混ぜない。価格調整 / 記事 CTA 改善 / SNS 告知 / 計測整備から1つ実行してください。"
+                    f"{diagnosis}\n"
+                    "提案会議で終えず、成果物パス・投稿URL・差し替え箇所のいずれかを残してください。"
                 ),
             })
 

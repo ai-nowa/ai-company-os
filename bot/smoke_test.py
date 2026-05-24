@@ -21,6 +21,11 @@ from .employee_runner import run_employee
 
 SHORT_SET = ["saegusa_mio", "shirase_kai", "morinaga_haru"]
 
+# CLI smoke helper, not a pytest module.  The async ``test_one(employee_id)``
+# function intentionally takes an employee id argument, so pytest must not
+# collect it as a fixture-based test.
+__test__ = False
+
 
 async def test_one(employee_id: str) -> tuple[str, bool, str]:
     try:

@@ -16,6 +16,8 @@ from collections import defaultdict
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
+from .activity_index import iter_all_employee_events, last_employee_out_ts, parse_ts
+
 JST = timezone(timedelta(hours=9))
 
 BASE_DIR = Path(__file__).parent.parent
@@ -60,6 +62,29 @@ SAKIOKURI_PATTERNS: list[str] = [
     r"明日朝",
 ]
 
+SAKIOKURI_ACTION_EXEMPT_KEYWORDS: list[str] = [
+    # 「待ち」を扱っていても、その場で完了・補完・代替作業を進めている文脈は
+    # 先送りではない。ここを除外しないと、監査報告や完了報告まで赤くなる。
+    "待機条件にはしません",
+    "待機条件にしません",
+    "待機にしない",
+    "待たず",
+    "待たない",
+    "止めません",
+    "止めない",
+    "待ちの間",
+    "今EOD",
+    "即",
+    "完了",
+    "実装",
+    "出力",
+    "作成しました",
+    "作りました",
+    "反映",
+    "確認済み",
+    "採用します",
+]
+
 NAREAI_RATE_THRESHOLD = 0.60
 NAREAI_NO_OUTPUT_HOURS = 3
 SAKIOKURI_DAILY_THRESHOLD = 5
@@ -67,22 +92,9 @@ SAKIOKURI_DAILY_THRESHOLD = 5
 
 def _load_logs(hours: int) -> list[dict]:
     """指定時間以内のログエントリを全社員分取得。"""
-    cutoff = (datetime.now(JST) - timedelta(hours=hours)).isoformat()
-    entries: list[dict] = []
-    for f in glob.glob(str(BASE_DIR / "employees/*/session/conversation_log.jsonl")):
-        emp_id = Path(f).parent.parent.name
-        try:
-            for line in Path(f).read_text(encoding="utf-8", errors="replace").splitlines():
-                try:
-                    e = json.loads(line)
-                    if e.get("ts", "") < cutoff:
-                        continue
-                    e["_emp"] = emp_id
-                    entries.append(e)
-                except json.JSONDecodeError:
-                    continue
-        except OSError:
-            continue
+    cutoff = datetime.now(JST) - timedelta(hours=hours)
+    entries = list(iter_all_employee_events(since=cutoff, archive_limit=8))
+    entries.sort(key=lambda e: e.get("ts", ""))
     return entries
 
 
@@ -167,6 +179,8 @@ def detect_sakiokuri(hours: int = 24) -> dict:
         emp = e.get("_emp", "unknown")
         text = e.get("text", "")
         matched = any(pat.search(text) for pat in compiled)
+        if matched and any(kw in text for kw in SAKIOKURI_ACTION_EXEMPT_KEYWORDS):
+            matched = False
         if matched:
             per_emp[emp] += 1
             if len(examples) < 5:
@@ -248,27 +262,11 @@ def detect_silent_employees(hours: int = SILENT_EMPLOYEE_HOURS) -> dict:
     """
     now = datetime.now(JST)
 
-    # 全社員の最終 out タイムスタンプを収集
-    last_out: dict[str, str] = {}
-    for f in glob.glob(str(BASE_DIR / "employees/*/session/conversation_log.jsonl")):
-        emp_id = Path(f).parent.parent.name
-        try:
-            for line in Path(f).read_text(encoding="utf-8", errors="replace").splitlines():
-                try:
-                    e = json.loads(line)
-                    if e.get("kind") == "out":
-                        ts = e.get("ts", "")
-                        if ts > last_out.get(emp_id, ""):
-                            last_out[emp_id] = ts
-                except json.JSONDecodeError:
-                    continue
-        except OSError:
-            continue
-
-    cutoff_iso = (now - timedelta(hours=hours)).isoformat()
+    cutoff_dt = now - timedelta(hours=hours)
     silent = []
     for emp_id in EMPLOYEE_IDS:
-        last_ts = last_out.get(emp_id, "")
+        last_ts = last_employee_out_ts(emp_id)
+        last_dt = parse_ts(last_ts)
         if not last_ts:
             silent.append({
                 "emp_id": emp_id,
@@ -276,14 +274,8 @@ def detect_silent_employees(hours: int = SILENT_EMPLOYEE_HOURS) -> dict:
                 "silent_hours": float(hours),
             })
             continue
-        if last_ts < cutoff_iso:
-            try:
-                last_dt = datetime.fromisoformat(last_ts)
-                if last_dt.tzinfo is None:
-                    last_dt = last_dt.replace(tzinfo=JST)
-                silent_h = round((now - last_dt).total_seconds() / 3600, 1)
-            except (ValueError, TypeError):
-                silent_h = float(hours)
+        if last_dt is None or last_dt < cutoff_dt:
+            silent_h = round((now - last_dt).total_seconds() / 3600, 1) if last_dt else float(hours)
             silent.append({
                 "emp_id": emp_id,
                 "last_out_ts": last_ts[11:19],

@@ -120,25 +120,52 @@ def detect_open_incidents(hours: int = 2) -> dict:
         return {"open_incidents": [], "alert": False}
 
     cutoff = (datetime.now(JST) - timedelta(hours=hours)).isoformat()
-    open_incidents = []
-
+    events = []
     for line in INCIDENTS_FILE.read_text(encoding="utf-8", errors="replace").splitlines():
         try:
             e = json.loads(line)
-            if e.get("ts", "") < cutoff:
-                continue
-            if e.get("severity") not in ("error", "critical"):
-                continue
-            if e.get("status", "open") == "resolved":
-                continue
-            open_incidents.append({
-                "ts": e["ts"][11:19],
-                "kind": e.get("kind", "?"),
-                "severity": e.get("severity"),
-                "detail": e.get("detail", "")[:100],
-            })
         except json.JSONDecodeError:
             continue
+        if e.get("ts", "") >= cutoff:
+            events.append(e)
+
+    def _logically_resolved(event_index: int) -> bool:
+        """Handle append-only incident logs.
+
+        watchdog writes ``dispatcher_down`` and then ``auto_restart`` as a
+        separate resolved event.  Without this relation the health monitor keeps
+        reporting a recovered restart as an open incident for the whole window.
+        """
+        event = events[event_index]
+        kind = event.get("kind", "")
+        for later in events[event_index + 1:]:
+            later_kind = later.get("kind", "")
+            later_status = later.get("status", "open")
+            if later_status not in {"resolved", "closed"}:
+                continue
+            if later_kind == f"{kind}_resolved":
+                return True
+            if kind == "dispatcher_down" and later_kind == "auto_restart":
+                return True
+            if kind == "auto_restart_failed" and later_kind == "auto_restart":
+                return True
+        return False
+
+    open_incidents = []
+
+    for idx, e in enumerate(events):
+        if e.get("severity") not in ("error", "critical"):
+            continue
+        if e.get("status", "open") in {"resolved", "closed"}:
+            continue
+        if _logically_resolved(idx):
+            continue
+        open_incidents.append({
+            "ts": e["ts"][11:19],
+            "kind": e.get("kind", "?"),
+            "severity": e.get("severity"),
+            "detail": e.get("detail", "")[:100],
+        })
 
     return {
         "open_incidents": open_incidents[-10:],

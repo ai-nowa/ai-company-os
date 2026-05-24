@@ -21,6 +21,7 @@ from pathlib import Path
 
 from .config import BASE_DIR, EMPLOYEES, JST
 from . import dynamic_config
+from .activity_index import iter_employee_events, last_employee_out_ts
 
 log = logging.getLogger("dashboard_writer")
 
@@ -50,21 +51,16 @@ def _employee_stats() -> list[dict]:
         log_path = BASE_DIR / "employees" / emp_id / "session" / "conversation_log.jsonl"
         out_1h = 0
         in_1h = 0
-        last_out_ts = ""
+        last_out_ts = last_employee_out_ts(emp_id)
         last_out_snippet = ""
         if log_path.exists():
-            for line in log_path.read_text(encoding="utf-8", errors="replace").splitlines():
-                try:
-                    e = json.loads(line)
-                except json.JSONDecodeError:
-                    continue
+            for e in iter_employee_events(emp_id, archive_limit=2):
                 ts = e.get("ts", "")
                 k = e.get("kind", "")
                 if ts >= cutoff_1h:
                     if k == "out": out_1h += 1
                     if k == "in": in_1h += 1
-                if k == "out":
-                    last_out_ts = ts
+                if k == "out" and ts == last_out_ts:
                     last_out_snippet = e.get("text", "")[:80]
         rows.append({
             "emp_id": emp_id,

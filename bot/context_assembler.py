@@ -14,6 +14,7 @@ from pathlib import Path
 from typing import Any, Optional
 
 from .config import BASE_DIR, COMPANY_DIR, EMPLOYEES, JST, now_jst_iso
+from .activity_index import last_employee_out_ts
 
 MAX_DIGEST_CHARS = 4000
 USAGE_METRICS_PATH = COMPANY_DIR / "usage_metrics.jsonl"
@@ -77,20 +78,7 @@ def _recent_discord_events(limit_per_file: int = 40) -> list[dict[str, Any]]:
 
 def _last_own_out_ts(employee_id: str) -> str:
     """この社員自身が最後に投稿した out の ts（応答済みかどうかの判定に使う）"""
-    log_path = BASE_DIR / "employees" / employee_id / "session" / "conversation_log.jsonl"
-    if not log_path.exists():
-        return ""
-    last = ""
-    for line in log_path.read_text(encoding="utf-8", errors="replace").splitlines():
-        try:
-            e = json.loads(line)
-        except json.JSONDecodeError:
-            continue
-        if e.get("kind") == "out":
-            ts = e.get("ts", "")
-            if ts > last:
-                last = ts
-    return last
+    return last_employee_out_ts(employee_id)
 
 
 def _recent_mentions(employee_id: str, max_items: int = 5) -> list[str]:

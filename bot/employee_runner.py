@@ -16,6 +16,7 @@ import asyncio
 import json
 import logging
 import os
+import signal
 import tempfile
 from dataclasses import dataclass
 from datetime import datetime, timedelta
@@ -57,6 +58,13 @@ CIRCUIT_STATE_PATH = COMPANY_DIR / ".llm_circuit_state.json"
 DEFAULT_CLAUDE_CIRCUIT_COOLDOWN_MINUTES = 15
 DEFAULT_CLAUDE_CIRCUIT_FAILURE_THRESHOLD = 2
 DEFAULT_CLAUDE_CIRCUIT_WINDOW_MINUTES = 10
+DEFAULT_PROCESS_TIMEOUTS = {
+    "micro": 90,
+    "routine": 180,
+    "work": 900,
+    "executive": 900,
+    "codex": 900,
+}
 
 
 @dataclass
@@ -299,6 +307,44 @@ def _mode_rules(mode: str) -> str:
     )
 
 
+def _process_timeout_seconds(mode: str) -> int:
+    try:
+        return int(dynamic_config.get(
+            f"llm_process_timeout.{mode}_seconds",
+            DEFAULT_PROCESS_TIMEOUTS.get(mode, 180),
+        ))
+    except (TypeError, ValueError):
+        return DEFAULT_PROCESS_TIMEOUTS.get(mode, 180)
+
+
+async def _communicate_with_timeout(
+    proc: asyncio.subprocess.Process,
+    *,
+    stdin: bytes,
+    timeout_seconds: int,
+) -> tuple[bytes, bytes, bool]:
+    try:
+        stdout, stderr = await asyncio.wait_for(
+            proc.communicate(input=stdin),
+            timeout=timeout_seconds,
+        )
+        return stdout, stderr, False
+    except asyncio.TimeoutError:
+        try:
+            os.killpg(proc.pid, signal.SIGTERM)
+        except ProcessLookupError:
+            pass
+        try:
+            await asyncio.wait_for(proc.wait(), timeout=5)
+        except asyncio.TimeoutError:
+            try:
+                os.killpg(proc.pid, signal.SIGKILL)
+            except ProcessLookupError:
+                pass
+            await proc.wait()
+        return b"", f"process timeout after {timeout_seconds}s".encode("utf-8"), True
+
+
 def _infer_mode(sender: str, user_message: str, mode: Optional[str]) -> str:
     if mode in RUN_MODES:
         resolved = mode
@@ -397,9 +443,16 @@ async def _exec_claude(
         stdin=asyncio.subprocess.PIPE,
         stdout=asyncio.subprocess.PIPE,
         stderr=asyncio.subprocess.PIPE,
+        start_new_session=True,
     )
-    stdout, stderr = await proc.communicate(input=prompt.encode("utf-8"))
+    stdout, stderr, timed_out = await _communicate_with_timeout(
+        proc,
+        stdin=prompt.encode("utf-8"),
+        timeout_seconds=_process_timeout_seconds(mode),
+    )
     stderr_text = stderr.decode("utf-8", errors="replace")
+    if timed_out:
+        return "", None, stderr_text, -2
     if proc.returncode != 0:
         return "", None, stderr_text, proc.returncode
     try:
@@ -510,8 +563,15 @@ async def run_codex(employee_id: str, prompt: str, route: ModelRoute) -> str:
             stdin=asyncio.subprocess.PIPE,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
+            start_new_session=True,
         )
-        _, stderr = await proc.communicate(input=prompt.encode("utf-8"))
+        _, stderr, timed_out = await _communicate_with_timeout(
+            proc,
+            stdin=prompt.encode("utf-8"),
+            timeout_seconds=_process_timeout_seconds("codex"),
+        )
+        if timed_out:
+            raise RuntimeError(stderr.decode("utf-8", errors="replace")[:400])
         if proc.returncode != 0:
             raise RuntimeError(stderr.decode("utf-8", errors="replace")[:400])
         with open(out_path, "r", encoding="utf-8") as f:

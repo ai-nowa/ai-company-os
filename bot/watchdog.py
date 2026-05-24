@@ -254,6 +254,7 @@ async def handle_dispatcher_down() -> None:
     if pid:
         log_incident("auto_restart", f"new pid={pid}", severity="info",
                      status="resolved", extra={"new_pid": pid})
+        mark_resolved("dispatcher_down", f"auto_restart pid={pid}")
         log.info(f"再起動完了 (pid={pid})")
     else:
         log_incident("auto_restart_failed", "start_dispatcher が PID を返さない",
