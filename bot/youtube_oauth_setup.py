@@ -26,6 +26,7 @@ TOKEN_FILE = BOT_DIR / "youtube_token.json"
 SCOPES = [
     "https://www.googleapis.com/auth/youtube.upload",
     "https://www.googleapis.com/auth/youtube.readonly",  # チャンネル情報取得
+    "https://www.googleapis.com/auth/yt-analytics.readonly",  # YouTube Analytics
 ]
 
 

@@ -26,7 +26,12 @@ from typing import Optional
 
 logger = logging.getLogger(__name__)
 
-SCOPES = ["https://www.googleapis.com/auth/youtube.upload"]
+SCOPES = [
+    "https://www.googleapis.com/auth/youtube.upload",
+    "https://www.googleapis.com/auth/youtube.readonly",
+    "https://www.googleapis.com/auth/youtube.force-ssl",
+    "https://www.googleapis.com/auth/yt-analytics.readonly",
+]
 _BOT_DIR = Path(__file__).parent
 CREDENTIALS_FILE = Path(os.environ.get("YOUTUBE_CREDENTIALS_FILE", str(_BOT_DIR / "youtube_client_secret.json")))
 TOKEN_FILE = Path(os.environ.get("YOUTUBE_TOKEN_FILE", str(_BOT_DIR / "youtube_token.json")))
@@ -52,7 +57,15 @@ def _get_credentials():
 
     creds = None
     if TOKEN_FILE.exists():
-        creds = Credentials.from_authorized_user_file(str(TOKEN_FILE), SCOPES)
+        # Keep any scopes already granted in youtube_token.json.  Passing only
+        # youtube.upload here downgrades the serialized token on refresh and
+        # breaks later read/analytics calls.
+        try:
+            token_data = json.loads(TOKEN_FILE.read_text(encoding="utf-8"))
+            token_scopes = token_data.get("scopes") or SCOPES
+        except (OSError, json.JSONDecodeError):
+            token_scopes = SCOPES
+        creds = Credentials.from_authorized_user_file(str(TOKEN_FILE), token_scopes)
 
     if not creds or not creds.valid:
         if creds and creds.expired and creds.refresh_token:
