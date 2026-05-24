@@ -111,7 +111,13 @@ async def find_channel(client: discord.Client, needle: str):
 
 async def post(client: discord.Client, channel_needle: str, prompt: str) -> None:
     log.info(f"Architect が『{channel_needle}』向け通達を生成中...")
-    msg = await run_architect(prompt, sender="ikuto", channel=channel_needle)
+    msg = await run_architect(
+        prompt,
+        sender="ikuto",
+        channel=channel_needle,
+        mode="broadcast",
+        use_resume=False,
+    )
     log.info(f"  プレビュー: {msg[:120]}...")
 
     ch = await find_channel(client, channel_needle)

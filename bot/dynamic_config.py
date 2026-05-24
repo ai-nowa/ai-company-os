@@ -56,6 +56,7 @@ def _defaults() -> dict:
         "architect_observer": {
             "enabled": True,
             "check_interval_seconds": 12600,
+            "initial_delay_seconds": 1800,
             "keyword_loop_threshold": 30,
             "silent_hours": 2,
             "token_overheat_threshold": 60000,
@@ -66,6 +67,63 @@ def _defaults() -> dict:
         },
         "architect_outbox": {
             "dispatch_timeout_seconds": 900,
+            "max_dispatch_targets": 2,
+        },
+        "architect": {
+            "model": "claude-opus-4-7",
+            "modes": {
+                "manual": {
+                    "effort": "xhigh",
+                    "use_resume": True,
+                    "max_output_tokens": 4000,
+                    "max_response_chars": 5000,
+                    "timeout_seconds": 900,
+                },
+                "auto": {
+                    "effort": "high",
+                    "use_resume": False,
+                    "max_output_tokens": 1200,
+                    "max_response_chars": 1200,
+                    "timeout_seconds": 300,
+                },
+                "observer": {
+                    "effort": "high",
+                    "use_resume": False,
+                    "max_output_tokens": 1400,
+                    "max_response_chars": 1600,
+                    "timeout_seconds": 360,
+                },
+                "incident": {
+                    "effort": "xhigh",
+                    "use_resume": False,
+                    "max_output_tokens": 1600,
+                    "max_response_chars": 1800,
+                    "timeout_seconds": 360,
+                },
+                "broadcast": {
+                    "effort": "high",
+                    "use_resume": False,
+                    "max_output_tokens": 1800,
+                    "max_response_chars": 2200,
+                    "timeout_seconds": 360,
+                },
+            },
+            "auto_response": {
+                "enabled": True,
+                "window_seconds": 1800,
+                "max_calls": 2,
+                "allowed_employee_ids": [
+                    "arima_reiji", "saegusa_mio", "shirase_kai", "kagura_aoi",
+                ],
+                "critical_keywords": [
+                    "P0", "critical", "incident", "障害", "停止", "再起動ループ", "dispatcher",
+                    "セキュリティ", "security", "流出", "漏洩", "APIキー", "api key", "secret",
+                    "token", "権限", "admin", "管理者", "invite", "招待", "認証", "OAuth",
+                    "決済", "支払い", "請求", "返金", "契約", "法務", "本番", "deploy",
+                    "公開可否", "公開判断", "削除", "delete", "リミット", "usage cap",
+                    "トークン過熱", "自己改修", "外部投稿",
+                ],
+            },
         },
         "admin_queue": {
             "enabled": False,
@@ -99,6 +157,7 @@ def _defaults() -> dict:
             "max_initial_targets": 6,
             "max_mentions_per_response": 2,
             "heartbeat_chain_calls": 1,
+            "architect_chain_calls": 2,
         },
         "model_policy": {
             "enabled": True,

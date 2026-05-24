@@ -67,6 +67,8 @@ async def kickoff(main_client: discord.Client) -> None:
         "(4) 設計者として9人を信頼している旨。"
         "自然な口調で、メタ的すぎず、語りかけるように。",
         sender="いくと",
+        mode="broadcast",
+        use_resume=False,
     )
     notice_ch = await find_channel(main_client, "お知らせ")
     await post_as_main(notice_ch, "設計者（Opus）", archi_msg)

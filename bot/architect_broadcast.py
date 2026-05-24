@@ -28,7 +28,13 @@ async def find_channel(client: discord.Client, needle: str):
 
 async def broadcast(client: discord.Client, channel_needle: str, prompt: str) -> None:
     log.info(f"Architect にメッセージ生成依頼 (channel={channel_needle})...")
-    response = await run_architect(prompt, sender="ikuto", channel=channel_needle)
+    response = await run_architect(
+        prompt,
+        sender="ikuto",
+        channel=channel_needle,
+        mode="broadcast",
+        use_resume=False,
+    )
     log.info(f"応答プレビュー: {response[:150]}...")
 
     ch = await find_channel(client, channel_needle)

@@ -144,10 +144,10 @@ async def consult_architect(situation: str) -> str:
         f"先頭に **[ACTION: RESTART|INVESTIGATE|ESCALATE]** のタグを必ず付けてください。"
     )
     try:
-        return await run_architect(msg, sender="watchdog")
+        return await run_architect(msg, sender="watchdog", mode="incident", use_resume=False)
     except Exception as e:
         log.exception("Architect 相談失敗")
-        return f"[ACTION: ESCALATE] Architect 相談自体が失敗: {type(e).__name__}: {e}"
+        return "[ACTION: ESCALATE] Architect 相談が一時的に失敗。詳細はサーバーログを確認。"
 
 
 def parse_action(advice: str) -> str:

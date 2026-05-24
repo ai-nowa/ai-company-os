@@ -19,6 +19,11 @@ from typing import Optional
 import discord
 
 from .architect import run_architect
+from .architect_policy import (
+    auto_response_max_calls,
+    auto_response_window_seconds,
+    should_auto_architect_respond,
+)
 from .config import (
     DISCORD_BOT_TOKEN,
     DISPLAY_TO_ID,
@@ -69,14 +74,25 @@ def _has_architect_mention(text: str) -> bool:
     return any(p in text for p in ARCHITECT_MENTION_PATTERNS)
 
 def _can_architect_auto_respond() -> bool:
-    """Architect 自動応答の rate limit。過去 5 分で 8 回まで（無限ループ防止）"""
+    """Architect 自動応答の rate limit。デフォルトは過去30分で2回まで。"""
     import time
     now = time.time()
-    _architect_auto_response_history[:] = [t for t in _architect_auto_response_history if now - t < 300]
-    if len(_architect_auto_response_history) >= 8:
+    window = auto_response_window_seconds()
+    max_calls = auto_response_max_calls()
+    _architect_auto_response_history[:] = [t for t in _architect_auto_response_history if now - t < window]
+    if len(_architect_auto_response_history) >= max_calls:
         return False
     _architect_auto_response_history.append(now)
     return True
+
+
+def _record_architect_auto_skip(reason: str, sender: str, content: str) -> None:
+    write_usage_metric(
+        employee_id="architect",
+        mode="architect:auto",
+        reason=f"{sender}: {content[:160]}",
+        skipped_reason=reason,
+    )
 
 
 def _cfg_bool(path: str, default: bool = True) -> bool:
@@ -626,6 +642,21 @@ async def process_architect_outbox_loop() -> None:
                         if t not in EMPLOYEES:
                             log.warning("architect_outbox: unknown dispatch target: %s", t)
                     if valid_targets:
+                        max_targets = int(dynamic_config.get("architect_outbox.max_dispatch_targets", 2))
+                        if len(valid_targets) > max_targets:
+                            dropped = valid_targets[max_targets:]
+                            log.warning(
+                                "architect_outbox: dispatch target cap applied: kept=%s dropped=%s",
+                                valid_targets[:max_targets],
+                                dropped,
+                            )
+                            write_usage_metric(
+                                employee_id="architect",
+                                mode="architect_outbox",
+                                reason=f"dispatch target cap: {f.name}",
+                                skipped_reason=f"dispatch_targets_clipped:{len(dropped)}",
+                            )
+                            valid_targets = valid_targets[:max_targets]
                         log.info(f"architect_outbox: dispatching to {len(valid_targets)} employees in PARALLEL: {valid_targets}")
                         tasks = [
                             dispatch_to_employee(
@@ -926,9 +957,23 @@ async def on_message(message: discord.Message) -> None:
         if _has_architect_mention(raw_content) or (
             main_client.user is not None and main_client.user in message.mentions
         ):
-            if _can_architect_auto_respond():
-                channel_name = getattr(message.channel, "name", "dm")
-                sender_label = f"社員（{message.author.display_name}）"
+            channel_name = getattr(message.channel, "name", "dm")
+            emp_id = multi_client.get_emp_for_user_id(message.author.id)
+            sender_label = f"社員（{message.author.display_name}）"
+            decision = should_auto_architect_respond(raw_content, emp_id)
+            if not decision.allowed:
+                _record_architect_auto_skip(decision.reason, sender_label, raw_content)
+                log.info(
+                    "Architect AUTO-RESPONSE skipped: reason=%s emp=%s channel=%s",
+                    decision.reason,
+                    emp_id,
+                    channel_name,
+                )
+                try:
+                    await message.add_reaction("👀")
+                except Exception:
+                    pass
+            elif _can_architect_auto_respond():
                 log.info(f"Architect AUTO-RESPONSE: {sender_label} in #{channel_name}")
                 try:
                     async with message.channel.typing():
@@ -936,11 +981,14 @@ async def on_message(message: discord.Message) -> None:
                             raw_content,
                             sender=sender_label,
                             channel=channel_name,
+                            mode="auto",
+                            use_resume=False,
                         )
                     await send_chunked(message.channel, "", response)
                 except Exception:
                     log.exception("Architect auto-response failed")
             else:
+                _record_architect_auto_skip("architect_auto_rate_limited", sender_label, raw_content)
                 log.warning(
                     f"Architect auto-response rate limited (skipping in #{getattr(message.channel, 'name', 'dm')})"
                 )

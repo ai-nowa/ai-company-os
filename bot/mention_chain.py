@@ -41,6 +41,8 @@ def max_depth() -> int:
 def chain_call_limit(origin: str = "mention") -> int:
     if origin == "heartbeat":
         return _cfg("mention_chain.heartbeat_chain_calls", 1)
+    if origin == "architect":
+        return _cfg("mention_chain.architect_chain_calls", 2)
     return _cfg("mention_chain.max_chain_calls", 6)
 
 
@@ -48,6 +50,8 @@ def mentions_per_response_limit(text: str, origin: str = "mention") -> int:
     base = _cfg("mention_chain.max_mentions_per_response", 2)
     if origin == "heartbeat":
         return min(base, _cfg("mention_chain.heartbeat_chain_calls", 1))
+    if origin == "architect":
+        return min(base, _cfg("mention_chain.architect_chain_calls", 2))
     if is_high_priority(text):
         return max(base, 4)
     return base

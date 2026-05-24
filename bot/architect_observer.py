@@ -53,7 +53,7 @@ def _detect_signals() -> dict:
     }
     now = datetime.now(JST)
 
-    # 1. 締切 48h 以内 + in_progress 以下
+    # 1. 期限超過または締切48h以内 + in_progress 以下
     if ACTIVE_TASKS.exists():
         text = ACTIVE_TASKS.read_text(encoding="utf-8", errors="replace")
         in_yaml = False
@@ -77,13 +77,14 @@ def _detect_signals() -> dict:
                         try:
                             d = datetime.strptime(due.group(1), "%Y-%m-%d").replace(tzinfo=JST)
                             hours_left = (d - now).total_seconds() / 3600
-                            if 0 < hours_left < 48:
+                            if hours_left < 48:
                                 signals["tight_deadlines"].append({
                                     "id": tid.group(1),
                                     "title": (title.group(1) if title else "")[:50],
                                     "owner": own.group(1) if own else "?",
                                     "status": st,
                                     "hours_left": int(hours_left),
+                                    "overdue": hours_left <= 0,
                                 })
                         except ValueError:
                             pass
@@ -189,9 +190,10 @@ def _has_anomaly(signals: dict) -> bool:
 def _summarize_for_architect(signals: dict) -> str:
     parts = ["[observer より] 会社状態の異常スクリーニング結果:\n"]
     if signals["tight_deadlines"]:
-        parts.append("## 締切48h以内")
+        parts.append("## 期限超過または締切48h以内")
         for x in signals["tight_deadlines"][:8]:
-            parts.append(f"- {x['id']} ({x['hours_left']}h残) owner={x['owner']} status={x['status']} — {x['title']}")
+            due_state = f"{abs(x['hours_left'])}h超過" if x.get("overdue") else f"{x['hours_left']}h残"
+            parts.append(f"- {x['id']} ({due_state}) owner={x['owner']} status={x['status']} — {x['title']}")
     if signals["loop_topics"]:
         parts.append("\n## ループ疑い（過去3hで30回以上出現）")
         for x in signals["loop_topics"]:
@@ -266,7 +268,13 @@ async def observe_once() -> None:
     from .architect import run_architect
     summary = _summarize_for_architect(signals)
     try:
-        response = await run_architect(summary, sender="observer", channel="auto")
+        response = await run_architect(
+            summary,
+            sender="observer",
+            channel="auto",
+            mode="observer",
+            use_resume=False,
+        )
     except Exception:
         log.exception("run_architect failed in observer")
         return
@@ -302,7 +310,7 @@ async def observer_loop() -> None:
     interval = dynamic_config.get("architect_observer.check_interval_seconds", 12600)
     log.info(f"architect_observer started (interval={interval}s = {interval//3600}h)")
     # 初回は起動後30分置いてから（dispatcher 立ち上がりの混乱を回避）
-    await asyncio.sleep(1800)
+    await asyncio.sleep(dynamic_config.get("architect_observer.initial_delay_seconds", 1800))
     while True:
         try:
             interval = dynamic_config.get("architect_observer.check_interval_seconds", 12600)

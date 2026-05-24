@@ -41,6 +41,8 @@ async def run(client: discord.Client) -> None:
         "(5) 監査（神楽アオイ）はテンプレ違反を見つけたら即指摘する "
         "短く、設計者の落ち着いた口調で。",
         sender="watchdog",
+        mode="broadcast",
+        use_resume=False,
     )
     notice_ch = await find_channel(client, "お知らせ")
     if notice_ch:
