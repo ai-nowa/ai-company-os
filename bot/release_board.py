@@ -187,18 +187,23 @@ def _candidate_title(path: Path, text: str) -> str:
 
 
 def _suggest_action(kind: str, path: str, text: str = "") -> str:
-    if kind == "video":
-        token = BASE_DIR / "bot" / "youtube_token.json"
-        if token.exists():
-            return "YouTube OAuthあり。公開/限定公開URLを作り、URLを成果物報告へ記録する。"
-        return "YouTubeが無理なら、動画の静止画+本文をサイト記事かDiscord公開サーバーへ即転用する。"
-    if kind == "x_post":
-        return "Xが人間待ちなら止めず、同文をサイト短報・Bluesky・Qiita/Zenn導線のどれかへ転用する。"
-    if kind == "article":
-        return "監査済みなら site/public/articles へ反映し、公開URLと導線CTAを成果物報告へ出す。"
-    if kind == "sales_page":
-        return "ai-nowa.com/shop への導線を1本増やし、/shop PVを今日の最小成功にする。"
-    return "内部メモで止めず、公開URL・販売導線・投稿本文のどれかへ変換する。"
+    try:
+        from .output_routes import route_for_kind
+
+        return route_for_kind(kind)
+    except Exception:
+        if kind == "video":
+            token = BASE_DIR / "bot" / "youtube_token.json"
+            if token.exists():
+                return "YouTube OAuthあり。公開/限定公開URLを作り、URLを成果物報告へ記録する。"
+            return "YouTubeが無理なら、動画の静止画+本文をサイト記事かDiscord公開サーバーへ即転用する。"
+        if kind == "x_post":
+            return "Xが人間待ちなら止めず、同文をサイト短報・Bluesky・Qiita/Zenn導線のどれかへ転用する。"
+        if kind == "article":
+            return "監査済みなら site/public/articles へ反映し、公開URLと導線CTAを成果物報告へ出す。"
+        if kind == "sales_page":
+            return "ai-nowa.com/shop への導線を1本増やし、/shop PVを今日の最小成功にする。"
+        return "内部メモで止めず、公開URL・販売導線・投稿本文のどれかへ変換する。"
 
 
 def collect_public_outputs(hours: int = 24) -> list[PublicOutput]:

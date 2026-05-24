@@ -333,6 +333,7 @@ def _load_wisdom_essence() -> str:
 _DIGEST_BUDGETS = {
     "micro": {
         "release": 520,
+        "routes": 0,
         "revenue": 560,
         "external_kpi": 520,
         "mentions": 620,
@@ -344,6 +345,7 @@ _DIGEST_BUDGETS = {
     },
     "routine": {
         "release": 640,
+        "routes": 740,
         "revenue": 700,
         "external_kpi": 620,
         "mentions": 700,
@@ -355,6 +357,7 @@ _DIGEST_BUDGETS = {
     },
     "work": {
         "release": 760,
+        "routes": 900,
         "revenue": 820,
         "external_kpi": 760,
         "mentions": 760,
@@ -366,6 +369,7 @@ _DIGEST_BUDGETS = {
     },
     "executive": {
         "release": 820,
+        "routes": 900,
         "revenue": 900,
         "external_kpi": 820,
         "mentions": 820,
@@ -463,6 +467,17 @@ def _external_kpi_items(limit: int) -> list[str]:
     return result
 
 
+def _output_route_items(mode: str, limit: int) -> list[str]:
+    if mode == "micro":
+        return []
+    try:
+        from .output_routes import output_route_items
+
+        return output_route_items(max_chars=limit)
+    except Exception:
+        return []
+
+
 def assemble_state_digest(employee_id: str, reason: str, mode: str = "routine") -> str:
     """Build a compact dynamic context digest for an employee call."""
     info = EMPLOYEES.get(employee_id, {})
@@ -476,9 +491,12 @@ def assemble_state_digest(employee_id: str, reason: str, mode: str = "routine") 
         "## 期限の読み方（待機禁止）",
         "- due/期限/判定日/観察日は待機日ではなく最遅締切。未来日でも今できる準備・草稿・検証を進める",
         "- 待つ必要がある時だけ blocked_by を明記し、同時に next_action_now または別タスクを進める",
+        "- 投稿/公開/確認をいくとへ依頼しない。Output Routesのどれかへ出すか、失敗理由と代替公開パスを成果物報告へ残す",
         "",
         *_fit_section("Release OS（公開・出荷ゲート）", _release_items(employee_id, budgets["release"]), budgets["release"], "- 未初期化"),
         "",
+        *([] if mode == "micro" else _fit_section("Output Routes（人間待ち禁止・先に試す出口）", _output_route_items(mode, budgets.get("routes", 0)), budgets.get("routes", 0), "- 未定義")),
+        *([] if mode == "micro" else [""]),
         *_fit_section("Revenue OS（収益ループ）", _revenue_ops_items(employee_id, mode, budgets["revenue"]), budgets["revenue"], "- 未初期化"),
         "",
         *_fit_section("外部KPI実測（自動取得・未取得は0ではない）", _external_kpi_items(budgets["external_kpi"]), budgets["external_kpi"], "- スナップショットなし"),
@@ -499,6 +517,7 @@ def assemble_state_digest(employee_id: str, reason: str, mode: str = "routine") 
         "- 必要なら成果物ファイルを作成・更新する",
         "- 他社員を呼ぶ時は @表示名 を使う。ただし1応答で呼ぶ相手は原則2人まで",
         "- 長文説明より、要約と成果物ファイルパスを優先する",
+        "- 投稿/公開/確認をいくとへ依頼しない。Output Routesのどれかへ出すか、失敗理由と代替公開パスを成果物報告へ残す",
         "",
         *_fit_section(
             "全社員必読エッセンス（短縮）",

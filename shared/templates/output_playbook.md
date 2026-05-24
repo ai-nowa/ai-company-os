@@ -27,6 +27,22 @@
 3. 外部投稿が全部止まる場合は、ai-nowa.com の短報・記事・shop導線へ出す。
 4. 公開できない理由が法務/安全/権利なら、監査ファイルに blocked_by と代替案を残す。
 
+## 実行ルート早見表
+
+迷ったら上から順に試す。通常作業を `いくと依頼` に投げない。
+
+| ルート | 使う時 | 実行 |
+|---|---|---|
+| ai-nowa.com site | 記事・短報・導線・shop/about | `site/public/...` を更新 → `cd site && wrangler pages deploy public --project-name=ai-nowa --branch=main --commit-dirty=true` |
+| site article | 監査OKの記事 | `site/public/articles/article-XX/index.html` と `site/public/articles/index.html` を更新 |
+| site note | X/YouTube/Blueskyが止まった素材 | `site/public/notes/<slug>/index.html` に短報化 |
+| Bluesky | 300字以内の告知 | `bot/.venv/bin/python -m bot.bluesky_client --text "..."` |
+| YouTube | mp4とOAuth tokenがある | `bot/.venv/bin/python -m bot.youtube_upload --video <mp4> --title "..." --privacy unlisted` |
+| Zenn | `articles/<slug>.md` と監査lockがある | `bot/.venv/bin/python -m bot.zenn_publisher <slug>` |
+| X | API実投稿不可/未確定 | `bot.x_publisher` はdry-run扱い。人間待ちにせずBlueskyかsite noteへ転用 |
+
+失敗したら「失敗したルート」「理由」「代替公開パス」を `成果物報告` に残す。
+
 ## チャネル別テンプレ
 
 ### X が止まる時
