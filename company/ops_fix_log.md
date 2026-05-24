@@ -29,3 +29,10 @@
 3. Polar Downloadables を sandbox live で疎通。
 4. アオイ監査GO後に本番添付。
 5. `POLAR_PRODUCT_ID` と `POLAR_CHECKOUT_ENABLED=1` を設定し、shop表示と価格を一致させて公開。
+
+## 2026-05-25 08:12 JST 追補
+
+- コミット: `ce6106e Limit autonomy startup fanout`
+- 再起動直後に全社員が startup tick で一斉にLLM起動する問題を追加で抑制。
+- `employee_autonomy.startup_max_llm_calls=3`、`startup_priority_employee_ids=[saegusa_mio, arima_reiji, shirase_kai]`、`startup_nonpriority_min_score=7` を追加。
+- 通常intervalの自律稼働は維持し、再起動直後だけ高優先/高スコアに限定する。
