@@ -172,6 +172,57 @@ def upload(
     return video_id
 
 
+def set_thumbnail(video_id: str, thumbnail_path: Path) -> bool:
+    """アップロード済み動画にサムネイルを単独設定する。"""
+    if not thumbnail_path.exists():
+        raise FileNotFoundError(f"サムネイルが見つかりません: {thumbnail_path}")
+    creds = _get_credentials()
+    if creds is None:
+        logger.warning("認証情報なし → サムネ設定 skip")
+        return False
+    from googleapiclient.discovery import build
+    from googleapiclient.http import MediaFileUpload
+    youtube = build("youtube", "v3", credentials=creds)
+    youtube.thumbnails().set(
+        videoId=video_id,
+        media_body=MediaFileUpload(str(thumbnail_path)),
+    ).execute()
+    logger.info("サムネイル設定完了: %s", video_id)
+    print(f"thumbnail set: https://youtu.be/{video_id}")
+    return True
+
+
+def set_privacy(video_id: str, privacy: str) -> Optional[str]:
+    """アップロード済み動画の公開設定を変更する（unlisted→public 昇格など）。
+
+    youtube.force-ssl スコープが必要。現行 status を取得してから privacyStatus
+    のみ差し替えるため、selfDeclaredMadeForKids 等の既存フィールドを保持する。
+    """
+    if privacy not in ("public", "unlisted", "private"):
+        raise ValueError(f"privacy は public/unlisted/private のいずれか: {privacy!r}")
+    if DRY_RUN:
+        logger.info("[dry-run] set_privacy skipped: %s -> %s", video_id, privacy)
+        print(f"[dry-run] set_privacy {video_id} -> {privacy}")
+        return None
+    creds = _get_credentials()
+    if creds is None:
+        logger.warning("認証情報なし → privacy 変更 skip")
+        print(f"[dry-run] set_privacy {video_id} -> {privacy}")
+        return None
+    from googleapiclient.discovery import build
+    youtube = build("youtube", "v3", credentials=creds)
+    resp = youtube.videos().list(part="status", id=video_id).execute()
+    items = resp.get("items", [])
+    if not items:
+        raise ValueError(f"動画が見つかりません: {video_id}")
+    status = items[0]["status"]
+    status["privacyStatus"] = privacy
+    youtube.videos().update(part="status", body={"id": video_id, "status": status}).execute()
+    logger.info("公開設定変更: %s -> %s", video_id, privacy)
+    print(f"privacy updated: https://youtu.be/{video_id} -> {privacy}")
+    return video_id
+
+
 # ---------------------------------------------------------------------------
 # 結果保存
 # ---------------------------------------------------------------------------
@@ -201,8 +252,8 @@ def main() -> None:
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
 
     p = argparse.ArgumentParser(description="YouTube 動画自動投稿")
-    p.add_argument("--video", type=Path, required=True, help="動画ファイルパス (.mp4)")
-    p.add_argument("--title", required=True, help="動画タイトル")
+    p.add_argument("--video", type=Path, help="動画ファイルパス (.mp4)")
+    p.add_argument("--title", help="動画タイトル")
     p.add_argument("--description", default=(
         "AI NOWA — 9人のAI社員が自律運営する会社の動画です。\n\n"
         "公式サイト → https://ai-nowa.com\n"
@@ -212,6 +263,8 @@ def main() -> None:
     p.add_argument("--tags", default="", help="カンマ区切りタグ (例: AI,自律AI,AINOWA)")
     p.add_argument("--thumbnail", type=Path, default=None, help="サムネイル画像パス (.png/.jpg)")
     p.add_argument("--privacy", choices=["public", "unlisted", "private"], default="private")
+    p.add_argument("--set-privacy", dest="set_privacy_id", metavar="VIDEO_ID",
+                   help="既存動画の公開設定を --privacy の値へ変更（unlisted→public 昇格など）")
     p.add_argument("--dry-run", action="store_true", help="実際に投稿せずシミュレーション")
     args = p.parse_args()
 
@@ -219,6 +272,13 @@ def main() -> None:
         os.environ["YOUTUBE_DRY_RUN"] = "1"
         global DRY_RUN
         DRY_RUN = True
+
+    if args.set_privacy_id:
+        set_privacy(args.set_privacy_id, args.privacy)
+        return
+
+    if not args.video or not args.title:
+        p.error("--video と --title は新規アップロード時に必須です（公開設定変更時は --set-privacy を使用）")
 
     tags = [t.strip() for t in args.tags.split(",") if t.strip()] if args.tags else []
 
