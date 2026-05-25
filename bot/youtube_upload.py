@@ -192,14 +192,27 @@ def set_thumbnail(video_id: str, thumbnail_path: Path) -> bool:
     return True
 
 
-def set_privacy(video_id: str, privacy: str) -> Optional[str]:
+def set_privacy(video_id: str, privacy: str, allow_unverified: bool = False) -> Optional[str]:
     """アップロード済み動画の公開設定を変更する（unlisted→public 昇格など）。
 
     youtube.force-ssl スコープが必要。現行 status を取得してから privacyStatus
     のみ差し替えるため、selfDeclaredMadeForKids 等の既存フィールドを保持する。
+
+    public 昇格時は audio_quality_check の PASS 記録（task#94）が無ければ拒否する。
+    これによりゲート未通過動画の public 化を構造的に不可能にする
+    （誤爆・手動ミス・履歴漏れの3種を塞ぐ / saegusa_mio 契約案 2026-05-25）。
+    allow_unverified=True は緊急時の明示オーバーライド用。
     """
     if privacy not in ("public", "unlisted", "private"):
         raise ValueError(f"privacy は public/unlisted/private のいずれか: {privacy!r}")
+    if privacy == "public" and not allow_unverified:
+        from bot.audio_quality_check import is_passed
+        if not is_passed(video_id):
+            raise PermissionError(
+                f"audio品質ゲート未PASS: {video_id} は public 昇格不可。"
+                f"先に `python -m bot.audio_quality_check --video <mp4> --video-id {video_id} --record` で"
+                f"PASS記録を作るか、緊急時は allow_unverified=True を明示すること。"
+            )
     if DRY_RUN:
         logger.info("[dry-run] set_privacy skipped: %s -> %s", video_id, privacy)
         print(f"[dry-run] set_privacy {video_id} -> {privacy}")
@@ -265,6 +278,8 @@ def main() -> None:
     p.add_argument("--privacy", choices=["public", "unlisted", "private"], default="private")
     p.add_argument("--set-privacy", dest="set_privacy_id", metavar="VIDEO_ID",
                    help="既存動画の公開設定を --privacy の値へ変更（unlisted→public 昇格など）")
+    p.add_argument("--allow-unverified", action="store_true",
+                   help="public昇格時に audio品質ゲートPASS記録が無くても強行（緊急時のみ）")
     p.add_argument("--dry-run", action="store_true", help="実際に投稿せずシミュレーション")
     args = p.parse_args()
 
@@ -274,7 +289,7 @@ def main() -> None:
         DRY_RUN = True
 
     if args.set_privacy_id:
-        set_privacy(args.set_privacy_id, args.privacy)
+        set_privacy(args.set_privacy_id, args.privacy, allow_unverified=args.allow_unverified)
         return
 
     if not args.video or not args.title:

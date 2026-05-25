@@ -39,20 +39,21 @@ async def render_frames(fps: int, scene_path: Path) -> int:
 
 
 def generate_ambient(out_wav: Path, duration_s: float) -> None:
-    """ガラス越し音声方針v1: ナレ無し・環境音ベース・控えめlo-fi pad。
+    """ガラス越し音声方針v1.1: ナレ無し・環境音のみ（lo-fi BGM/パッドは撤回）。
+
+    「観察」の生っぽさ・静けさを優先し、楽音パッドは載せない（編集長判断 2026-05-25）。
+    低いブラウンノイズ＋かすかなサーバーハム音のみ。
     完全無音禁止(task#93)を満たすため compose 前に必ず生成する。
     RMS -22dBFS前後 / クリッピング無しを狙い、音声品質ゲートを通す。"""
     dur = duration_s + 1.0
     fade_out_start = max(0.0, duration_s - 3.0)
     filt = (
-        f"sine=frequency=130.81:sample_rate=44100:duration={dur},volume=0.14[a];"
-        f"sine=frequency=196.00:sample_rate=44100:duration={dur},volume=0.10[b];"
-        f"sine=frequency=98.00:sample_rate=44100:duration={dur},volume=0.10[c];"
         f"anoisesrc=color=brown:sample_rate=44100:duration={dur}:amplitude=0.5,"
-        f"highpass=f=50,lowpass=f=1100,volume=0.20[air];"
-        f"[a][b][c]amix=inputs=3:normalize=0,lowpass=f=650,tremolo=f=0.1:d=0.4[pad];"
-        f"[pad][air]amix=inputs=2:normalize=0,afade=t=in:d=2.5,"
-        f"afade=t=out:st={fade_out_start:.1f}:d=3,volume=14dB[mix]"
+        f"highpass=f=40,lowpass=f=900,volume=0.20[air];"
+        f"sine=frequency=60:sample_rate=44100:duration={dur},volume=0.06[hum];"
+        f"sine=frequency=120:sample_rate=44100:duration={dur},volume=0.03[hum2];"
+        f"[air][hum][hum2]amix=inputs=3:normalize=0,afade=t=in:d=2.5,"
+        f"afade=t=out:st={fade_out_start:.1f}:d=3,volume=16dB[mix]"
     )
     cmd = [
         "ffmpeg", "-y", "-filter_complex", filt,
