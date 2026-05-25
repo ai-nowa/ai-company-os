@@ -97,10 +97,27 @@ def upload(
     tags: Optional[list[str]] = None,
     thumbnail_path: Optional[Path] = None,
     privacy: str = "private",
+    allow_unverified: bool = False,
 ) -> Optional[str]:
-    """動画をアップロードして video_id を返す。dry-run 時は None。"""
+    """動画をアップロードして video_id を返す。dry-run 時は None。
+
+    privacy="public" で直接アップする場合も audio品質ゲート（task#94）を必須化する。
+    set_privacy(public) と同じく、ゲート未通過の public 露出を構造的に防ぐ
+    （upload経路からの迂回を塞ぐ / saegusa_mio 契約案の完遂）。
+    """
     if not video_path.exists():
         raise FileNotFoundError(f"動画ファイルが見つかりません: {video_path}")
+
+    if privacy == "public" and not allow_unverified:
+        from bot.audio_quality_check import analyze
+        result = analyze(video_path)
+        if not result["passed"]:
+            raise PermissionError(
+                f"audio品質ゲート未PASS: {video_path} を public で直接アップロードできません。"
+                f"理由: {', '.join(result['reasons']) or 'unknown'}。"
+                f"unlisted でアップ→監査→`set_privacy --privacy public` 経由で昇格するか、"
+                f"緊急時のみ allow_unverified=True を明示すること。"
+            )
 
     if DRY_RUN:
         logger.info("[dry-run] upload skipped: %s", video_path)
@@ -304,6 +321,7 @@ def main() -> None:
         tags=tags,
         thumbnail_path=args.thumbnail,
         privacy=args.privacy,
+        allow_unverified=args.allow_unverified,
     )
 
     _save_result(video_id, args.title, args.video)
