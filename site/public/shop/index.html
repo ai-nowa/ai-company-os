@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>AI NOWA OS Starter Kit v0.1 — AI NOWA</title>
-  <meta name="description" content="AI社員9人の実判断ログから作った、AIエージェント会社運用スターターキット。役割表・運用テンプレ・判断ログ・実験判定表・セットアップ手順。¥2,980。">
+  <meta name="description" content="AI社員9人の実判断ログから作った、AIエージェント会社運用スターターキット。役割表・運用テンプレ・判断ログ・実験判定表・セットアップ手順。">
   <link rel="stylesheet" href="../style.css">
   <style>
     .shop-hero { text-align: center; padding: 3.5rem 0 2.5rem; }
@@ -132,6 +132,20 @@
     gtag("js", new Date());
     gtag("config", "G-TJN3FYJDET");
   </script>
+  <script>
+    document.addEventListener("DOMContentLoaded", function () {
+      try {
+        var ref = document.referrer || "";
+        var src = "direct";
+        if (ref.indexOf("/about") !== -1) src = "about";
+        else if (ref.indexOf("/notes/") !== -1) src = "notes";
+        else if (ref.indexOf("/articles/") !== -1) src = "articles";
+        else if (ref.indexOf("ai-nowa.com") !== -1) src = "internal_other";
+        else if (ref) src = "external";
+        gtag("event", "view_shop_arrival", { source: src, referrer: ref });
+      } catch (e) {}
+    });
+  </script>
 </head>
 <body>
   <header>
@@ -162,7 +176,7 @@
 
     <div class="price-box">
       <div style="font-size:0.85rem;color:var(--muted);margin-bottom:0.3rem;">AI NOWA OS Starter Kit v0.1</div>
-      <div class="price-sale">¥2,980<span style="font-size:1rem;font-weight:400;color:var(--muted);">（税込）</span></div>
+      <div class="price-sale">「こう使いたい」を募集中</div>
       <p style="font-size:0.88rem;color:var(--text);margin:0.6rem 0 1.4rem;">役割表・運用テンプレ・判断ログ・実験判定表・セットアップ手順 一式</p>
 
       <a href="#intent-form" class="btn-buy">欲しい / 詳しく聞きたい → こちら</a>
@@ -222,14 +236,14 @@
       </p>
 
       <div class="intent-buttons" style="display:flex;flex-direction:column;gap:0.7rem;">
-        <button type="button" data-intent="want" class="intent-btn btn-buy" style="border:0;cursor:pointer;text-align:left;">
-          ✋ 欲しい（買いたい）
+        <button type="button" data-intent="yes" class="intent-btn btn-buy" style="border:0;cursor:pointer;text-align:left;">
+          ✋ Starter Kit v0.1 を試したい
         </button>
-        <button type="button" data-intent="want_details" class="intent-btn btn-buy" style="border:0;cursor:pointer;text-align:left;background:var(--accent2);">
-          📝 詳しく聞きたい
+        <button type="button" data-intent="maybe" class="intent-btn btn-buy" style="border:0;cursor:pointer;text-align:left;background:var(--accent2);">
+          📝 自分の運用に合うか聞きたい
         </button>
-        <button type="button" data-intent="price_concern" class="intent-btn btn-buy" style="border:0;cursor:pointer;text-align:left;background:var(--bg);color:var(--text);border:1px solid var(--accent);">
-          💭 価格・内容が気になる
+        <button type="button" data-intent="reading" class="intent-btn btn-buy" style="border:0;cursor:pointer;text-align:left;background:var(--bg);color:var(--text);border:1px solid var(--accent);">
+          💭 まずは内容を見るだけ
         </button>
       </div>
 
@@ -249,6 +263,26 @@
 
       <script>
         (function () {
+          function readEntry() {
+            try {
+              var saved = sessionStorage.getItem('ai_nowa_entry');
+              if (saved) return JSON.parse(saved);
+            } catch (e) {}
+            var params = new URLSearchParams(location.search);
+            var entry = {
+              from: params.get('from') || '',
+              utm_source: params.get('utm_source') || '',
+              utm_medium: params.get('utm_medium') || '',
+              utm_campaign: params.get('utm_campaign') || '',
+              referrer: (document.referrer || '').slice(0, 120),
+            };
+            try { sessionStorage.setItem('ai_nowa_entry', JSON.stringify(entry)); } catch (e) {}
+            return entry;
+          }
+          var entry = readEntry();
+          function entrySource() {
+            return (entry.from || entry.utm_source || '').replace(/[^a-z0-9_\-]/gi, '').slice(0, 32);
+          }
           function send(payload) {
             return fetch('/api/intent-click', {
               method: 'POST',
@@ -257,7 +291,8 @@
               keepalive: true,
             }).catch(function () {});
           }
-          send({ kind: 'shop_view', source: 'shop_index' });
+          var entrySrc = entrySource();
+          send({ kind: 'shop_view', source: entrySrc ? ('shop_' + entrySrc).slice(0, 32) : 'shop_index' });
 
           var thanks = document.getElementById('intent-thanks');
           var btns = document.querySelectorAll('.intent-btn');
