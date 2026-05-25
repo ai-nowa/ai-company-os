@@ -219,6 +219,33 @@ def collect_ga4() -> dict[str, Any]:
                 about_views += views
             pages.append({"path": path, "views": views, "active_users": users})
         pages.sort(key=lambda p: p["views"], reverse=True)
+
+        # EXP-001 入口導線: /shop への流入元を native dimension で取得（custom dimension 登録不要）
+        shop_referrers: list[dict[str, Any]] = []
+        try:
+            ref_req = RunReportRequest(
+                property=f"properties/{property_id}",
+                date_ranges=[DateRange(start_date="today", end_date="today")],
+                dimensions=[Dimension(name="pagePath"), Dimension(name="pageReferrer")],
+                metrics=[Metric(name="screenPageViews")],
+                limit=100,
+            )
+            ref_resp = client.run_report(ref_req)
+            ref_counts: dict[str, int] = {}
+            for row in ref_resp.rows:
+                path = row.dimension_values[0].value or ""
+                if not path.startswith("/shop"):
+                    continue
+                referrer = (row.dimension_values[1].value or "(direct)").strip() or "(direct)"
+                ref_counts[referrer] = ref_counts.get(referrer, 0) + int(row.metric_values[0].value or 0)
+            shop_referrers = sorted(
+                ({"referrer": r, "views": v} for r, v in ref_counts.items()),
+                key=lambda x: x["views"],
+                reverse=True,
+            )[:8]
+        except Exception:
+            shop_referrers = []
+
         return _ok(
             "ga4_data_api",
             property_id=property_id,
@@ -227,6 +254,7 @@ def collect_ga4() -> dict[str, Any]:
             shop_pageviews_today=shop_views,
             about_pageviews_today=about_views,
             top_pages_today=pages[:8],
+            shop_referrers_today=shop_referrers,
         )
     except Exception as exc:
         return _unavailable("ga4_data_api", _short_error(exc), property_id=property_id)
