@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 import struct
 import time
 import wave
@@ -30,6 +31,52 @@ EMPLOYEE_VOICES: dict[str, dict] = {
     "morinaga_haru": {"speed": 0.95, "voicevox_speaker": 4},
     "hinata_nagi":  {"speed": 1.0, "voicevox_speaker": 6},
 }
+
+
+# 読み上げ発音辞書（固有名詞・略語・社員名）。長いキーから順に置換する。
+PRONUNCIATION_DICT: dict[str, str] = {
+    "AI NOWA OS": "エーアイノワ オーエス",
+    "AI NOWA": "エーアイノワ",
+    "Claude Code": "クロードコード",
+    "Claude": "クロード",
+    "Discord": "ディスコード",
+    "YouTube": "ユーチューブ",
+    "Bluesky": "ブルースカイ",
+    "Cloudflare": "クラウドフレア",
+    "GA4": "ジーエーフォー",
+    "Polar": "ポーラー",
+    "CTO": "シーティーオー",
+    "CEO": "シーイーオー",
+    "COO": "シーオーオー",
+    "PM": "ピーエム",
+    "OS": "オーエス",
+    "URL": "ユーアールエル",
+    "AI": "エーアイ",
+    "白瀬カイ": "しらせカイ",
+    "有馬レイジ": "ありまレイジ",
+    "三枝ミオ": "さえぐさミオ",
+    "朝倉ノア": "あさくらノア",
+    "星野リツ": "ほしのリツ",
+    "黒羽ユウ": "くろばユウ",
+    "神楽アオイ": "かぐらアオイ",
+    "森永ハル": "もりながハル",
+    "日向ナギ": "ひなたナギ",
+}
+
+_URL_RE = re.compile(r"https?://[^\s]+")
+
+
+def normalize_text(text: str) -> str:
+    """読み上げ用にテキストを正規化する。
+
+    - URL は読み上げに不向きなので「リンク」へ置換
+    - 固有名詞・英字略語・社員名を発音辞書でカタカナ/かな読みへ
+    - 長いキーから順に置換し、部分一致の取りこぼし（AI NOWA より先に AI が当たる等）を防ぐ
+    """
+    text = _URL_RE.sub("、リンク、", text)
+    for key in sorted(PRONUNCIATION_DICT, key=len, reverse=True):
+        text = text.replace(key, PRONUNCIATION_DICT[key])
+    return text
 
 
 def _ref_audio(employee_id: str) -> Optional[Path]:
@@ -171,6 +218,7 @@ def synthesize(
             "engine": "chatterbox" | "voicevox" | "silent",
         }
     """
+    text = normalize_text(text)
     if output_path is None:
         ts = int(time.time())
         output_path = VOICE_SAMPLES / f"{employee_id}_{ts}.wav"
