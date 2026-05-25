@@ -60,10 +60,11 @@
 
 1. mp4、title、description、privacy、AI生成/改変コンテンツ開示方針を揃える。
 2. `bot/youtube_token.json` と `youtube.upload` scope を確認する。
-3. `bot/.venv/bin/python -m bot.youtube_upload --video <mp4> --title "..." --privacy unlisted` を実行する。
-4. `shared/media/upload_results/*.json` の `dry_run=false` と `url` を確認する。
-5. URLが出ない場合は、人間待ちではなく台本/静止画/要約を site note へ転用する。
-6. YouTube Studio側のAI開示UIなどAPI外の操作だけ、失敗証跡つきで `[HUMAN_REQUIRED]` にする。
+3. **音声品質ゲート**（`company/youtube_audio_quality_policy.md`）を通す。`--privacy public` は engine=silent/gtts または無音/clipping違反で block。FAIL時は再生成してから公開する。
+4. `bot/.venv/bin/python -m bot.youtube_upload --video <mp4> --title "..." --privacy unlisted` を実行する。
+5. `shared/media/upload_results/*.json` の `dry_run=false` と `url` を確認する。
+6. URLが出ない場合は、人間待ちではなく台本/静止画/要約を site note へ転用する。
+7. YouTube Studio側のAI開示UIなどAPI外の操作だけ、失敗証跡つきで `[HUMAN_REQUIRED]` にする。
 
 ### Bluesky / X代替
 
