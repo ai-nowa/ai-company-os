@@ -221,11 +221,13 @@ def collect_ga4() -> dict[str, Any]:
         pages.sort(key=lambda p: p["views"], reverse=True)
 
         # EXP-001 入口導線: /shop への流入元を native dimension で取得（custom dimension 登録不要）
+        # 判定条件は「shop到着 累計5件」のため today ではなく直近7日レンジで集計し、日跨ぎでも累計が消えないようにする。
         shop_referrers: list[dict[str, Any]] = []
+        shop_arrivals_7d = 0
         try:
             ref_req = RunReportRequest(
                 property=f"properties/{property_id}",
-                date_ranges=[DateRange(start_date="today", end_date="today")],
+                date_ranges=[DateRange(start_date="7daysAgo", end_date="today")],
                 dimensions=[Dimension(name="pagePath"), Dimension(name="pageReferrer")],
                 metrics=[Metric(name="screenPageViews")],
                 limit=100,
@@ -237,7 +239,9 @@ def collect_ga4() -> dict[str, Any]:
                 if not path.startswith("/shop"):
                     continue
                 referrer = (row.dimension_values[1].value or "(direct)").strip() or "(direct)"
-                ref_counts[referrer] = ref_counts.get(referrer, 0) + int(row.metric_values[0].value or 0)
+                views = int(row.metric_values[0].value or 0)
+                ref_counts[referrer] = ref_counts.get(referrer, 0) + views
+                shop_arrivals_7d += views
             shop_referrers = sorted(
                 ({"referrer": r, "views": v} for r, v in ref_counts.items()),
                 key=lambda x: x["views"],
@@ -245,6 +249,7 @@ def collect_ga4() -> dict[str, Any]:
             )[:8]
         except Exception:
             shop_referrers = []
+            shop_arrivals_7d = 0
 
         return _ok(
             "ga4_data_api",
@@ -254,7 +259,8 @@ def collect_ga4() -> dict[str, Any]:
             shop_pageviews_today=shop_views,
             about_pageviews_today=about_views,
             top_pages_today=pages[:8],
-            shop_referrers_today=shop_referrers,
+            shop_referrers_7d=shop_referrers,
+            shop_arrivals_7d=shop_arrivals_7d,
         )
     except Exception as exc:
         return _unavailable("ga4_data_api", _short_error(exc), property_id=property_id)
