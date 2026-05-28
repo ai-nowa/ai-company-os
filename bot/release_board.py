@@ -79,6 +79,16 @@ INTERNAL_ONLY_NAME_RE = re.compile(
     r"series_arc|series_entry)",
     re.IGNORECASE,
 )
+# 他社員宛て内部依頼 basename を Ready 候補から構造除外する RE。
+# B案: 9社員固有名 allowlist。実測で A案 `for_[a-z]+_[a-z]+` は false positive 2件
+# (who_is_this_for_ceo_ack, who_is_this_for_cta_v2 等 CTAコピー検証ファイル) を
+# 巻き込んだのに対し、B案は 3 件全て正当な内部依頼で false positive=0 だった
+# (2026-05-28 ユウ実測, ミオ/レイジ確定形で B案採用)。
+# 将来名前が増えたら allowlist に追記する小パッチで戻せる(rollback 合意済)。
+INTERNAL_REQUEST_FOR_NAME_RE = re.compile(
+    r"_for_(yuu|ritsu|aoi|kai|mio|haru|noa|nagi|reiji)(?:[_\.\-]|$)",
+    re.IGNORECASE,
+)
 ARTICLE_NUM_RE = re.compile(r"article-(\d+)")
 QUIET_START_HOUR = 22
 QUIET_END_HOUR = 7
@@ -414,6 +424,8 @@ def collect_ready_candidates(hours: int = 48) -> list[ReleaseCandidate]:
                 for keyword in ("公開依頼", "投稿依頼", "公開GO", "投稿本文", "コピペOK", "YouTube", "Xポスト")
             )
             if INTERNAL_ONLY_NAME_RE.search(path.name):
+                continue
+            if INTERNAL_REQUEST_FOR_NAME_RE.search(path.name):
                 continue
             heading = ""
             for line in text.splitlines()[:5]:
