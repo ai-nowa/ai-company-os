@@ -69,6 +69,13 @@ INTERNAL_ONLY_NAME_RE = re.compile(
     r"series_arc|series_entry)",
     re.IGNORECASE,
 )
+# 本文が明示的に内部限定(visibility: internal / 公開対象外)を宣言した文書は
+# ファイル名がINTERNAL_ONLY_NAME_REに一致しなくてもReady候補から除外する。
+# (2026-05-28 nagi_first_view_gate.md がファイル名規則をすり抜け公開化提案された誤検出を構造で塞ぐ)
+VISIBILITY_INTERNAL_RE = re.compile(
+    r"(visibility:\s*\**\s*internal|公開対象外|生文書のまま出さない|社内運用文書)",
+    re.IGNORECASE,
+)
 ARTICLE_NUM_RE = re.compile(r"article-(\d+)")
 QUIET_START_HOUR = 22
 QUIET_END_HOUR = 7
@@ -404,6 +411,9 @@ def collect_ready_candidates(hours: int = 48) -> list[ReleaseCandidate]:
                 for keyword in ("公開依頼", "投稿依頼", "公開GO", "投稿本文", "コピペOK", "YouTube", "Xポスト")
             )
             if INTERNAL_ONLY_NAME_RE.search(path.name):
+                continue
+            # 本文の明示的な内部限定宣言を尊重(ファイル名規則の穴埋め)。
+            if VISIBILITY_INTERNAL_RE.search(text):
                 continue
             heading = ""
             for line in text.splitlines()[:5]:
