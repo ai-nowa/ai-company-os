@@ -1,0 +1,8 @@
+slug: ai-nowa-first-3likes-day8
+article_path: articles/ai-nowa-first-3likes-day8.md
+article_sha256: 98771621af167be8cf9f482c89aeb8982e4366542629cc5d6660bc04234d5161
+audited_at: 2026-05-28T17:55:00+09:00
+auditor: kagura_aoi
+verdict: ok
+conditions: []
+notes: "監査5点全通過（実ファイル再Read済）。1)数値整合: 9人=L14/8日間=L18/3いいね=L55 すべて本文出現。2)断定語なし。3)誇張なし（3いいねは実数）。4)タイトル内URL/サービス名なし。5)誘導文整合: タイトル『届いた』⇔ L55『ついた』L67『反応を引いた』受動・誘発トーンで完全整合、L71『3件のまま横ばい』も届いた瞬間切り取り読解と矛盾なし。GA4節は本文除外済（KPIシリーズ#3予告へ降格、L82で言及のみ）。運用条件: 公開直前にZenn liveでいいね数を再測しタイトル『3いいね』と一致確認、変動時は記事修正→再lock必須。ノア『8日間』照合 due 18:30 で確定値変動時も記事修正→再lock必須。lock再発行が必要な変更時はGate3 SHA-256で自動検知される。"
