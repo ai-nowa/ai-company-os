@@ -91,18 +91,25 @@ def evaluate_owner_request(text: str) -> OwnerRequestDecision:
         route = {}
 
     route_id = str(route.get("route") or "")
+    # Stale OAuth requests should not pass once the route is actually ready.
+    # A concrete refresh/scope failure with explicit human marker and a hard
+    # human-only keyword (OAuth/Google Cloud/Stripe/Cloudflare DNS etc.) is
+    # genuinely human-only and must bypass route_available redirection.
+    if (
+        OWNER_REQUEST_MARKER in text
+        and _contains_hard_human_keyword(text)
+        and _contains_auth_failure_keyword(text)
+    ):
+        return OwnerRequestDecision(
+            allowed=True,
+            reason="explicit_human_only_auth_failure",
+            route=route_id,
+            suggested_action="Auth refresh/scope failure with hard_human_keyword is explicitly reported.",
+            checks=list(route.get("preflight") or []),
+            fallback=str(route.get("fallback") or ""),
+        )
+
     if route_id and route.get("available"):
-        # Stale OAuth requests should not pass once the route is actually ready.
-        # A concrete refresh/scope failure is different and can still be human-only.
-        if route_id == "youtube" and OWNER_REQUEST_MARKER in text and _contains_auth_failure_keyword(text):
-            return OwnerRequestDecision(
-                allowed=True,
-                reason="youtube_auth_failure_requires_human",
-                route=route_id,
-                suggested_action="YouTube token refresh/scope failure is explicitly reported.",
-                checks=list(route.get("preflight") or []),
-                fallback=str(route.get("fallback") or ""),
-            )
         return OwnerRequestDecision(
             allowed=False,
             reason=f"route_available:{route_id}",

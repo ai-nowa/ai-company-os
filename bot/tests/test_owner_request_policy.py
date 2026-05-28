@@ -55,6 +55,35 @@ def test_human_required_auth_failure_can_pass(monkeypatch):
     assert should_redirect_owner_request("📥｜いくと依頼", text) is False
 
 
+def test_human_required_oauth_failure_passes_for_any_route(monkeypatch):
+    """GA4 OAuth 等、youtube 以外の route が available と判定されても、
+    HUMAN_REQUIRED + hard_human_keyword + auth_failure_keyword なら通る。
+    過去の line 97 youtube限定 bug の回帰防止。
+    """
+    from bot import output_routes
+
+    monkeypatch.setattr(
+        output_routes,
+        "route_preflight_for_text",
+        lambda _text: {
+            "route": "note",
+            "available": True,
+            "command": "create note html",
+            "preflight": ["site/public/notes/<slug>/index.html を作成"],
+            "fallback": "Discord公開報告へ転用",
+        },
+    )
+    text = (
+        f"{OWNER_REQUEST_MARKER} GA4 OAuth同意画面を「本番環境」に昇格してください。"
+        "tokenが2.5日で失効するchurnを構造で止める。"
+    )
+
+    decision = evaluate_owner_request(text)
+    assert decision.allowed is True
+    assert decision.reason == "explicit_human_only_auth_failure"
+    assert should_redirect_owner_request("📥｜いくと依頼", text) is False
+
+
 def test_marker_without_hard_human_keyword_is_still_redirected():
     text = f"{OWNER_REQUEST_MARKER} Xに投稿してください。"
 
