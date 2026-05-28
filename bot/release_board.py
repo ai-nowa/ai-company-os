@@ -33,6 +33,18 @@ PUBLIC_HOST_RE = re.compile(
     re.IGNORECASE,
 )
 LOCAL_OR_DRAFT_RE = re.compile(r"(localhost|127\.0\.0\.1|preview\.json|dry_run)", re.IGNORECASE)
+# 本文の恒久「凍結ガード」マーカー。行頭(markdown装飾許容)の status: / 凍結ガード: 行が
+# 非公開意図の語を含む場合のみ ready 候補から除外する（誤除外防止に語句を必須化）。
+FREEZE_GUARD_RE = re.compile(
+    r"^\s*(?:[-*#>]\s*)*(?:status|凍結ガード|公開ガード|freeze[\s_-]?guard)\s*[:：]\s*"
+    r".*?(非公開|公開しない|公開不可|温存|凍結|保留|deployしない|deploy[\s_-]?しない|"
+    r"do[\s_-]?not[\s_-]?publish|hold|no[\s_-]?publish)",
+    re.IGNORECASE | re.MULTILINE,
+)
+
+
+def has_freeze_guard(text: str) -> bool:
+    return bool(FREEZE_GUARD_RE.search(text or ""))
 
 READY_KEYWORDS = [
     "公開依頼", "投稿依頼", "公開GO", "公開をお願いします", "コピペOK", "投稿本文",
@@ -41,15 +53,23 @@ READY_KEYWORDS = [
 ]
 HUMAN_WAIT_KEYWORDS = [
     "いくと待ち", "投稿お願いします", "投稿をお願いします", "公開お願いします", "公開をお願いします",
-    "投稿後", "コピペ", "X投稿", "YouTube", "Shorts", "note", "人間",
+    "投稿後", "コピペ", "X投稿", "YouTube投稿", "YouTube公開", "Shorts投稿", "note投稿", "note公開", "[HUMAN_REQUIRED]",
+]
+# ファイル走査(Ready生成側)専用の人間依頼マーカー。
+# READY_KEYWORDS と部分一致衝突しない高精度の語だけに限定し、
+# 内部の人間依頼ドキュメント(GA4再認証等)が公開候補へ誤計上されるのを防ぐ。
+FILE_HUMAN_WAIT_MARKERS = [
+    "[HUMAN_REQUIRED]", "いくと待ち",
 ]
 INTERNAL_ONLY_NAME_RE = re.compile(
-    r"(ack|ceo|decision|judgment|handover|praise|findings|review|audit|"
+    r"(_internal|ack|ceo|decision|judgment|handover|praise|findings|review|audit|"
     r"measure|measurement|state_correction|scope|eod|completion|"
     r"phase_restructure|observation_sheet|pm_completion|audit_ng|"
-    r"policy|concept|value_definition|load_design|runbook|strategy)",
+    r"policy|concept|value_definition|load_design|runbook|strategy|"
+    r"series_arc|series_entry)",
     re.IGNORECASE,
 )
+ARTICLE_NUM_RE = re.compile(r"article-(\d+)")
 QUIET_START_HOUR = 22
 QUIET_END_HOUR = 7
 QUIET_COOLDOWN_MIN = 360
@@ -260,6 +280,8 @@ def _candidate_title(path: Path, text: str) -> str:
 def _suggest_action(kind: str, path: str, text: str = "") -> str:
     if kind == "video" and not path.lower().endswith(".mp4"):
         return "台本/説明欄は対応mp4を確認。mp4がなければ動画生成してから `bot.youtube_upload --video <mp4>`。URLが出なければ site noteへ転用。"
+    if kind == "human_auth":
+        return "いくと本人の認証/権限/本人確認が必須の依頼。Bluesky等への転用は不可。いくと依頼での承認待ちが正しい状態。"
     try:
         from .output_routes import route_for_kind
 
@@ -347,7 +369,7 @@ def collect_ready_candidates(hours: int = 48) -> list[ReleaseCandidate]:
         if not root.exists():
             continue
         for path in root.rglob("*"):
-            if not path.is_file() or any(part in {"_archive", "archive", "__pycache__"} for part in path.parts):
+            if not path.is_file() or any(part in {"_archive", "archive", "_internal", "__pycache__"} for part in path.parts):
                 continue
             if path.suffix.lower() not in {".md", ".mp4", ".html", ".txt"}:
                 continue
@@ -363,7 +385,18 @@ def collect_ready_candidates(hours: int = 48) -> list[ReleaseCandidate]:
                     text = path.read_text(encoding="utf-8", errors="replace")[:5000]
                 except Exception:
                     text = ""
+            if has_freeze_guard(text):
+                continue
             hay = f"{path.name}\n{text}"
+            # 人間依頼([HUMAN_REQUIRED]等)はReady(公開候補)ではない。
+            # HUMAN_WAIT_KEYWORDS は従来 Discord 走査だけに配線されており、
+            # ファイル走査(Ready生成側)に未適用で内部依頼が sales_page 等へ誤計上された
+            # (構造ゲートの遡及漏れ, 2026-05-28 ミオ報告)。
+            # ただし HUMAN_WAIT_KEYWORDS を丸ごと適用すると READY_KEYWORDS と部分一致衝突する
+            # ("コピペ"⊂"コピペOK", "公開をお願いします") ため、ファイル走査では衝突しない
+            # 高精度の人間依頼マーカーだけに絞る。
+            if any(marker in hay for marker in FILE_HUMAN_WAIT_MARKERS):
+                continue
             if not any(keyword.lower() in hay.lower() for keyword in READY_KEYWORDS):
                 continue
             has_publish_language = path.suffix.lower() == ".mp4" or any(
@@ -409,6 +442,11 @@ def collect_ready_candidates(hours: int = 48) -> list[ReleaseCandidate]:
 
 
 def _wait_kind(text: str) -> str:
+    # [HUMAN_REQUIRED] は本人の認証/本人確認/契約など人間しかできない依頼に限定運用。
+    # これを x_post 等の公開kindに誤分類すると「Bluesky転用」提案が出て無意味になる
+    # (GA4再認証を誤って転用提案した事例, 2026-05-28 黒羽報告)。転用不可kindへ先に分離。
+    if "[HUMAN_REQUIRED]" in text:
+        return "human_auth"
     if "YouTube" in text or "Shorts" in text or "動画" in text:
         return "video"
     if "X" in text or "ポスト" in text or "投稿本文" in text:
@@ -442,6 +480,35 @@ def collect_human_wait_requests(hours: int = 24) -> list[HumanWaitRequest]:
             suggested_action=_suggest_action(kind, "", text),
         ))
     return sorted(requests, key=lambda r: r.ts, reverse=True)
+
+
+def detect_untracked_published_articles() -> list[str]:
+    """site/public/articles/index.html に載る article-XX のうち、shipped_artifacts.jsonl
+    に公開URLが記録されていない番号を返す（出荷台帳の遡及リンク漏れ＝幽霊在庫の検出）。
+
+    warn専用。source_path特定が不能なため自動shipped記録はしない
+    （saegusa_mio 案B 2026-05-28: 全社員deploy手順移行を伴う案Aは過剰設計として却下）。
+    """
+    index_path = BASE_DIR / "site" / "public" / "articles" / "index.html"
+    if not index_path.exists():
+        return []
+    try:
+        html = index_path.read_text(encoding="utf-8", errors="replace")
+    except Exception:
+        return []
+    listed = set(ARTICLE_NUM_RE.findall(html))
+    if not listed:
+        return []
+    shipped_nums: set[str] = set()
+    try:
+        from .shipped_artifacts import load_shipped_artifacts
+
+        for row in load_shipped_artifacts(hours=None):
+            shipped_nums |= set(ARTICLE_NUM_RE.findall(str(row.get("output_url", ""))))
+    except Exception:
+        return []
+    missing = sorted(listed - shipped_nums, key=lambda x: int(x))
+    return [f"article-{n}" for n in missing]
 
 
 def collect_release_metrics() -> dict[str, Any]:
@@ -492,9 +559,11 @@ def collect_release_metrics() -> dict[str, Any]:
             kept_waits.append(req)
         human_waits = kept_waits
     stale_candidates = [c for c in candidates if c.age_hours >= 2]
+    untracked_articles = detect_untracked_published_articles()
     return {
         "ts": now_jst_iso(),
         "public_outputs_24h": len(public_outputs),
+        "untracked_published_articles": untracked_articles,
         "ready_to_ship_count": len(candidates),
         "stale_ready_count": len(stale_candidates),
         "human_wait_requests_24h": len(human_waits),
@@ -582,10 +651,19 @@ def render_release_board(metrics: dict[str, Any] | None = None) -> str:
         f"- superseded_24h: {metrics.get('superseded_count', 0)}（同テーマで公開URLが出た候補は自動降格）",
         ("- quiet_hours: ON（22-07時）。公開チャネル新規投稿は1チャネル合計1件まで。site/notes/articles更新は可。"
          if metrics.get("quiet_hours") else "- quiet_hours: OFF（通常時間帯）"),
+    ]
+    untracked = metrics.get("untracked_published_articles", [])
+    if untracked:
+        lines.append(
+            f"- WARN 台帳遡及漏れ: index.html公開済みだが shipped_artifacts 未記録 = {len(untracked)}件 "
+            f"({', '.join(untracked[:12])}{' …' if len(untracked) > 12 else ''})。"
+            f"`bot.shipped_artifacts --source <md> --route article --url <live URL>` で記録すると幽霊在庫が消える。"
+        )
+    lines.extend([
         "",
         "## Ready To Ship",
         "",
-    ]
+    ])
     candidates = metrics.get("top_candidates", [])
     if candidates:
         lines.extend(["| 種別 | 経過 | 所有 | パス | 次の即時行動 |", "|---|---:|---|---|---|"])

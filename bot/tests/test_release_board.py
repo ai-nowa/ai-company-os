@@ -156,3 +156,166 @@ def test_quiet_hours_detection_window(monkeypatch):
     assert rb._is_quiet_hours(datetime(2026, 5, 25, 6, 59, tzinfo=JST))
     assert not rb._is_quiet_hours(datetime(2026, 5, 25, 7, 0, tzinfo=JST))
     assert not rb._is_quiet_hours(datetime(2026, 5, 24, 21, 59, tzinfo=JST))
+
+
+def test_series_arc_and_series_entry_are_excluded(monkeypatch, tmp_path):
+    base = _redirect_release_paths(monkeypatch, tmp_path)
+    outbox = base / "employees" / "hoshino_ritsu" / "outbox"
+    outbox.mkdir(parents=True, exist_ok=True)
+    (outbox / "series_arc.md").write_text(
+        "# Series Arc\n\nYouTube シリーズ管理台帳。投稿本文ではない。\n",
+        encoding="utf-8",
+    )
+    (outbox / "2026-05-27_series_entry_ep05.md").write_text(
+        "# Series Entry ep05\n\nYouTube。シリーズ管理エントリ。\n",
+        encoding="utf-8",
+    )
+
+    metrics = rb.collect_release_metrics()
+    paths = [c["path"] for c in metrics["top_candidates"]]
+    assert all("series_arc" not in p for p in paths), f"series_arc が ready に残っている: {paths}"
+    assert all("series_entry" not in p for p in paths), f"series_entry が ready に残っている: {paths}"
+
+
+def test_untracked_published_articles_detected_and_shipped_excluded(monkeypatch, tmp_path):
+    base = _redirect_release_paths(monkeypatch, tmp_path)
+    articles_dir = base / "site" / "public" / "articles"
+    articles_dir.mkdir(parents=True, exist_ok=True)
+    # index に 14, 15 が載っている（両方とも公開済み）
+    (articles_dir / "index.html").write_text(
+        '<a href="article-14/">#002</a><a href="article-15/">#003</a>',
+        encoding="utf-8",
+    )
+    # shipped には 15 のみ記録（14 は台帳遡及漏れ＝幽霊在庫）
+    ledger = base / "company" / "shipped_artifacts.jsonl"
+    ledger.parent.mkdir(parents=True, exist_ok=True)
+    ledger.write_text(
+        json.dumps({
+            "route": "article",
+            "source_path": "employees/hoshino_ritsu/outbox/x.md",
+            "output_url": "https://ai-nowa.com/articles/article-15/",
+            "ts": "2026-05-28T00:00:00+09:00",
+        }, ensure_ascii=False) + "\n",
+        encoding="utf-8",
+    )
+
+    untracked = rb.detect_untracked_published_articles()
+    assert "article-14" in untracked, f"未記録の article-14 が検出されていない: {untracked}"
+    assert "article-15" not in untracked, f"記録済みの article-15 が誤検出された（二重記録防止）: {untracked}"
+
+
+def test_freeze_guard_marker_excludes_draft_from_ready(monkeypatch, tmp_path):
+    base = _redirect_release_paths(monkeypatch, tmp_path)
+    outbox = base / "employees" / "kuroba_yuu" / "outbox"
+    outbox.mkdir(parents=True, exist_ok=True)
+    # 公開語(投稿本文/コピペOK)を持つが、本文の凍結ガードで温存中のドラフト
+    (outbox / "2026-05-28_next_branch_revenue_board_draft.md").write_text(
+        "# Next Branch 収益ボード draft\n"
+        "status: 温存のみ（非公開）\n"
+        "凍結ガード: 規約確定までこのdraftは公開しない\n\n"
+        "投稿本文（コピペOK）:\nshop 販売導線のCTA案。\n",
+        encoding="utf-8",
+    )
+    metrics = rb.collect_release_metrics()
+    paths = [c["path"] for c in metrics["top_candidates"]]
+    assert all("next_branch_revenue_board" not in p for p in paths), (
+        f"凍結ガード付き draft が ready に残っている: {paths}"
+    )
+    assert metrics["ready_to_ship_count"] == 0
+
+
+def test_freeze_guard_does_not_over_exclude_ready_status(monkeypatch, tmp_path):
+    base = _redirect_release_paths(monkeypatch, tmp_path)
+    outbox = base / "employees" / "kuroba_yuu" / "outbox"
+    outbox.mkdir(parents=True, exist_ok=True)
+    # status: が公開可（ready）を指す場合は除外しない（誤除外防止）
+    (outbox / "2026-05-28_cta_copy_ready.md").write_text(
+        "# CTA コピー\n"
+        "status: ready（公開OK）\n\n"
+        "投稿本文（コピペOK）:\nai-nowa.com/shop へ。\n",
+        encoding="utf-8",
+    )
+    metrics = rb.collect_release_metrics()
+    paths = [c["path"] for c in metrics["top_candidates"]]
+    assert any("cta_copy_ready" in p for p in paths), (
+        f"公開可ステータスの draft が誤って除外された: {paths}"
+    )
+
+
+def test_draft_without_freeze_guard_stays_ready(monkeypatch, tmp_path):
+    base = _redirect_release_paths(monkeypatch, tmp_path)
+    outbox = base / "employees" / "kuroba_yuu" / "outbox"
+    outbox.mkdir(parents=True, exist_ok=True)
+    # 凍結マーカーが無い通常の公開draftは従来どおり ready に残る（偽陰性=正規ページ誤除外の監査）
+    (outbox / "2026-05-28_shop_cta_draft.md").write_text(
+        "# shop CTA draft\n\n投稿本文（コピペOK）:\nai-nowa.com/shop の販売導線CTA。\n",
+        encoding="utf-8",
+    )
+    metrics = rb.collect_release_metrics()
+    paths = [c["path"] for c in metrics["top_candidates"]]
+    assert any("shop_cta_draft" in p for p in paths), (
+        f"マーカー無しの公開draftが誤って除外された: {paths}"
+    )
+    assert metrics["ready_to_ship_count"] == 1
+
+
+def test_human_required_internal_request_excluded_from_ready(monkeypatch, tmp_path):
+    # [HUMAN_REQUIRED] の内部人間依頼ドキュメントは、公開語(deploy/販売/導線)を含んでも
+    # Ready(公開候補)に計上しない。構造ゲートの遡及漏れ修正(2026-05-28 ミオ報告)の回帰テスト。
+    base = _redirect_release_paths(monkeypatch, tmp_path)
+    outbox = base / "employees" / "shirase_kai" / "outbox"
+    outbox.mkdir(parents=True, exist_ok=True)
+    (outbox / "2026-05-28_ga4_reauth_request.md").write_text(
+        "# [HUMAN_REQUIRED] GA4 再認証依頼（外部KPI取得が停止中）\n\n"
+        "ブラウザ承認が必要。deploy 後に販売導線の計測が戻る。投稿本文（コピペOK）相当の素材ではない。\n",
+        encoding="utf-8",
+    )
+    metrics = rb.collect_release_metrics()
+    paths = [c["path"] for c in metrics["top_candidates"]]
+    assert all("ga4_reauth_request" not in p for p in paths), (
+        f"[HUMAN_REQUIRED] 内部依頼が ready に誤計上されている: {paths}"
+    )
+
+
+def test_human_wait_filter_does_not_over_exclude_kopipe_ok(monkeypatch, tmp_path):
+    # 衝突ガード: "コピペ"(HUMAN_WAIT) ⊂ "コピペOK"(READY) のため、
+    # [HUMAN_REQUIRED] を持たない正当な「コピペOK」公開draftは ready に残る。
+    base = _redirect_release_paths(monkeypatch, tmp_path)
+    outbox = base / "employees" / "kuroba_yuu" / "outbox"
+    outbox.mkdir(parents=True, exist_ok=True)
+    (outbox / "2026-05-28_ep03_about_cta_ready.md").write_text(
+        "# ep03 説明欄 CTA\n\n誘導ブロック（コピペOK）:\nai-nowa.com/about へ誘導する説明欄。\n",
+        encoding="utf-8",
+    )
+    metrics = rb.collect_release_metrics()
+    paths = [c["path"] for c in metrics["top_candidates"]]
+    assert any("ep03_about_cta_ready" in p for p in paths), (
+        f"コピペOK の公開draftが人間待ちフィルタで誤除外された: {paths}"
+    )
+
+
+def test_human_required_classified_as_human_auth_not_reusable(monkeypatch):
+    # [HUMAN_REQUIRED](本人認証/権限が必須)は human_auth に分類され、
+    # x_post等の公開kindへ誤分類して「Bluesky転用」を提案してはならない。
+    # GA4再認証が x_post 誤分類→転用提案された事例(2026-05-28 黒羽報告)の回帰テスト。
+    text = "# [HUMAN_REQUIRED] GA4 OAuth再認証依頼（いくと宛）\nブラウザ承認待ち"
+    assert rb._wait_kind(text) == "human_auth"
+    # 紛らわしく "X" や "投稿" を含んでも human_auth が優先される
+    assert rb._wait_kind("[HUMAN_REQUIRED] X投稿の前に本人確認が必要") == "human_auth"
+    action = rb._suggest_action("human_auth", "x.md", text)
+    assert "転用" in action and "不可" in action
+    assert "Bluesky" not in action or "不可" in action
+
+
+def test_wait_kind_normal_x_post_unchanged(monkeypatch):
+    # 通常の公開依頼は従来どおり x_post / video に分類される（誤って human_auth に倒さない）。
+    assert rb._wait_kind("EXP-005 Xポスト 投稿本文（コピペOK）") == "x_post"
+    assert rb._wait_kind("YouTube Shorts 動画の公開をお願いします") == "video"
+
+
+def test_has_freeze_guard_unit():
+    assert rb.has_freeze_guard("status: 温存のみ（非公開）")
+    assert rb.has_freeze_guard("凍結ガード: 公開しない")
+    assert rb.has_freeze_guard("- 凍結ガード： 規約確定まで deployしない")
+    assert not rb.has_freeze_guard("status: ready")
+    assert not rb.has_freeze_guard("公開依頼。投稿本文はコピペOK。")
