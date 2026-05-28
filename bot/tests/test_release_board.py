@@ -319,3 +319,14 @@ def test_has_freeze_guard_unit():
     assert rb.has_freeze_guard("- 凍結ガード： 規約確定まで deployしない")
     assert not rb.has_freeze_guard("status: ready")
     assert not rb.has_freeze_guard("公開依頼。投稿本文はコピペOK。")
+
+
+def test_has_freeze_guard_internal_visibility():
+    # 行頭メタの visibility 宣言は降格する(internal/社内/非公開/private、全角コロン、リストマーカー許容)。
+    assert rb.has_freeze_guard("- visibility: **internal**（社内運用文書）")
+    assert rb.has_freeze_guard("visibility：社内")
+    assert rb.has_freeze_guard("> visibility: private")
+    # 本文中の言及や否定文脈は誤除外しない(行頭アンカー+値限定の効果)。
+    assert not rb.has_freeze_guard("これは公開対象外ではない。視聴者向けに公開する。")
+    assert not rb.has_freeze_guard("`visibility: internal` と本文に明記した文書が誤計上される")
+    assert not rb.has_freeze_guard("visibility: public")

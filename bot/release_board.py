@@ -43,8 +43,18 @@ FREEZE_GUARD_RE = re.compile(
 )
 
 
+# 本文が明示的に内部限定(visibility: internal/社内/非公開/private)を行頭メタで宣言した文書も
+# ready 候補から降格する。行頭アンカー+値限定で、本文中の言及や否定文脈("公開対象外ではない"等)を
+# 誤除外しない高精度設計(黒羽ユウ案B採用 / 2026-05-28)。FREEZE_GUARD_RE と並ぶ降格ガード。
+INTERNAL_VISIBILITY_RE = re.compile(
+    r"^\s*(?:[-*#>]\s*)*visibility\s*[:：]\s*\**\s*(internal|社内|非公開|private)",
+    re.IGNORECASE | re.MULTILINE,
+)
+
+
 def has_freeze_guard(text: str) -> bool:
-    return bool(FREEZE_GUARD_RE.search(text or ""))
+    t = text or ""
+    return bool(FREEZE_GUARD_RE.search(t) or INTERNAL_VISIBILITY_RE.search(t))
 
 READY_KEYWORDS = [
     "公開依頼", "投稿依頼", "公開GO", "公開をお願いします", "コピペOK", "投稿本文",
@@ -67,13 +77,6 @@ INTERNAL_ONLY_NAME_RE = re.compile(
     r"phase_restructure|observation_sheet|pm_completion|audit_ng|"
     r"policy|concept|value_definition|load_design|runbook|strategy|"
     r"series_arc|series_entry)",
-    re.IGNORECASE,
-)
-# 本文が明示的に内部限定(visibility: internal / 公開対象外)を宣言した文書は
-# ファイル名がINTERNAL_ONLY_NAME_REに一致しなくてもReady候補から除外する。
-# (2026-05-28 nagi_first_view_gate.md がファイル名規則をすり抜け公開化提案された誤検出を構造で塞ぐ)
-VISIBILITY_INTERNAL_RE = re.compile(
-    r"(visibility:\s*\**\s*internal|公開対象外|生文書のまま出さない|社内運用文書)",
     re.IGNORECASE,
 )
 ARTICLE_NUM_RE = re.compile(r"article-(\d+)")
@@ -411,9 +414,6 @@ def collect_ready_candidates(hours: int = 48) -> list[ReleaseCandidate]:
                 for keyword in ("公開依頼", "投稿依頼", "公開GO", "投稿本文", "コピペOK", "YouTube", "Xポスト")
             )
             if INTERNAL_ONLY_NAME_RE.search(path.name):
-                continue
-            # 本文の明示的な内部限定宣言を尊重(ファイル名規則の穴埋め)。
-            if VISIBILITY_INTERNAL_RE.search(text):
                 continue
             heading = ""
             for line in text.splitlines()[:5]:
